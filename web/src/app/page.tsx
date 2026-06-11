@@ -90,7 +90,7 @@ function viError(m: string): string {
 
 function AkashMark({ size = 48 }: { size?: number }) {
   return (
-    <div className="dq-mark relative grid place-items-center rounded-2xl bg-gradient-to-br from-violet-600 via-fuchsia-500 to-cyan-400 shadow-lg shadow-violet-500/40" style={{ width: size, height: size }}>
+    <div className="dq-mark relative grid place-items-center rounded-2xl bg-gradient-to-br from-violet-600 via-blue-600 to-cyan-400 shadow-lg shadow-violet-500/40" style={{ width: size, height: size }}>
       <span className="font-black text-white" style={{ fontSize: size * 0.52, lineHeight: 1 }}>A</span>
       <span className="absolute inset-0 rounded-2xl ring-1 ring-white/30" />
     </div>
@@ -137,11 +137,11 @@ function Login() {
             <div className="flex items-center gap-4 mb-6">
               <AkashMark size={64} />
               <div>
-                <div className="text-5xl font-black tracking-tight bg-gradient-to-r from-violet-300 via-fuchsia-300 to-cyan-300 bg-clip-text text-transparent">Akash</div>
+                <div className="text-5xl font-black tracking-tight bg-gradient-to-r from-violet-300 via-blue-400 to-cyan-300 bg-clip-text text-transparent">Akash</div>
                 <div className="text-[11px] uppercase tracking-[0.3em] text-zinc-500 mt-1">Akashic knowledge engine</div>
               </div>
             </div>
-            <h1 className="text-2xl font-bold leading-snug mb-6 text-zinc-100">Biến trải nghiệm thành <span className="bg-gradient-to-r from-violet-400 to-cyan-300 bg-clip-text text-transparent">trí tuệ</span>,<br />biến trí tuệ thành <span className="bg-gradient-to-r from-pink-400 to-amber-300 bg-clip-text text-transparent">content</span>.</h1>
+            <h1 className="text-2xl font-bold leading-snug mb-6 text-zinc-100">Biến trải nghiệm thành <span className="bg-gradient-to-r from-violet-400 to-cyan-300 bg-clip-text text-transparent">trí tuệ</span>,<br />biến trí tuệ thành <span className="bg-gradient-to-r from-amber-400 to-yellow-300 bg-clip-text text-transparent">content</span>.</h1>
             <div className="space-y-3">
               {([
                 [<IOrbit key="o" size={20} />, 'Galaxy tri thức đa chiều', '3 kho · liên kết 8 chiều · zoom như bản đồ sao'],
@@ -183,7 +183,7 @@ function Login() {
                   <input className="w-full rounded-xl bg-white/5 border border-white/10 px-3.5 py-3 pr-11 text-sm outline-none focus:border-violet-400/70 focus:bg-white/[0.07] transition" placeholder="Tối thiểu 6 ký tự" type={showPw ? 'text' : 'password'} autoComplete={mode === 'in' ? 'current-password' : 'new-password'} value={pw} onChange={e => setPw(e.target.value)} onKeyDown={e => e.key === 'Enter' && go()} />
                   <button onClick={() => setShowPw(s => !s)} title={showPw ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'} className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 grid place-items-center rounded-lg text-zinc-500 hover:text-white hover:bg-white/10">{showPw ? <IEyeOff size={16} /> : <IEye size={16} />}</button>
                 </div>
-                <button disabled={busy} onClick={go} className="w-full rounded-xl py-3 text-sm font-bold bg-gradient-to-r from-violet-500 via-fuchsia-500 to-cyan-500 disabled:opacity-70 shadow-lg shadow-violet-500/30 hover:opacity-95 transition flex items-center justify-center gap-2">
+                <button disabled={busy} onClick={go} className="w-full rounded-xl py-3 text-sm font-bold bg-gradient-to-r from-violet-500 via-blue-600 to-cyan-500 disabled:opacity-70 shadow-lg shadow-violet-500/30 hover:opacity-95 transition flex items-center justify-center gap-2">
                   {busy ? <><span className="w-4 h-4 rounded-full border-2 border-white/40 border-t-white animate-spin" /> Đang nhảy hyperspace…</> : mode === 'in' ? '⌁ Khởi động warp drive' : '⌁ Tạo tài khoản & cất cánh'}
                 </button>
                 {msg && <p className={`text-xs mt-3 leading-relaxed ${ok ? 'text-emerald-400' : 'text-amber-300'}`}>{msg}</p>}
@@ -636,7 +636,7 @@ function Workspace({ user }: { user: User }) {
       {page === 'know' ? (
         <>
       <header className="flex items-center justify-between px-6 py-4 border-b border-white/10">
-        <span className="text-xl font-black tracking-tight bg-gradient-to-r from-violet-300 via-fuchsia-300 to-cyan-300 bg-clip-text text-transparent">Akash</span>
+        <span className="text-xl font-black tracking-tight bg-gradient-to-r from-violet-300 via-blue-400 to-cyan-300 bg-clip-text text-transparent">Akash</span>
         <div className="flex items-center gap-2">
           <div className="flex gap-1 bg-white/5 border border-white/10 rounded-xl p-1 text-sm">
             <button onClick={() => setView('folder')} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition ${view === 'folder' ? 'bg-gradient-to-r from-violet-500 to-cyan-500 text-white shadow-lg shadow-violet-500/25' : 'text-zinc-400 hover:text-zinc-200'}`}><IDoc size={15} /> Trang</button>
@@ -802,7 +802,7 @@ function Workspace({ user }: { user: User }) {
                       {/* LUỒNG HỌC: radar 5 cạnh → ôn lại → chuyển content */}
                       <button onClick={() => setShowRadar(s => !s)} title="Xem radar Độ Thấm" className="flex items-center gap-1.5 text-xs rounded-lg bg-violet-500/15 border border-violet-400/30 text-violet-300 px-2.5 py-1 hover:bg-violet-500/25"><ITarget size={13} /> {depthScore(depth)}</button>
                       <button onClick={() => setShowDigest(true)} className="flex items-center gap-1.5 text-xs rounded-lg bg-white/10 border border-white/10 px-2.5 py-1 hover:bg-white/15"><IRefresh size={13} /> Ôn lại</button>
-                      {nodeOf(editing.id)?.owner_id === user.id && <button onClick={toContent} title="Bài đã chín → tạo content" className="flex items-center gap-1.5 text-xs rounded-lg bg-gradient-to-r from-pink-500 to-amber-500 px-2.5 py-1 font-semibold"><IMegaphone size={13} /> Content</button>}
+                      {nodeOf(editing.id)?.owner_id === user.id && <button onClick={toContent} title="Bài đã chín → tạo content" className="flex items-center gap-1.5 text-xs rounded-lg bg-gradient-to-r from-amber-500 to-yellow-400 px-2.5 py-1 font-semibold"><IMegaphone size={13} /> Content</button>}
                       {showRadar && (
                         <>
                           <div className="fixed inset-0 z-20" onClick={() => setShowRadar(false)} />
@@ -880,7 +880,7 @@ function Workspace({ user }: { user: User }) {
                       )}
                       {/* đề xuất trang cá nhân lên Kho nhân loại */}
                       {node?.layer === 'personal' && node?.owner_id === user.id && !node?.subtype && node?.kind === 'page' && (
-                        <button onClick={() => setProposeFor(editing.id)} title="Trả lời 3 câu → bản sao vào hàng chờ duyệt Kho nhân loại" className="rounded-lg bg-fuchsia-500/15 border border-fuchsia-400/30 text-fuchsia-200 px-2.5 py-1 hover:bg-fuchsia-500/25">♾️ Đề xuất lên nhân loại</button>
+                        <button onClick={() => setProposeFor(editing.id)} title="Trả lời 3 câu → bản sao vào hàng chờ duyệt Kho nhân loại" className="rounded-lg bg-violet-500/15 border border-violet-400/30 text-violet-200 px-2.5 py-1 hover:bg-violet-500/25">♾️ Đề xuất lên nhân loại</button>
                       )}
                       {/* thành viên góp ý bài kho chung */}
                       {!canE && node?.layer !== 'personal' && (
@@ -1065,7 +1065,7 @@ function Workspace({ user }: { user: User }) {
               setProposeFor(null); setProp3({ reason: '', goal: '', note: '' })
               if (orgId) loadTree(orgId)
               setToast('♾️ Đã đề xuất kèm lý do — chờ ban biên tập'); setTimeout(() => setToast(''), 3000)
-            }} disabled={!prop3.reason.trim()} className="w-full rounded-xl bg-gradient-to-r from-fuchsia-500 to-violet-500 py-2.5 text-sm font-bold disabled:opacity-40">📨 Gửi đề xuất</button>
+            }} disabled={!prop3.reason.trim()} className="w-full rounded-xl bg-gradient-to-r from-violet-600 via-blue-600 to-cyan-500 py-2.5 text-sm font-bold disabled:opacity-40">📨 Gửi đề xuất</button>
           </div>
         </div>
       )}
@@ -1166,7 +1166,7 @@ function Workspace({ user }: { user: User }) {
             <div className="relative w-[600px] max-w-[95vw] rounded-3xl p-[1.5px] bg-gradient-to-br from-violet-500/70 via-white/10 to-cyan-500/70 shadow-2xl shadow-violet-500/20">
               <div className="rounded-3xl bg-[#0d0d18]/97 overflow-hidden">
                 {/* progress + dots */}
-                <div className="h-1 bg-white/5"><div className="h-full bg-gradient-to-r from-violet-500 via-fuchsia-500 to-cyan-400 transition-all duration-500" style={{ width: `${((obStep + 1) / 3) * 100}%` }} /></div>
+                <div className="h-1 bg-white/5"><div className="h-full bg-gradient-to-r from-violet-500 via-blue-600 to-cyan-400 transition-all duration-500" style={{ width: `${((obStep + 1) / 3) * 100}%` }} /></div>
                 <div className="p-8 pb-6">
                   <div className="flex items-center justify-between mb-6">
                     <div className="flex items-center gap-2.5">
@@ -1182,13 +1182,13 @@ function Workspace({ user }: { user: User }) {
                   <div key={obStep} className="dq-step-in min-h-[280px]">
                     {obStep === 0 && (
                       <>
-                        <h2 className="text-2xl font-black mb-1">Chào mừng đến <span className="bg-gradient-to-r from-violet-300 via-fuchsia-300 to-cyan-300 bg-clip-text text-transparent">Akash</span></h2>
+                        <h2 className="text-2xl font-black mb-1">Chào mừng đến <span className="bg-gradient-to-r from-violet-300 via-blue-400 to-cyan-300 bg-clip-text text-transparent">Akash</span></h2>
                         <p className="text-sm text-zinc-500 mb-5">Akasha — "hư không lưu giữ mọi tri thức". Bạn có 3 tầng kho:</p>
                         <div className="grid gap-2.5">
                           {[
                             ['🧠', 'Kho của bạn', 'Riêng tư tuyệt đối — trải nghiệm & bài học mỗi ngày', 'from-violet-500/20 to-violet-500/5 border-violet-400/30'],
                             ['🌐', 'Kho tập đoàn', 'Tri thức QNET chung — sản phẩm, kỹ năng, văn hoá RYTHM', 'from-cyan-500/20 to-cyan-500/5 border-cyan-400/30'],
-                            ['♾️', 'Kho nhân loại', 'Tinh hoa sách & triết lý — Atomic Habits, Khắc kỷ, Ikigai…', 'from-fuchsia-500/20 to-fuchsia-500/5 border-fuchsia-400/30'],
+                            ['♾️', 'Kho nhân loại', 'Tinh hoa sách & triết lý — Atomic Habits, Khắc kỷ, Ikigai…', 'from-violet-500/20 to-blue-500/5 border-violet-400/30'],
                           ].map(([ic, t, d, cls]) => (
                             <div key={t} className={`flex items-center gap-3.5 rounded-2xl bg-gradient-to-r border px-4 py-3.5 ${cls}`}>
                               <span className="text-3xl">{ic}</span>
@@ -1220,7 +1220,7 @@ function Workspace({ user }: { user: User }) {
                     )}
                     {obStep === 2 && (
                       <>
-                        <h2 className="text-2xl font-black mb-1">Học thật → <span className="bg-gradient-to-r from-pink-300 to-amber-300 bg-clip-text text-transparent">Content thật</span></h2>
+                        <h2 className="text-2xl font-black mb-1">Học thật → <span className="bg-gradient-to-r from-amber-200 to-yellow-400 bg-clip-text text-transparent">Content thật</span></h2>
                         <p className="text-sm text-zinc-500 mb-5">Vòng lặp giá trị của Akash — mỗi bài học là một tài sản:</p>
                         <div className="flex items-center justify-between gap-2 mb-5">
                           {[['🎓', 'Thấm', '5 bước digest'], ['🎯', 'Độ Thấm', 'radar 5 cạnh'], ['📣', '→ Content', 'lên Board'], ['💰', 'Giá trị', 'dạy & thu nhập']].map(([ic, t, d], i) => (
@@ -1250,8 +1250,8 @@ function Workspace({ user }: { user: User }) {
                     <div className="flex gap-2">
                       {obStep > 0 && <button onClick={() => setObStep(s => s - 1)} className="rounded-xl bg-white/10 border border-white/10 px-4 py-2.5 text-sm hover:bg-white/15">← Trước</button>}
                       {obStep < 2
-                        ? <button onClick={() => setObStep(s => s + 1)} className="rounded-xl bg-gradient-to-r from-violet-500 via-fuchsia-500 to-cyan-500 px-6 py-2.5 text-sm font-bold shadow-lg shadow-violet-500/30">Tiếp →</button>
-                        : <button onClick={finish} className="rounded-xl bg-gradient-to-r from-violet-500 via-fuchsia-500 to-cyan-500 px-6 py-2.5 text-sm font-bold shadow-lg shadow-violet-500/30">✍️ Viết dòng đầu tiên</button>}
+                        ? <button onClick={() => setObStep(s => s + 1)} className="rounded-xl bg-gradient-to-r from-violet-500 via-blue-600 to-cyan-500 px-6 py-2.5 text-sm font-bold shadow-lg shadow-violet-500/30">Tiếp →</button>
+                        : <button onClick={finish} className="rounded-xl bg-gradient-to-r from-violet-500 via-blue-600 to-cyan-500 px-6 py-2.5 text-sm font-bold shadow-lg shadow-violet-500/30">✍️ Viết dòng đầu tiên</button>}
                     </div>
                   </div>
                 </div>

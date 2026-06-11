@@ -1,20 +1,22 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Be_Vietnam_Pro, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
+// Be Vietnam Pro: thiết kế cho tiếng Việt — dấu đẹp, hình học high-tech (BRANDING.md §2)
+const akashSans = Be_Vietnam_Pro({
   variable: "--font-geist-sans",
-  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800"],
+  subsets: ["vietnamese", "latin"],
 });
 
-const geistMono = Geist_Mono({
+const akashMono = JetBrains_Mono({
   variable: "--font-geist-mono",
-  subsets: ["latin"],
+  subsets: ["vietnamese", "latin"],
 });
 
 export const metadata: Metadata = {
-  title: "Akash — Kho tri thức",
-  description: "Akash · biến trải nghiệm thành trí tuệ, biến trí tuệ thành content",
+  title: "Akash — Vũ trụ tri thức của bạn",
+  description: "Akash · mài cuộc đời thành kim cương: sống → ghi → chuyển hoá → toả sáng",
 };
 
 export default function RootLayout({
@@ -25,7 +27,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${akashSans.variable} ${akashMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
         <script dangerouslySetInnerHTML={{ __html: `try{var t=localStorage.getItem('akash-theme');if(t)document.documentElement.setAttribute('data-theme',t)}catch(e){};(function(){var x=function(s){return s&&(s.indexOf('chrome-extension://')>-1||s.indexOf('Talisman')>-1||s.indexOf('moz-extension://')>-1)};window.addEventListener('unhandledrejection',function(e){var r=e.reason||{};if(x(String(r.stack||r.message||e.reason||'')))e.stopImmediatePropagation(),e.preventDefault()},true);window.addEventListener('error',function(e){if(x(String(e.filename||'')+String(e.message||'')+String(e.error&&e.error.stack||'')))e.stopImmediatePropagation(),e.preventDefault()},true)})()` }} />

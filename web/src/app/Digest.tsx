@@ -317,16 +317,16 @@ export default function Digest({ folder, others, orgId, userId, onClose, onSaved
             <>
               <p className="text-sm text-zinc-400 mb-2">📚 <b>Tham chiếu</b> — nguồn gốc & mạng dẫn chứng (credibility cho content sau này).</p>
               <div className="rounded-xl bg-white/[0.03] border border-white/10 p-3 mb-3">
-                <div className="text-[10px] uppercase tracking-wider text-fuchsia-300/80 mb-2">Nguồn ngoài (sách / URL / video)</div>
+                <div className="text-[10px] uppercase tracking-wider text-violet-300/80 mb-2">Nguồn ngoài (sách / URL / video)</div>
                 <div className="flex gap-1.5 mb-2">
                   <select value={refDraft.type} onChange={e => setRefDraft({ ...refDraft, type: e.target.value })} className="rounded-lg bg-[#15151f] border border-white/10 px-2 text-xs outline-none">
                     {['sách', 'url', 'video', 'podcast'].map(t => <option key={t}>{t}</option>)}
                   </select>
                   <input value={refDraft.title} onChange={e => setRefDraft({ ...refDraft, title: e.target.value })} placeholder="Tên nguồn…" className="flex-1 rounded-lg bg-white/5 border border-white/10 px-2.5 py-1.5 text-xs outline-none" />
                   <input value={refDraft.url} onChange={e => setRefDraft({ ...refDraft, url: e.target.value })} placeholder="link (tuỳ chọn)" className="w-32 rounded-lg bg-white/5 border border-white/10 px-2.5 py-1.5 text-xs outline-none" />
-                  <button onClick={() => { if (refDraft.title.trim()) { setRefs([...refs, refDraft]); setRefDraft({ type: 'sách', title: '', url: '' }); fire('Nguồn: ' + refDraft.title, '#e879f9') } }} className="rounded-lg bg-fuchsia-500/30 border border-fuchsia-400/40 px-3 text-xs">＋</button>
+                  <button onClick={() => { if (refDraft.title.trim()) { setRefs([...refs, refDraft]); setRefDraft({ type: 'sách', title: '', url: '' }); fire('Nguồn: ' + refDraft.title, '#e879f9') } }} className="rounded-lg bg-violet-500/30 border border-violet-400/40 px-3 text-xs">＋</button>
                 </div>
-                <div className="flex flex-wrap gap-1.5">{refs.map((r, i) => <span key={i} className="text-[11px] rounded-lg bg-fuchsia-500/15 border border-fuchsia-400/30 text-fuchsia-200 px-2 py-1">{r.type === 'sách' ? '📕' : '🔗'} {r.title} <button onClick={() => setRefs(refs.filter((_, j) => j !== i))} className="text-zinc-500 ml-1">✕</button></span>)}</div>
+                <div className="flex flex-wrap gap-1.5">{refs.map((r, i) => <span key={i} className="text-[11px] rounded-lg bg-violet-500/15 border border-violet-400/30 text-violet-200 px-2 py-1">{r.type === 'sách' ? '📕' : '🔗'} {r.title} <button onClick={() => setRefs(refs.filter((_, j) => j !== i))} className="text-zinc-500 ml-1">✕</button></span>)}</div>
               </div>
               <input value={q} onChange={e => setQ(e.target.value)} placeholder="🔍 Tìm trang nội bộ…" className={inputCls + ' mb-2 py-2'} />
               <div className="space-y-2.5">
@@ -339,9 +339,9 @@ export default function Digest({ folder, others, orgId, userId, onClose, onSaved
             <>
               <p className="text-sm text-zinc-400 mb-2">🌱 <b>Cuộc đời</b> — điều này chạm vào đời thật thế nào? (điền được phần nào hay phần đó)</p>
               <div className="rounded-xl bg-white/[0.03] border border-white/10 p-3 mb-2.5">
-                <div className="text-[10px] uppercase tracking-wider text-pink-300/80 mb-1.5">🌱 Trải nghiệm — kể 1 lần BẠN đã sống điều này</div>
+                <div className="text-[10px] uppercase tracking-wider text-amber-300/80 mb-1.5">🌱 Trải nghiệm — kể 1 lần BẠN đã sống điều này</div>
                 <textarea value={expStory} onChange={e => { setExpStory(e.target.value) }} className={inputCls + ' h-16'} placeholder="Hồi tháng 3, mình đã…" />
-                {expStory.trim() && <label className="flex items-center gap-2 mt-1.5 text-[11px] text-zinc-400"><input type="checkbox" checked={makeNote} onChange={e => setMakeNote(e.target.checked)} className="accent-pink-400" /> Lưu thành note trong 📓 Nhật ký hành trình + nối về bài</label>}
+                {expStory.trim() && <label className="flex items-center gap-2 mt-1.5 text-[11px] text-zinc-400"><input type="checkbox" checked={makeNote} onChange={e => setMakeNote(e.target.checked)} className="accent-amber-400" /> Lưu thành note trong 📓 Nhật ký hành trình + nối về bài</label>}
               </div>
               <div className="rounded-xl bg-white/[0.03] border border-white/10 p-3 mb-2.5">
                 <div className="text-[10px] uppercase tracking-wider text-amber-300/80 mb-1.5">🧡 Cảm xúc — bài này chạm gì trong bạn?</div>
@@ -432,7 +432,7 @@ export default function Digest({ folder, others, orgId, userId, onClose, onSaved
                 <div className="text-5xl font-black bg-gradient-to-r from-violet-400 to-cyan-300 bg-clip-text text-transparent mb-1">{celebrate.score}</div>
                 <div className="text-[11px] uppercase tracking-widest text-zinc-500 mb-1">Độ Thấm</div>
                 <p className="text-xs text-zinc-500 mb-5">{celebrate.covered}/8 chiều · node sẽ sáng hơn trên Galaxy ✨ · hẹn ôn lại sau {[1,3,7,21,60][0]} ngày</p>
-                <button onClick={onClose} className="rounded-xl bg-gradient-to-r from-violet-500 via-fuchsia-500 to-cyan-500 px-6 py-2.5 text-sm font-bold shadow-lg shadow-violet-500/30">Tiếp tục hành trình →</button>
+                <button onClick={onClose} className="rounded-xl bg-gradient-to-r from-violet-500 via-blue-600 to-cyan-500 px-6 py-2.5 text-sm font-bold shadow-lg shadow-violet-500/30">Tiếp tục hành trình →</button>
               </div>
             </div>
           </div>

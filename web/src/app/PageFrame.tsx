@@ -290,8 +290,8 @@ export function PageFooter({ node, pages, outLinks, backLinks, mdText, canE, onO
             {refs.map((r, i) => (
               <li key={i} className="text-xs text-zinc-400">
                 {(r.props as Record<string, unknown> | null)?.url
-                  ? <a href={(r.props as Record<string, string>).url} target="_blank" rel="noreferrer" className="text-fuchsia-300 hover:underline">{r.title}</a>
-                  : <button onClick={() => onOpen(r.id)} className="text-fuchsia-300 hover:underline">{r.title}</button>}
+                  ? <a href={(r.props as Record<string, string>).url} target="_blank" rel="noreferrer" className="text-violet-300 hover:underline">{r.title}</a>
+                  : <button onClick={() => onOpen(r.id)} className="text-violet-300 hover:underline">{r.title}</button>}
               </li>
             ))}
           </ol>

@@ -16,7 +16,7 @@ const TYPES: { t: ColType; label: string }[] = [
   { t: 'select', label: '🏷️ Lựa chọn' }, { t: 'checkbox', label: '☑️ Checkbox' }, { t: 'date', label: '📅 Ngày' },
 ]
 const TYPE_ICON: Record<ColType, string> = { text: '📝', number: '🔢', select: '🏷️', checkbox: '☑️', date: '📅' }
-const CHIP = ['bg-violet-500/20 text-violet-200', 'bg-cyan-500/20 text-cyan-200', 'bg-emerald-500/20 text-emerald-200', 'bg-amber-500/20 text-amber-200', 'bg-pink-500/20 text-pink-200', 'bg-blue-500/20 text-blue-200']
+const CHIP = ['bg-violet-500/20 text-violet-200', 'bg-cyan-500/20 text-cyan-200', 'bg-emerald-500/20 text-emerald-200', 'bg-amber-500/20 text-amber-200', 'bg-amber-500/20 text-amber-200', 'bg-blue-500/20 text-blue-200']
 function chipClass(opts: string[] | undefined, v: string) {
   const i = Math.max(0, (opts ?? []).indexOf(v))
   return CHIP[i % CHIP.length]

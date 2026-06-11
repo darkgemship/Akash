@@ -86,20 +86,20 @@ function VoiceCard({ me }: { me: string }) {
         <Lbl>🎙️ Giọng của tôi — AI viết content ĐÚNG GIỌNG BẠN từ đây ({filled}/8)</Lbl>
         <button onClick={() => setOpen(o => !o)} className="text-xs rounded-lg bg-white/10 border border-white/10 px-3 py-1.5">{open ? 'Thu gọn' : filled ? 'Sửa' : '✍️ Bắt đầu'}</button>
       </div>
-      <div className="h-1.5 rounded-full bg-white/5 overflow-hidden"><div className="h-full bg-gradient-to-r from-pink-500 to-amber-400 transition-all" style={{ width: `${filled / 8 * 100}%` }} /></div>
+      <div className="h-1.5 rounded-full bg-white/5 overflow-hidden"><div className="h-full bg-gradient-to-r from-amber-500 to-yellow-400 transition-all" style={{ width: `${filled / 8 * 100}%` }} /></div>
       {open && (
         <div className="mt-3 space-y-2.5">
           {VOICE_QS.map((q2, i) => (
             <div key={i}>
               <div className="text-xs text-zinc-300 mb-1">{i + 1}. {q2}</div>
-              <textarea value={ans[i]} onChange={e => setAns(a => a.map((x, j) => j === i ? e.target.value : x))} className="w-full h-12 rounded-xl bg-white/5 border border-white/10 p-2.5 text-xs outline-none focus:border-pink-400/50" />
+              <textarea value={ans[i]} onChange={e => setAns(a => a.map((x, j) => j === i ? e.target.value : x))} className="w-full h-12 rounded-xl bg-white/5 border border-white/10 p-2.5 text-xs outline-none focus:border-amber-400/50" />
             </div>
           ))}
           <button onClick={async () => {
             const { error } = await supabase.from('profiles').upsert({ id: me, voice: { answers: ans, updated_at: new Date().toISOString() } })
             setSaved(error ? '⚠️ ' + error.message : '✅ Đã lưu giọng của bạn')
             setTimeout(() => setSaved(''), 2500)
-          }} className="w-full rounded-xl bg-gradient-to-r from-pink-500 to-amber-500 py-2.5 text-sm font-bold">💾 Lưu giọng</button>
+          }} className="w-full rounded-xl bg-gradient-to-r from-amber-500 to-yellow-400 py-2.5 text-sm font-bold">💾 Lưu giọng</button>
           {saved && <p className="text-xs text-zinc-300">{saved}</p>}
         </div>
       )}
@@ -143,14 +143,14 @@ export function Profile({ user }: { user: User }) {
   return (
     <div className="p-8 max-w-2xl mx-auto">
       <div className="flex items-center gap-4 mb-6">
-        <div className="w-16 h-16 rounded-full bg-gradient-to-br from-violet-500 to-pink-500" />
+        <div className="w-16 h-16 rounded-full bg-gradient-to-br from-violet-500 to-blue-400" />
         <div>
           <h1 className="text-2xl font-extrabold">{user.email?.split('@')[0]}</h1>
           <p className="text-zinc-400 text-sm">{user.email} · {level ? ROLE_NAME[level] : '—'}</p>
         </div>
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-        <Card><Lbl>⚡ Qi điểm</Lbl><div className="text-3xl font-black bg-gradient-to-r from-amber-300 to-pink-400 bg-clip-text text-transparent">{qi}</div><p className="text-[10px] text-zinc-600 mt-1">thấm 10 · content 5 · nối 3 · trang 1</p></Card>
+        <Card><Lbl>⚡ Qi điểm</Lbl><div className="text-3xl font-black bg-gradient-to-r from-amber-300 to-yellow-500 bg-clip-text text-transparent">{qi}</div><p className="text-[10px] text-zinc-600 mt-1">thấm 10 · content 5 · nối 3 · trang 1</p></Card>
         <Card><Lbl>🔥 Streak</Lbl><div className="text-3xl font-black">{streak}<span className="text-sm text-zinc-500"> ngày</span></div></Card>
         <Card><Lbl>🏆 Tổng Độ Thấm</Lbl><div className="text-3xl font-black bg-gradient-to-r from-violet-400 to-cyan-300 bg-clip-text text-transparent">{total}</div></Card>
         <Card><Lbl>🎓 Bài đã Thấm</Lbl><div className="text-3xl font-black">{learned}</div></Card>
@@ -253,7 +253,7 @@ export function ReviewQueue({ orgId, onOpen, onChanged }: { orgId: string | null
               </div>
               {excerpt(n.md) && <p className="text-xs text-zinc-500 mt-2 pl-10 leading-relaxed">{excerpt(n.md)}…</p>}
               {(n.props?.proposal as { reason?: string; goal?: string } | undefined)?.reason && (
-                <p className="text-[11px] text-fuchsia-200/80 mt-1.5 pl-10">💡 Lý do đề xuất: {(n.props!.proposal as { reason: string }).reason}{(n.props!.proposal as { goal?: string }).goal ? ` · 🎯 ${(n.props!.proposal as { goal: string }).goal}` : ''}</p>
+                <p className="text-[11px] text-violet-200/80 mt-1.5 pl-10">💡 Lý do đề xuất: {(n.props!.proposal as { reason: string }).reason}{(n.props!.proposal as { goal?: string }).goal ? ` · 🎯 ${(n.props!.proposal as { goal: string }).goal}` : ''}</p>
               )}
             </div>
           ))}
@@ -371,7 +371,7 @@ export function Studio({ orgId, user, canEdit, canApprove, pages, onOpen, onRelo
     return (
       <div key={pg.id}>
         <button onClick={() => setDestId(sel ? null : pg.id)} style={{ paddingLeft: 8 + depth * 18 }}
-          className={`w-full flex items-center gap-1.5 rounded-lg py-1.5 pr-2 text-left text-xs border transition ${sel ? 'bg-gradient-to-r from-violet-500/30 to-fuchsia-500/15 border-violet-400/50 text-white font-semibold' : 'border-transparent text-zinc-300 hover:bg-white/5'}`}>
+          className={`w-full flex items-center gap-1.5 rounded-lg py-1.5 pr-2 text-left text-xs border transition ${sel ? 'bg-gradient-to-r from-violet-500/30 to-blue-500/15 border-violet-400/50 text-white font-semibold' : 'border-transparent text-zinc-300 hover:bg-white/5'}`}>
           <span onClick={e => { e.stopPropagation(); setDestOpen(s => { const n = new Set(s); if (n.has(pg.id)) n.delete(pg.id); else n.add(pg.id); return n }) }}
             className={`w-4 shrink-0 text-center text-[10px] ${kids.length ? 'text-zinc-500 hover:text-white cursor-pointer' : 'text-transparent'}`}>{open ? '▾' : '▸'}</span>
           <span className="shrink-0">{pg.icon || '📄'}</span>
@@ -404,7 +404,8 @@ export function Studio({ orgId, user, canEdit, canApprove, pages, onOpen, onRelo
     const tl = PT.find(x => x[0] === ptype)?.[1] ?? ''
     // TRƯỜNG CHUẨN đồng nhất mọi file (xem docs/STANDARD-TEMPLATE.md) — lấy từ form bước 2
     const head = `**Loại:** ${tl} · **Ngày sự kiện:** ${eventDate ? new Date(eventDate + 'T00:00:00').toLocaleDateString('vi') : '…'} · **Campaign:** ${campaign.trim() || '—'}\n\n**Tóm tắt 1 câu:** ${summary.trim()}\n\n**Nguồn:** ${source.trim() || '…'}`
-    setDraft(`# ${title}\n\n${head}\n\n${tpl}\n\n## 💎 Trích dẫn đắt\n> \n\n## 📥 Nội dung gốc\n\n${raw.trim()}`)
+    // KHÔNG nhét "# title" vào md — trang đã có title field, tránh 2 tiêu đề khổng lồ chồng nhau
+    setDraft(`${head}\n\n${tpl}\n\n## 💎 Trích dẫn đắt\n> \n\n## 📥 Nội dung gốc\n\n${raw.trim()}`)
     setStep(3)
   }
   // admin/biên tập mở trang template đầu vào để chỉnh — thống nhất đầu vào toàn org
@@ -446,7 +447,7 @@ export function Studio({ orgId, user, canEdit, canApprove, pages, onOpen, onRelo
     setTimeout(() => { onOpen(id) }, 900)
   }
 
-  const stepCls = (n: number) => `flex-1 text-center text-[11px] py-2 rounded-xl border transition ${step === n ? 'bg-gradient-to-r from-fuchsia-500/30 to-violet-500/30 border-fuchsia-400/40 text-white font-bold' : step > n ? 'bg-white/5 border-white/10 text-zinc-400' : 'bg-white/[0.02] border-white/5 text-zinc-600'}`
+  const stepCls = (n: number) => `flex-1 text-center text-[11px] py-2 rounded-xl border transition ${step === n ? 'bg-gradient-to-r from-violet-500/30 to-blue-500/25 border-violet-400/40 text-white font-bold' : step > n ? 'bg-white/5 border-white/10 text-zinc-400' : 'bg-white/[0.02] border-white/5 text-zinc-600'}`
   return (
     <div className="px-8 pb-8 max-w-4xl mx-auto">
       <div className="flex items-center justify-between mb-1">
@@ -463,8 +464,8 @@ export function Studio({ orgId, user, canEdit, canApprove, pages, onOpen, onRelo
 
       {step === 1 && (
         <Card>
-          <textarea value={raw} onChange={e => setRaw(e.target.value)} placeholder="Dán bất cứ gì: ghi chép buổi event, transcript video, bài copy từ nhóm, chương sách…" className="w-full h-64 rounded-xl bg-white/5 border border-white/10 p-4 text-sm outline-none focus:border-fuchsia-400/50 mb-3" />
-          <button onClick={analyze} disabled={!raw.trim()} className="w-full rounded-xl bg-gradient-to-r from-fuchsia-500 to-violet-500 py-3 text-sm font-bold disabled:opacity-40 shadow-lg shadow-fuchsia-500/25">⚡ Phân tích & đề xuất →</button>
+          <textarea value={raw} onChange={e => setRaw(e.target.value)} placeholder="Dán bất cứ gì: ghi chép buổi event, transcript video, bài copy từ nhóm, chương sách…" className="w-full h-64 rounded-xl bg-white/5 border border-white/10 p-4 text-sm outline-none focus:border-violet-400/50 mb-3" />
+          <button onClick={analyze} disabled={!raw.trim()} className="w-full rounded-xl bg-gradient-to-r from-violet-600 via-blue-600 to-cyan-500 py-3 text-sm font-bold disabled:opacity-40 shadow-lg shadow-violet-500/25">⚡ Phân tích & đề xuất →</button>
         </Card>
       )}
 
@@ -474,23 +475,23 @@ export function Studio({ orgId, user, canEdit, canApprove, pages, onOpen, onRelo
           <div className="space-y-4 mt-2">
             <div>
               <div className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1.5">Tiêu đề đề xuất — sửa được</div>
-              <input value={title} onChange={e => setTitle(e.target.value)} className="w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2.5 text-sm outline-none focus:border-fuchsia-400/50" />
+              <input value={title} onChange={e => setTitle(e.target.value)} className="w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2.5 text-sm outline-none focus:border-violet-400/50" />
             </div>
             <div>
               <div className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1.5">Loại nội dung — máy đoán, bạn chỉnh</div>
-              <div className="flex flex-wrap gap-1.5">{PT.map(([k, l]) => <button key={k} onClick={() => setPtype(k)} className={`px-3 py-1.5 rounded-lg text-xs border ${ptype === k ? 'bg-fuchsia-500/25 border-fuchsia-400/50 text-fuchsia-100' : 'bg-white/5 border-white/10 text-zinc-400'}`}>{l}</button>)}</div>
+              <div className="flex flex-wrap gap-1.5">{PT.map(([k, l]) => <button key={k} onClick={() => setPtype(k)} className={`px-3 py-1.5 rounded-lg text-xs border ${ptype === k ? 'bg-violet-500/25 border-violet-400/50 text-violet-100' : 'bg-white/5 border-white/10 text-zinc-400'}`}>{l}</button>)}</div>
             </div>
             <div>
               <div className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1.5">Đưa vào đâu? — chọn kho, cây folder bung ra bên dưới</div>
               <div className="flex flex-wrap gap-1.5 mb-2">
                 <button onClick={() => { setTarget('personal'); setDestId(null); setDestOpen(new Set()) }} className={`px-3 py-1.5 rounded-lg text-xs border ${target === 'personal' ? 'bg-violet-500/25 border-violet-400/50 text-violet-100' : 'bg-white/5 border-white/10 text-zinc-400'}`}>🧠 Kho của tôi (vào ngay)</button>
-                <button onClick={() => { setTarget('humanity'); setDestId(null); setDestOpen(new Set()) }} className={`px-3 py-1.5 rounded-lg text-xs border ${target === 'humanity' ? 'bg-fuchsia-500/25 border-fuchsia-400/50 text-fuchsia-100' : 'bg-white/5 border-white/10 text-zinc-400'}`}>♾️ Đề xuất Kho nhân loại (chờ duyệt)</button>
+                <button onClick={() => { setTarget('humanity'); setDestId(null); setDestOpen(new Set()) }} className={`px-3 py-1.5 rounded-lg text-xs border ${target === 'humanity' ? 'bg-violet-500/25 border-violet-400/50 text-violet-100' : 'bg-white/5 border-white/10 text-zinc-400'}`}>♾️ Đề xuất Kho nhân loại (chờ duyệt)</button>
                 {canEdit && <button onClick={() => { setTarget('corporate'); setDestId(null); setDestOpen(new Set()) }} className={`px-3 py-1.5 rounded-lg text-xs border ${target === 'corporate' ? 'bg-cyan-500/25 border-cyan-400/50 text-cyan-100' : 'bg-white/5 border-white/10 text-zinc-400'}`}>🌐 Kho QNET (chờ duyệt)</button>}
               </div>
               {/* 📂 cây folder của kho đang chọn — bấm chọn nơi nạp, ▸ mở cấp con */}
               <div className="max-h-44 overflow-auto rounded-lg bg-black/20 border border-white/5 p-1.5 space-y-0.5">
                 <button onClick={() => setDestId(null)}
-                  className={`w-full flex items-center gap-1.5 rounded-lg py-1.5 px-2 text-left text-xs border transition ${destId === null ? 'bg-gradient-to-r from-violet-500/30 to-fuchsia-500/15 border-violet-400/50 text-white font-semibold' : 'border-transparent text-zinc-300 hover:bg-white/5'}`}>
+                  className={`w-full flex items-center gap-1.5 rounded-lg py-1.5 px-2 text-left text-xs border transition ${destId === null ? 'bg-gradient-to-r from-violet-500/30 to-blue-500/15 border-violet-400/50 text-white font-semibold' : 'border-transparent text-zinc-300 hover:bg-white/5'}`}>
                   <span className="w-4 shrink-0" /><span className="shrink-0">🏠</span><span className="truncate">{TARGET_LBL[target]} — ngoài cùng</span>
                   {destId === null && <span className="ml-auto shrink-0 text-[10px] text-violet-200">✓ nạp vào đây</span>}
                 </button>
@@ -511,20 +512,20 @@ export function Studio({ orgId, user, canEdit, canApprove, pages, onOpen, onRelo
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2">
                 <label className="block">
                   <span className="text-[10px] text-zinc-500">📅 Ngày sự kiện — ngày THỰC TẾ xảy ra, không phải hôm nay</span>
-                  <input type="date" value={eventDate} onChange={e => setEventDate(e.target.value)} className="mt-1 w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2 text-sm outline-none focus:border-fuchsia-400/50 [color-scheme:dark]" />
+                  <input type="date" value={eventDate} onChange={e => setEventDate(e.target.value)} className="mt-1 w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2 text-sm outline-none focus:border-violet-400/50 [color-scheme:dark]" />
                 </label>
                 <label className="block">
                   <span className="text-[10px] text-zinc-500">🚩 Campaign — chiến dịch content (tuỳ chọn)</span>
-                  <input value={campaign} onChange={e => setCampaign(e.target.value)} placeholder="vd: Tuyển thành viên T6" className="mt-1 w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2 text-sm outline-none focus:border-fuchsia-400/50" />
+                  <input value={campaign} onChange={e => setCampaign(e.target.value)} placeholder="vd: Tuyển thành viên T6" className="mt-1 w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2 text-sm outline-none focus:border-violet-400/50" />
                 </label>
               </div>
               <label className="block mb-2">
-                <span className="text-[10px] text-zinc-500">✏️ Tóm tắt 1 câu — <b className="text-fuchsia-300">bắt buộc</b>, AI dùng làm snippet khi trích dẫn</span>
-                <input value={summary} onChange={e => setSummary(e.target.value)} placeholder="Một câu nói lên cốt lõi của bài…" className={`mt-1 w-full rounded-xl bg-white/5 border px-3 py-2 text-sm outline-none focus:border-fuchsia-400/50 ${summary.trim() ? 'border-white/10' : 'border-amber-400/40'}`} />
+                <span className="text-[10px] text-zinc-500">✏️ Tóm tắt 1 câu — <b className="text-violet-300">bắt buộc</b>, AI dùng làm snippet khi trích dẫn</span>
+                <input value={summary} onChange={e => setSummary(e.target.value)} placeholder="Một câu nói lên cốt lõi của bài…" className={`mt-1 w-full rounded-xl bg-white/5 border px-3 py-2 text-sm outline-none focus:border-violet-400/50 ${summary.trim() ? 'border-white/10' : 'border-amber-400/40'}`} />
               </label>
               <label className="block">
                 <span className="text-[10px] text-zinc-500">🔗 Nguồn — sách / URL / người kể / tự trải nghiệm</span>
-                <input value={source} onChange={e => setSource(e.target.value)} placeholder="vd: sách Atomic Habits ch.3 · buổi event 9/6 · tự trải nghiệm" className="mt-1 w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2 text-sm outline-none focus:border-fuchsia-400/50" />
+                <input value={source} onChange={e => setSource(e.target.value)} placeholder="vd: sách Atomic Habits ch.3 · buổi event 9/6 · tự trải nghiệm" className="mt-1 w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2 text-sm outline-none focus:border-violet-400/50" />
               </label>
             </div>
 
@@ -539,7 +540,7 @@ export function Studio({ orgId, user, canEdit, canApprove, pages, onOpen, onRelo
               )}
               {sugLinks.filter(({ pg }) => !conns.some(c => c.id === pg.id)).length > 0 && (
                 <div className="flex flex-wrap gap-1.5 mb-1.5">
-                  {sugLinks.filter(({ pg }) => !conns.some(c => c.id === pg.id)).map(({ pg }) => <button key={pg.id} onClick={() => addConn(pg.id)} className="px-3 py-1.5 rounded-lg text-xs border bg-white/5 border-white/10 text-zinc-400 hover:border-fuchsia-400/40">✨ {pg.icon || '📄'} {pg.title} <span className="text-zinc-600">· máy gợi ý</span></button>)}
+                  {sugLinks.filter(({ pg }) => !conns.some(c => c.id === pg.id)).map(({ pg }) => <button key={pg.id} onClick={() => addConn(pg.id)} className="px-3 py-1.5 rounded-lg text-xs border bg-white/5 border-white/10 text-zinc-400 hover:border-violet-400/40">✨ {pg.icon || '📄'} {pg.title} <span className="text-zinc-600">· máy gợi ý</span></button>)}
                 </div>
               )}
               {conns.length === 0 && connResults.length === 0 && sugLinks.length === 0 && <p className="text-xs text-zinc-600">Chưa nối trang nào — bỏ qua được, nối sau trong trang cũng được.</p>}
@@ -569,7 +570,7 @@ export function Studio({ orgId, user, canEdit, canApprove, pages, onOpen, onRelo
             </div>
             <div className="flex gap-2">
               <button onClick={() => setStep(1)} className="rounded-xl bg-white/5 border border-white/10 px-4 py-2.5 text-sm text-zinc-400">← Sửa raw</button>
-              <button onClick={generate} disabled={!title.trim() || !summary.trim()} title={!summary.trim() ? 'Cần Tóm tắt 1 câu — trường bắt buộc theo chuẩn' : ''} className="flex-1 rounded-xl bg-gradient-to-r from-fuchsia-500 to-violet-500 py-2.5 text-sm font-bold disabled:opacity-40">🤖 AI tạo lại bản chuẩn →</button>
+              <button onClick={generate} disabled={!title.trim() || !summary.trim()} title={!summary.trim() ? 'Cần Tóm tắt 1 câu — trường bắt buộc theo chuẩn' : ''} className="flex-1 rounded-xl bg-gradient-to-r from-violet-600 via-blue-600 to-cyan-500 py-2.5 text-sm font-bold disabled:opacity-40">🤖 AI tạo lại bản chuẩn →</button>
             </div>
           </div>
         </Card>
@@ -740,7 +741,7 @@ export function Today({ user, stats, recent, pages, editorial = [], counts, onOp
       <p className="text-zinc-500 text-sm mb-6">Hôm nay bạn <b className="text-zinc-300">trải nghiệm</b> được điều gì?</p>
 
       {/* QUICK CAPTURE — hành động số 1 của mỗi ngày */}
-      <div className="rounded-2xl p-[1.5px] bg-gradient-to-r from-violet-500/60 via-fuchsia-500/40 to-cyan-500/60 mb-6 shadow-lg shadow-violet-500/10">
+      <div className="rounded-2xl p-[1.5px] bg-gradient-to-r from-violet-500/60 via-blue-600/40 to-cyan-500/60 mb-6 shadow-lg shadow-violet-500/10">
         <div className="rounded-2xl bg-[#0d0d18] flex items-center gap-2 px-4 py-1.5">
           <span className="text-xl">✍️</span>
           <input value={cap} onChange={e => setCap(e.target.value)}
