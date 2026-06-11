@@ -2,6 +2,20 @@
 
 > Ghi lại mỗi đợt build để lần sau làm tốt hơn. Quy trình chuẩn: **đọc docs → sửa code → `npm run build` → test thật trên preview (đăng nhập, bấm từng nút) → cập nhật docs**.
 
+## 2026-06-12 — 🌌 ĐÊM BUILD LỚN (5h tự hành, đa agent, deep research ×2)
+**Đã có git repo** (root, checkpoint từng phase — lần đầu dự án có version control).
+1. **Branding v2 "Vũ trụ Kim cương"** (docs/BRANDING.md): bỏ toàn bộ fuchsia/pink "quê" → quang phổ violet→blue→cyan→diamond + vàng hoàng đạo cho thời gian/Chuyển hoá; font Be Vietnam Pro + JetBrains Mono (subset vietnamese); tokens --ak-* + .ak-cta/.ak-grad; fix double-title (Studio không nhét `# title` vào md nữa, h1 thân bài 1.55em < title).
+2. **DB tái cấu trúc theo KHO-CHUAN §2bis**: 7 cây cá nhân (Hành trình/La bàn/Kim cương/Quan hệ/Tủ nguồn/Xưởng/Thịnh vượng — props.hub) + 6 nhánh nhân loại; xoá 5 trang rác; dọn double-title toàn DB.
+3. **Seed 194 trang data thật có hồn**: persona 30 tuổi đủ 5 chương đời + 8 cảnh McAdams + giá trị + Kim Chỉ Nam + hồ sơ người + tài chính; deep-research (7 agents, 100 tool calls) seed kho nhân loại 6 nhánh ~22 trang có nguồn, QNET facts public, **20 bài KOL Jobs/Gates ảnh Wikimedia**, ~100 hooks + kịch bản + title formulas, 21 câu hỏi brand voice; **45 links 8 chiều có excerpt** đan xuyên 3 kho.
+4. **Home mới**: account block đầu trang (role+Qi+streak) · AI-hiểu-bạn hero to với 6 vùng progress · khối "✅ Hôm nay bạn cần làm" GỘP (ôn + việc giao + bài trả + chờ duyệt; rỗng = 1 dòng) · ghi nhanh 3 LOẠI (trải nghiệm→Hành trình, insight→Kim cương, quote→Kim Chỉ Nam, đủ trường chuẩn) · widget quote sống từ Kim Chỉ Nam + số liệu · KOL preview 3 bài xoay theo ngày.
+5. **4 hub mới (Hubs.tsx)**: 🌟 KolFeed kiểu Instagram (stories row + grid ảnh + viewer + "rút insight → Kim cương bài học + tự link reference") · 🎛️ ContentEngine (ma trận content lưu node content_matrix + wizard 21 câu ghi vào "Tôi là ai" + thư viện hook copy 1 chạm + master prompt máy sinh + generator chiến lược 30/60/180 vào Xưởng content + pipeline media vẽ sẵn) · ✅ ReviewHub (kho › nhánh › ai viết › góp ý, màn xem-sửa-md-rồi-duyệt, approved_by) · 👥 MembersHub (cards theo cấp, toggle quyền, trang đang build, giao việc vòng đời giao→nộp→nghiệm thu + Qi).
+6. **Chuyển hoá**: toàn bộ UI Thấm → Chuyển hoá; Digest vốn đã 7 màn × 8 chiều.
+7. **Galaxy**: Dòng đời 3 làn rõ theo kho (NHÂN LOẠI/ĐỜI TÔI/QNET) + vạch ◆ HÔM NAY chia QUÁ KHỨ (chuyển hoá bài học) / TƯƠNG LAI (mốc cần lấp, sương vàng); Neuro xoay chậm 4.6× khi không kéo (user: "quay vòng vòng không nhìn được").
+8. **Rename Akash**: docs headers + package name; Supabase project rename cần dashboard (NOTES-FOUNDER §1).
+9. **Docs mới**: BRANDING.md · CONTENT-ENGINE.md (8 bước, model map) · NOTES-FOUNDER.md (việc founder + MCP + AI keys) · ROADMAP 3 phase mới.
+**Verify thật trên preview** (login admin, 1440px): Home/KOL/Engine/Review/Members đều render; rút insight KOL → DB đúng (Kim cương + 1 link); sinh lịch 30 ngày → vào Xưởng content; duyệt bài: sửa md được lưu + status published + approved_by ✅. **Bug bắt & fix khi test**: bấm chip ma trận nhanh tạo N node trùng (race trước khi có mxId) → ensureMatrixId + dọn DB còn 1.
+**Bug đã gặp**: Be_Vietnam_Pro cần weight tường minh; event_date năm -10000 vỡ timestamp (null hoá); node script ESM phải nằm trong web/ mới resolve node_modules.
+
 ## 2026-06-11 — 📂 Studio đợt 2: bước 2 hoàn thiện data nộp (user feedback)
 - **Cây folder chuyển lên bước 2** ngay dưới "Đưa vào đâu?" — bấm kho nào cây của kho đó bung ra như mind map (user yêu cầu); bước 3 chỉ còn dòng tóm tắt `Sẽ nạp vào: … › … · 🕸️ N liên kết` + nút "✎ đổi" quay lại bước 2.
 - **📋 Trường chuẩn ngay bước 2** (theo STANDARD-TEMPLATE.md): 📅 Ngày sự kiện (máy tự bắt "hôm nay/sáng nay…" → điền hôm nay; lưu cột `event_date`) · 🚩 Campaign (`props.campaign`) · ✏️ Tóm tắt 1 câu (máy lấy câu đầu raw; **bắt buộc** — thiếu thì viền hổ phách + khoá nút AI tạo) · 🔗 Nguồn. `generate()` đổ cả 4 vào head bản chuẩn.

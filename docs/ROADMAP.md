@@ -31,3 +31,25 @@
 1. **Giai đoạn 1 (đã xong):** điểm off-chain từ events — đổi thưởng nội bộ, leaderboard, milestone.
 2. **Giai đoạn 2:** snapshot Qi định kỳ + ký hash bảng điểm (proof) đăng công khai — minh bạch không cần ví.
 3. **Giai đoạn 3 (chỉ khi có lý do kinh tế thật):** mint điểm thành token trên chain rẻ (Base/Polygon), ví custodial cho user không rành crypto. ⚠️ lưu ý pháp lý VN về token + bản chất MLM — cần tư vấn trước khi phát hành. KHÔNG đưa nội dung kho lên chain (riêng tư), chỉ điểm/huy hiệu.
+
+---
+
+## 🚀 3 PHASE TIẾP THEO (chốt đêm build 2026-06-12 — sau khi đã có: 7 cây + 6 nhánh, Home mới, 4 hub, branding v2, 194 trang data thật)
+
+### Phase 1 — NGƯỜI THẬT (2 tuần): "5 user dùng thật, không gãy"
+- Deploy Vercel + rename Supabase project → Akash (NOTES-FOUNDER.md §1)
+- Wizard "Mục lục đời" (LSI McAdams — bộ câu hỏi đã sẵn KHO-CHUAN §2bis) làm onboarding user mới; user mới tự có 7 cây
+- Pilot 5–10 người thật; đo bằng events; North star: **số bài Chuyển hoá trọn/người/tuần**
+- Mobile drawer + polish responsive
+
+### Phase 2 — CẮM TRÍ TUỆ (3-4 tuần): "AI chạy thật qua ai_jobs"
+- Edge Function + key server-only (rule §B5): Haiku (Studio chuẩn hoá, phân loại inbox, gợi ý liên kết) → Sonnet (content theo Hồ sơ Hồn — master prompt đã build) → Opus (chiến lược campaign)
+- Chấm bản nháp 3 trục Hook/Hồn/Hành động; "Thấm cùng AI" phỏng vấn lấp vùng mù
+- Job dọn kho tuần: trang 0 link / inbox quá hạn / thiếu loại → đề xuất gộp/xoá
+- Embeddings/pgvector cho retrieval 8 chiều
+
+### Phase 3 — KHÉP VÒNG KINH DOANH (4-6 tuần): "đăng → đo → tinh chỉnh tự động"
+- Meta/TikTok API: đăng từ Board + kéo reach/lead về content_results gắn trang gốc
+- Dashboard kết quả theo campaign + vòng lặp "thành công nối tiếp thành công" (bài tốt → nhân bản định dạng)
+- Media pipeline thật (Flux/Kling/ElevenLabs qua ai_jobs) — luồng 8 bước trong CONTENT-ENGINE.md
+- Qi điểm minh bạch + bảng vinh danh đội nhóm (token hoá thật vẫn CHỜ lý do kinh tế + pháp lý, theo DECISIONS §A10)
