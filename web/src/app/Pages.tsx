@@ -152,8 +152,8 @@ export function Profile({ user }: { user: User }) {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
         <Card><Lbl>⚡ Qi điểm</Lbl><div className="text-3xl font-black bg-gradient-to-r from-amber-300 to-yellow-500 bg-clip-text text-transparent">{qi}</div><p className="text-[10px] text-zinc-600 mt-1">thấm 10 · content 5 · nối 3 · trang 1</p></Card>
         <Card><Lbl>🔥 Streak</Lbl><div className="text-3xl font-black">{streak}<span className="text-sm text-zinc-500"> ngày</span></div></Card>
-        <Card><Lbl>🏆 Tổng Độ Thấm</Lbl><div className="text-3xl font-black bg-gradient-to-r from-violet-400 to-cyan-300 bg-clip-text text-transparent">{total}</div></Card>
-        <Card><Lbl>🎓 Bài đã Thấm</Lbl><div className="text-3xl font-black">{learned}</div></Card>
+        <Card><Lbl>🏆 Tổng Độ Chuyển hoá</Lbl><div className="text-3xl font-black bg-gradient-to-r from-violet-400 to-cyan-300 bg-clip-text text-transparent">{total}</div></Card>
+        <Card><Lbl>🎓 Bài đã chuyển hoá</Lbl><div className="text-3xl font-black">{learned}</div></Card>
       </div>
       <VoiceCard me={user.id} />
       <Card className="mb-4">
@@ -699,23 +699,37 @@ export function Studio({ orgId, user, canEdit, canApprove, pages, onOpen, onRelo
 
 /* ---------- TODAY (trung tâm hành động — không trùng chức năng kho) ---------- */
 type TodayNode = N & { icon?: string | null }
-export function Today({ user, stats, recent, pages, editorial = [], counts, onOpen, onCapture, onGalaxy, onDigest, onRaw }: {
+const CAP_TYPES: [string, string, string][] = [
+  ['exp', '🌱 Trải nghiệm', 'Chuyện vừa xảy ra — vào 📓 Hành trình của tôi'],
+  ['insight', '💎 Insight', 'Ý chợt loé — vào 💎 Kim cương bài học'],
+  ['quote', '💬 Quote đắt', 'Câu nói hay vừa nghe/đọc — kèm nguồn'],
+]
+export function Today({ user, role, stats, recent, pages, editorial = [], counts, onOpen, onOpenId, onCapture, onGalaxy, onDigest, onRaw, onKolAll }: {
   user: User
-  stats: { pages: number; notes: number; links: number }
+  role?: { level: number; can_edit: boolean; can_approve: boolean } | null
+  stats: { pages: number; notes: number; links: number; dims?: number }
   recent: TodayNode[]
-  pages: TodayNode[]            // note cá nhân — để tính "cần thẩm thấu"
+  pages: TodayNode[]            // note cá nhân — để tính "cần chuyển hoá"
   editorial?: (TodayNode & { status?: string; note?: string })[]
-  counts?: { values: number; mantras: number; people: number; dated: number }
+  counts?: { values: number; mantras: number; people: number; dated: number; pendingAll?: number }
   onOpen: (n: TodayNode) => void
-  onCapture: (title: string) => void
+  onOpenId: (id: string) => void
+  onCapture: (title: string, type?: string, source?: string) => void
   onGalaxy: () => void
   onDigest: (n: TodayNode) => void
   onRaw?: () => void
+  onKolAll?: () => void
 }) {
   const [learnedIds, setLearnedIds] = useState<Set<string>>(new Set())
   const [dueIds, setDueIds] = useState<string[]>([])
   const [streak, setStreak] = useState(0)
+  const [qi, setQi] = useState(0)
   const [cap, setCap] = useState('')
+  const [capType, setCapType] = useState('exp')
+  const [capSrc, setCapSrc] = useState('')
+  const [myAsg, setMyAsg] = useState<{ id: string; title: string; due: string | null; node_id?: string | null }[]>([])
+  const [kol, setKol] = useState<{ id: string; title: string; props: Record<string, unknown> }[]>([])
+  const [quote, setQuote] = useState<{ text: string; from: string; id: string } | null>(null)
   const [qaOpen, setQaOpen] = useState(false)
   const [qaAns, setQaAns] = useState(['', '', ''])
   useEffect(() => {
@@ -723,137 +737,163 @@ export function Today({ user, stats, recent, pages, editorial = [], counts, onOp
       setLearnedIds(new Set((data ?? []).filter(d => d.learned).map(d => d.node_id as string)))
       setDueIds((data ?? []).filter(d => d.learned && d.next_review_at && new Date(d.next_review_at as string) <= new Date()).map(d => d.node_id as string))
     })
-    supabase.from('events').select('ts').eq('user_id', user.id).order('ts', { ascending: false }).limit(500).then(({ data }) => {
+    supabase.from('events').select('ts,type').eq('user_id', user.id).order('ts', { ascending: false }).limit(500).then(({ data }) => {
       const days = new Set((data ?? []).map(e => new Date(e.ts as string).toDateString()))
       let st = 0; const d = new Date()
       while (days.has(d.toDateString())) { st++; d.setDate(d.getDate() - 1) }
       setStreak(st)
+      const PT2: Record<string, number> = { digest: 10, content: 5, link: 3, create: 1 }
+      setQi(Math.round((data ?? []).reduce((s, e) => s + (PT2[e.type as string] ?? 0), 0)))
+    })
+    supabase.from('assignments').select('id,title,due,node_id,status,assignee').eq('assignee', user.id).neq('status', 'done').limit(5).then(({ data }) => setMyAsg((data as { id: string; title: string; due: string | null; node_id?: string | null }[]) ?? []))
+    supabase.from('nodes').select('id,title,props').eq('subtype', 'kol_post').order('created_at', { ascending: false }).limit(30).then(({ data }) => {
+      const all = (data as { id: string; title: string; props: Record<string, unknown> }[]) ?? []
+      // xoay theo ngày để feed luôn mới
+      const day = Math.floor(Date.now() / 86400000)
+      setKol(all.length ? [0, 1, 2].map(i => all[(day * 3 + i) % all.length]) : [])
+    })
+    // quote sống: lấy 1 câu từ Kim Chỉ Nam
+    supabase.from('nodes').select('id,md,title').eq('owner_id', user.id).eq('subtype', 'anchor_home').limit(1).maybeSingle().then(({ data }) => {
+      const qs = (data?.md ?? '').split('\n').filter((l: string) => l.startsWith('> '))
+      if (qs.length) { const day = Math.floor(Date.now() / 86400000); setQuote({ text: qs[day % qs.length].slice(2), from: 'Kim Chỉ Nam của bạn', id: data!.id as string }) }
     })
   }, [user.id])
   const hour = new Date().getHours()
   const greet = hour < 11 ? 'Chào buổi sáng' : hour < 14 ? 'Chào buổi trưa' : hour < 18 ? 'Chào buổi chiều' : 'Chào buổi tối'
-  const unlearned = pages.filter(p => !learnedIds.has(p.id)).slice(0, 5)
   const learnedCount = pages.filter(p => learnedIds.has(p.id)).length
+  // gợi ý chuyển hoá: ưu tiên trang có event_date gần + chưa chuyển hoá (heuristic — AI thật thay sau)
+  const sugDigest = pages.filter(p => !learnedIds.has(p.id)).slice(0, 3).map((p, i) => ({ n: p, why: ['mới ghi gần nhất — chuyển hoá khi còn nóng', 'chưa nối chiều nào — đang là trang mồ côi', 'cùng mạch với bài bạn vừa chuyển hoá'][i] ?? 'tới lượt' }))
   const pct = pages.length ? Math.round((learnedCount / pages.length) * 100) : 0
+  const roleName = role?.level === 5 ? '👑 Admin' : role?.can_approve ? '✅ Tổng biên tập' : role?.can_edit ? '✏️ Biên tập viên' : '🌱 Thành viên'
+  // ===== KHỐI CẦN LÀM (chỉ những việc THẬT) =====
+  const todos: { icon: string; label: string; sub?: string; act: () => void; cta: string }[] = []
+  for (const id of dueIds.slice(0, 3)) { const n = pages.find(p2 => p2.id === id) ?? recent.find(p2 => p2.id === id); if (n) todos.push({ icon: '🔁', label: `Ôn lại: ${n.title || 'Trang'}`, sub: 'đến hạn ôn theo lịch nhớ lâu', act: () => onDigest(n), cta: 'Ôn ngay' }) }
+  for (const a of myAsg.slice(0, 3)) todos.push({ icon: '📋', label: a.title, sub: a.due ? `việc được giao · hạn ${new Date(a.due).toLocaleDateString('vi')}` : 'việc được giao', act: () => { if (a.node_id) onOpenId(a.node_id) }, cta: 'Mở việc' })
+  for (const n of editorial.filter(e => e.status === 'draft').slice(0, 2)) todos.push({ icon: '🔁', label: `Sửa & nộp lại: ${n.title || 'Trang'}`, sub: (n as { note?: string }).note ? `BTV góp ý: ${(n as { note?: string }).note}` : 'bài bị trả lại', act: () => onOpen(n), cta: 'Sửa ngay' })
+  if (role?.can_approve && (counts?.pendingAll ?? 0) > 0) todos.push({ icon: '📨', label: `${counts!.pendingAll} bài chờ bạn duyệt`, sub: 'thành viên đang đợi', act: () => onRaw?.(), cta: 'Vào duyệt' })
   return (
     <div className="p-8 max-w-4xl mx-auto">
-      <h1 className="text-3xl font-extrabold mb-1">{greet}, {user.email?.split('@')[0]} 👋</h1>
-      <p className="text-zinc-500 text-sm mb-6">Hôm nay bạn <b className="text-zinc-300">trải nghiệm</b> được điều gì?</p>
-
-      {/* QUICK CAPTURE — hành động số 1 của mỗi ngày */}
-      <div className="rounded-2xl p-[1.5px] bg-gradient-to-r from-violet-500/60 via-blue-600/40 to-cyan-500/60 mb-6 shadow-lg shadow-violet-500/10">
-        <div className="rounded-2xl bg-[#0d0d18] flex items-center gap-2 px-4 py-1.5">
-          <span className="text-xl">✍️</span>
-          <input value={cap} onChange={e => setCap(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter' && cap.trim()) { onCapture(cap.trim()); setCap('') } }}
-            placeholder="Ghi nhanh 1 trải nghiệm / bài học hôm nay… (Enter để tạo trang)"
-            className="flex-1 bg-transparent outline-none py-3 text-sm placeholder:text-zinc-600" />
-          <button onClick={() => { if (cap.trim()) { onCapture(cap.trim()); setCap('') } }} disabled={!cap.trim()}
-            className="rounded-xl bg-gradient-to-r from-violet-500 to-cyan-500 px-4 py-2 text-xs font-bold disabled:opacity-40">Tạo trang</button>
+      {/* ===== ACCOUNT ngay đầu Home ===== */}
+      <div className="flex items-center gap-4 mb-6">
+        <div className="w-12 h-12 rounded-2xl ak-grad grid place-items-center text-lg font-black text-white shadow-lg shadow-violet-500/30 shrink-0">{(user.email ?? 'A')[0].toUpperCase()}</div>
+        <div className="min-w-0 flex-1">
+          <h1 className="text-2xl font-extrabold truncate">{greet}, {user.email?.split('@')[0]} 👋</h1>
+          <div className="flex items-center gap-2 text-[11px] text-zinc-500 flex-wrap">
+            <span className="rounded-lg bg-white/5 border border-white/10 px-2 py-0.5">{roleName}</span>
+            <span className="text-amber-300 font-semibold">⚡ {qi} Qi</span>
+            <span className={streak > 0 ? 'text-orange-300' : ''}>🔥 {streak} ngày liên tục</span>
+          </div>
         </div>
       </div>
 
-      {/* AI HIỂU BẠN % + ĐẾN HẠN ÔN + RAW (vòng lặp mỗi sáng) */}
-      <div className="grid sm:grid-cols-3 gap-3 mb-4">
-        {(() => {
-          const c = counts ?? { values: 0, mantras: 0, people: 0, dated: 0 }
-          const parts: [string, number, number, string][] = [
-            ['⭐ Giá trị cốt lõi (≥3)', Math.min(1, c.values / 3) * 20, 20, 'Thấm 1 bài → màn Hồn cốt'],
-            ['⚓ Kim chỉ nam (≥3)', Math.min(1, c.mantras / 3) * 15, 15, 'viết mantra khi Thấm'],
-            ['🎓 Bài đã Thấm (≥10)', Math.min(1, learnedIds.size / 10) * 25, 25, 'Thấm đều mỗi ngày'],
-            ['👥 Người thật (≥5)', Math.min(1, c.people / 5) * 15, 15, 'kể chuyện người khi Thấm'],
-            ['🔥 Streak (≥7 ngày)', Math.min(1, streak / 7) * 15, 15, 'mỗi ngày 1 hành động'],
-            ['📅 Mốc đời (≥5)', Math.min(1, c.dated / 5) * 10, 10, 'gắn ngày sự kiện cho trang'],
-          ]
-          const pctAI = Math.round(parts.reduce((s2, p2) => s2 + p2[1], 0))
-          const missing = parts.filter(p2 => p2[1] < p2[2])[0]
-          return (
-            <Card className="flex items-center gap-4">
-              <svg width="74" height="74" viewBox="0 0 74 74" className="shrink-0 -rotate-90">
-                <circle cx="37" cy="37" r="31" fill="none" stroke="rgba(127,127,160,.15)" strokeWidth="7" />
-                <circle cx="37" cy="37" r="31" fill="none" stroke="url(#aig)" strokeWidth="7" strokeLinecap="round" strokeDasharray={`${pctAI * 1.948} 999`} />
-                <defs><linearGradient id="aig"><stop offset="0%" stopColor="#8b5cf6" /><stop offset="100%" stopColor="#22d3ee" /></linearGradient></defs>
-              </svg>
-              <div className="min-w-0">
-                <div className="text-2xl font-black bg-gradient-to-r from-violet-400 to-cyan-300 bg-clip-text text-transparent">{pctAI}%</div>
-                <Lbl>🤖 AI hiểu bạn</Lbl>
-                {missing && <p className="text-[10px] text-zinc-500 leading-snug mb-1.5">Tăng tiếp: <b className="text-zinc-300">{missing[0]}</b> — {missing[3]}</p>}
-                <div className="flex flex-wrap gap-1">
-                  <button onClick={() => setQaOpen(true)} className="text-[10px] rounded-lg bg-gradient-to-r from-violet-500 to-cyan-500 px-2 py-1 font-bold">💬 Trả lời 3 câu hôm nay</button>
-                  <button disabled title="Kết nối FB/Insta/YouTube để AI đọc giọng content của bạn — khi cắm API" className="text-[10px] rounded-lg bg-white/5 border border-white/10 px-2 py-1 text-zinc-600">🔗 FB/Insta · soon</button>
+      {/* ===== GHI NHANH có loại + nguồn (không sơ sài) ===== */}
+      <div className="rounded-2xl p-[1.5px] bg-gradient-to-r from-violet-500/60 via-blue-600/40 to-cyan-500/60 mb-3 shadow-lg shadow-violet-500/10">
+        <div className="rounded-2xl bg-[#0d0d18] px-4 py-3">
+          <div className="flex gap-1.5 mb-2">
+            {CAP_TYPES.map(([k, l, hint]) => <button key={k} onClick={() => setCapType(k)} title={hint} className={`text-[10px] rounded-lg px-2.5 py-1 border transition ${capType === k ? 'bg-violet-500/25 border-violet-400/50 text-white font-bold' : 'bg-white/5 border-white/10 text-zinc-500'}`}>{l}</button>)}
+            <span className="ml-auto text-[10px] text-zinc-600 self-center hidden sm:inline">{CAP_TYPES.find(c => c[0] === capType)?.[2]}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xl">{capType === 'exp' ? '✍️' : capType === 'insight' ? '💎' : '💬'}</span>
+            <input value={cap} onChange={e => setCap(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter' && cap.trim()) { onCapture(cap.trim(), capType, capSrc.trim()); setCap(''); setCapSrc('') } }}
+              placeholder={capType === 'exp' ? 'Chuyện gì vừa xảy ra với bạn?…' : capType === 'insight' ? 'Insight vừa loé lên — viết một câu cho rõ…' : 'Dán nguyên văn câu quote đắt…'}
+              className="flex-1 bg-transparent outline-none py-1.5 text-sm placeholder:text-zinc-600" />
+            <button onClick={() => { if (cap.trim()) { onCapture(cap.trim(), capType, capSrc.trim()); setCap(''); setCapSrc('') } }} disabled={!cap.trim()}
+              className="rounded-xl ak-cta px-4 py-2 text-xs font-bold disabled:opacity-40">Nạp vào kho</button>
+          </div>
+          {capType === 'quote' && <input value={capSrc} onChange={e => setCapSrc(e.target.value)} placeholder="Nguồn: ai nói / sách nào / link…" className="mt-2 w-full rounded-lg bg-white/5 border border-white/10 px-3 py-1.5 text-xs outline-none focus:border-amber-400/40" />}
+        </div>
+      </div>
+      <p className="text-[10px] text-zinc-600 mb-5 px-1">Mẹo bắt insight: ghi NGAY trong 30 giây khi nó loé — kèm bối cảnh "đang làm gì lúc nghĩ ra" để sau này kể lại được.</p>
+
+      {/* ===== AI HIỂU BẠN — hero to rõ ===== */}
+      {(() => {
+        const c = counts ?? { values: 0, mantras: 0, people: 0, dated: 0 }
+        const parts: [string, number, number, string][] = [
+          ['⭐ Giá trị cốt lõi', Math.min(1, c.values / 3) * 20, 20, 'định nghĩa ≥3 giá trị'],
+          ['⚓ Kim chỉ nam', Math.min(1, c.mantras / 3) * 15, 15, 'viết châm ngôn khi Chuyển hoá'],
+          ['💎 Bài đã chuyển hoá', Math.min(1, learnedIds.size / 10) * 25, 25, 'đều tay mỗi ngày'],
+          ['👥 Người thật', Math.min(1, c.people / 5) * 15, 15, 'kể chuyện người thật'],
+          ['🔥 Nhịp sống', Math.min(1, streak / 7) * 15, 15, 'mỗi ngày 1 hành động'],
+          ['📅 Mốc đời', Math.min(1, c.dated / 5) * 10, 10, 'gắn ngày thật cho trang'],
+        ]
+        const pctAI = Math.round(parts.reduce((s2, p2) => s2 + p2[1], 0))
+        return (
+          <Card className="mb-4 !p-6">
+            <div className="flex items-center gap-6 flex-wrap">
+              <div className="relative shrink-0">
+                <svg width="132" height="132" viewBox="0 0 132 132" className="-rotate-90">
+                  <circle cx="66" cy="66" r="56" fill="none" stroke="rgba(127,127,160,.12)" strokeWidth="11" />
+                  <circle cx="66" cy="66" r="56" fill="none" stroke="url(#aig)" strokeWidth="11" strokeLinecap="round" strokeDasharray={`${pctAI * 3.519} 999`} />
+                  <defs><linearGradient id="aig"><stop offset="0%" stopColor="#8b5cf6" /><stop offset="50%" stopColor="#3b82f6" /><stop offset="100%" stopColor="#22d3ee" /></linearGradient></defs>
+                </svg>
+                <div className="absolute inset-0 grid place-items-center -mt-1">
+                  <div className="text-center"><div className="text-3xl font-black ak-grad-text">{pctAI}%</div><div className="text-[9px] uppercase tracking-widest text-zinc-500">AI hiểu bạn</div></div>
                 </div>
               </div>
-            </Card>
-          )
-        })()}
-        <Card>
-          <Lbl>⏰ Đến hạn ôn hôm nay ({dueIds.length})</Lbl>
-          {dueIds.length === 0 ? <p className="text-xs text-zinc-600 mt-1">Chưa có bài nào tới hạn — tuyệt!</p> : (
-            <div className="space-y-1 mt-1">
-              {dueIds.slice(0, 3).map(id => {
-                const n = pages.find(p2 => p2.id === id) ?? recent.find(p2 => p2.id === id)
-                return n ? (
-                  <button key={id} onClick={() => onDigest(n)} className="w-full text-left text-xs rounded-lg bg-white/[0.04] border border-white/10 px-2.5 py-1.5 hover:border-violet-400/40 truncate">🔁 {n.title || 'Trang'}</button>
-                ) : null
-              })}
-              {dueIds.length > 3 && <p className="text-[10px] text-zinc-600">+{dueIds.length - 3} bài nữa</p>}
+              <div className="flex-1 min-w-[230px]">
+                <div className="text-sm font-bold mb-0.5">🤖 AI đang hiểu bạn đến đâu?</div>
+                <p className="text-[11px] text-zinc-500 mb-3">AI chỉ được viết content bằng giọng bạn từ vùng nó ĐÃ hiểu. Lấp đầy 6 vùng để mở khoá:</p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 mb-3">
+                  {parts.map(([lb, v, max, hint]) => (
+                    <div key={lb} title={hint} className="rounded-lg bg-white/[0.04] border border-white/10 px-2 py-1.5">
+                      <div className="text-[10px] text-zinc-400 truncate">{lb}</div>
+                      <div className="h-1 rounded-full bg-white/10 mt-1 overflow-hidden"><div className={`h-full ${v >= max ? 'bg-emerald-400' : 'ak-grad'}`} style={{ width: `${(v / max) * 100}%` }} /></div>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  <button onClick={() => setQaOpen(true)} className="text-[11px] rounded-lg ak-cta px-3 py-1.5 font-bold">💬 Trả lời 3 câu hôm nay</button>
+                  <button disabled title="Kết nối FB/Insta để AI đọc giọng content — khi cắm API" className="text-[11px] rounded-lg bg-white/5 border border-white/10 px-3 py-1.5 text-zinc-600">🔗 FB/Insta · soon</button>
+                </div>
+              </div>
             </div>
-          )}
-        </Card>
-        <Card>
-          <Lbl>⚡ Nạp dữ liệu & xét duyệt</Lbl>
-          {editorial.length > 0 ? (
-            <div className="space-y-1 mb-2">
-              {editorial.slice(0, 2).map(n => (
-                <button key={n.id} onClick={() => onOpen(n)} className="w-full text-left rounded-lg bg-white/[0.04] border border-white/10 px-2 py-1.5 hover:border-amber-400/40">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] shrink-0">{n.status === 'pending' ? '⏳' : '📝'}</span>
-                    <span className="flex-1 text-[11px] truncate text-zinc-300">{n.title}</span>
-                  </div>
-                  {n.note && <p className="text-[10px] text-amber-200/80 truncate mt-0.5">💬 BTV: {n.note}</p>}
-                </button>
-              ))}
-            </div>
-          ) : <p className="text-[11px] text-zinc-500 leading-snug mb-2">Chưa có bài chờ duyệt. Raw → AI tạo bản chuẩn → bạn duyệt → nộp.</p>}
-          <button onClick={onRaw} className="w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2 text-xs font-bold text-zinc-300 hover:bg-white/10">↓ Tới khu nạp liệu</button>
-        </Card>
-      </div>
+          </Card>
+        )
+      })()}
 
-      {/* BÀI CỦA TÔI VỚI BAN BIÊN TẬP */}
-      {editorial.length > 0 && (
-        <Card className="mb-4">
-          <Lbl>📨 Bài của tôi với ban biên tập ({editorial.length})</Lbl>
+      {/* ===== HÔM NAY BẠN CẦN LÀM — gộp ôn + việc giao + bài trả + duyệt; rỗng thì 1 dòng ===== */}
+      {todos.length > 0 ? (
+        <Card className="mb-4 border-amber-400/20">
+          <Lbl>✅ Hôm nay bạn cần làm ({todos.length})</Lbl>
           <div className="space-y-1.5">
-            {editorial.map(n => (
-              <button key={n.id} onClick={() => onOpen(n)} className="w-full text-left rounded-xl px-3 py-2 bg-white/[0.03] border border-white/10 hover:border-amber-400/40 transition flex items-center gap-2">
-                <span className="text-lg shrink-0">{n.icon || '📄'}</span>
-                <span className="flex-1 text-sm truncate">{n.title || 'Trang'}</span>
-                {n.status === 'pending'
-                  ? <span className="text-[10px] rounded bg-amber-500/15 border border-amber-400/30 text-amber-300 px-1.5 py-0.5 shrink-0">⏳ chờ duyệt</span>
-                  : <span className="text-[10px] rounded bg-zinc-500/15 border border-zinc-400/30 text-zinc-400 px-1.5 py-0.5 shrink-0" title={n.note}>📝 bị trả lại{n.note ? ' · có góp ý' : ''}</span>}
-              </button>
+            {todos.map((t, i) => (
+              <div key={i} className="flex items-center gap-2.5 rounded-xl bg-white/[0.03] border border-white/10 px-3 py-2 hover:border-amber-400/40 transition">
+                <span className="text-lg shrink-0">{t.icon}</span>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm truncate text-zinc-200">{t.label}</div>
+                  {t.sub && <div className="text-[10px] text-zinc-500 truncate">{t.sub}</div>}
+                </div>
+                <button onClick={t.act} className="text-[10px] rounded-lg bg-gradient-to-r from-amber-500 to-yellow-400 text-black px-2.5 py-1 font-bold shrink-0">{t.cta}</button>
+              </div>
             ))}
           </div>
         </Card>
+      ) : (
+        <p className="text-xs text-zinc-600 mb-4 px-1">✨ Hôm nay chưa có việc tồn — ghi một trải nghiệm mới hoặc chuyển hoá một bài bên dưới.</p>
       )}
 
       <div className="grid lg:grid-cols-2 gap-4 mb-4">
-        {/* CẦN THẨM THẤU — việc học hôm nay */}
+        {/* CẦN CHUYỂN HOÁ — máy đề xuất 3 bài kèm lý do */}
         <Card>
           <div className="flex items-center justify-between mb-2">
-            <Lbl>🎓 Cần thẩm thấu ({unlearned.length ? `${pages.length - learnedCount} bài` : 'xong!'})</Lbl>
-            <span className="text-[10px] text-zinc-600">{pct}% kho đã Thấm</span>
+            <Lbl>🔥 Cần chuyển hoá</Lbl>
+            <span className="text-[10px] text-zinc-600">{pct}% kho đã chuyển hoá</span>
           </div>
-          <div className="h-1.5 rounded-full bg-white/5 mb-3 overflow-hidden"><div className="h-full bg-gradient-to-r from-violet-500 to-cyan-400 transition-all" style={{ width: `${pct}%` }} /></div>
+          <div className="h-1.5 rounded-full bg-white/5 mb-3 overflow-hidden"><div className="h-full bg-gradient-to-r from-amber-500 to-yellow-400 transition-all" style={{ width: `${pct}%` }} /></div>
           <div className="space-y-1.5">
-            {unlearned.map(n => (
-              <div key={n.id} className="flex items-center gap-2 rounded-xl bg-white/[0.03] border border-white/10 px-3 py-2 hover:border-violet-400/40 transition group">
-                <span className="text-lg shrink-0">{n.icon || '📄'}</span>
-                <button onClick={() => onOpen(n)} className="flex-1 text-left text-sm truncate text-zinc-300 hover:text-white">{n.title || 'Trang'}</button>
-                <button onClick={() => onDigest(n)} className="opacity-0 group-hover:opacity-100 text-[10px] rounded-lg bg-gradient-to-r from-violet-500 to-cyan-500 px-2.5 py-1 font-bold shrink-0">Thấm ngay</button>
+            {sugDigest.map(({ n, why }) => (
+              <div key={n.id} className="rounded-xl bg-white/[0.03] border border-white/10 px-3 py-2 hover:border-amber-400/40 transition group">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg shrink-0">{n.icon || '📄'}</span>
+                  <button onClick={() => onOpen(n)} className="flex-1 text-left text-sm truncate text-zinc-300 hover:text-white">{n.title || 'Trang'}</button>
+                  <button onClick={() => onDigest(n)} className="text-[10px] rounded-lg bg-gradient-to-r from-amber-500 to-yellow-400 text-black px-2.5 py-1 font-bold shrink-0">Chuyển hoá</button>
+                </div>
+                <p className="text-[10px] text-zinc-600 pl-7">vì: {why}</p>
               </div>
             ))}
-            {unlearned.length === 0 && <p className="text-xs text-zinc-600 py-3 text-center">🏆 Mọi bài đều đã thẩm thấu. Viết trải nghiệm mới đi!</p>}
+            {sugDigest.length === 0 && <p className="text-xs text-zinc-600 py-3 text-center">🏆 Mọi bài đều đã chuyển hoá. Viết trải nghiệm mới đi!</p>}
           </div>
         </Card>
 
@@ -872,19 +912,47 @@ export function Today({ user, stats, recent, pages, editorial = [], counts, onOp
         </Card>
       </div>
 
-      {/* dải số liệu + galaxy mini-cta */}
-      <div className="flex items-center gap-3 rounded-2xl bg-white/[0.03] border border-white/10 px-5 py-3.5 mb-4 text-sm">
-        <span className="text-zinc-400">📄 <b className="text-white">{stats.pages}</b> trang</span>
-        <span className="text-zinc-700">·</span>
-        <span className="text-zinc-400">📝 <b className="text-white">{stats.notes}</b> note</span>
-        <span className="text-zinc-700">·</span>
-        <span className="text-zinc-400">🕸️ <b className="bg-gradient-to-r from-violet-400 to-cyan-300 bg-clip-text text-transparent">{stats.links}</b> liên kết</span>
-        <button onClick={onGalaxy} className="ml-auto text-xs rounded-xl bg-white/10 border border-white/10 px-3 py-1.5 hover:bg-white/15">🌌 Mở Galaxy</button>
+      {/* ===== WIDGET: quote sống + số thú vị ===== */}
+      <div className="grid sm:grid-cols-[1.4fr_1fr] gap-3 mb-4">
+        {quote ? (
+          <button onClick={() => onOpenId(quote.id)} className="text-left rounded-2xl bg-gradient-to-br from-amber-500/10 to-transparent border border-amber-400/20 px-5 py-4 hover:border-amber-400/50 transition">
+            <div className="text-[10px] uppercase tracking-widest text-amber-300/70 mb-1">⚓ Hôm nay nhớ lấy câu này</div>
+            <p className="text-sm text-amber-100/90 italic leading-relaxed">“{quote.text}”</p>
+            <p className="text-[10px] text-zinc-600 mt-1">— {quote.from}</p>
+          </button>
+        ) : (
+          <div className="rounded-2xl bg-white/[0.03] border border-white/10 px-5 py-4"><p className="text-xs text-zinc-600">⚓ Chưa có châm ngôn nào — viết câu đầu tiên khi Chuyển hoá một bài.</p></div>
+        )}
+        <div className="rounded-2xl bg-white/[0.03] border border-white/10 px-5 py-4 grid grid-cols-3 gap-2 text-center">
+          <div><div className="text-xl font-black text-white">{stats.pages}</div><div className="text-[9px] uppercase tracking-wider text-zinc-600">trang</div></div>
+          <div><div className="text-xl font-black ak-grad-text">{stats.links}</div><div className="text-[9px] uppercase tracking-wider text-zinc-600">liên kết</div></div>
+          <button onClick={onGalaxy} className="rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 grid place-items-center"><span className="text-base">🌌</span><span className="text-[9px] text-zinc-500">Galaxy</span></button>
+        </div>
       </div>
 
-      <Card><Lbl>📡 KOL feed (Phase 2)</Lbl>
-        <p className="text-sm text-zinc-400">Cập nhật từ lãnh đạo QNET & idol bạn chọn — đọc xong take-note ngay.</p>
-      </Card>
+      {/* ===== KOL FEED — đọc người khổng lồ, rút insight ===== */}
+      {kol.length > 0 && (
+        <Card className="mb-4">
+          <div className="flex items-center justify-between mb-2">
+            <Lbl>🌟 Người khổng lồ hôm nay</Lbl>
+            <button onClick={onKolAll} className="text-[10px] rounded-lg bg-white/5 border border-white/10 px-2.5 py-1 text-zinc-400 hover:text-white">Xem cả feed →</button>
+          </div>
+          <div className="grid sm:grid-cols-3 gap-2.5">
+            {kol.map(k => {
+              const img = k.props?.image_url as string | undefined
+              return (
+                <button key={k.id} onClick={() => onOpenId(k.id)} className="text-left rounded-xl overflow-hidden bg-white/[0.03] border border-white/10 hover:border-violet-400/50 transition group">
+                  {img && <div className="h-24 bg-black/40 overflow-hidden"><img src={img} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" /></div>}
+                  <div className="p-2.5">
+                    <div className="text-[11px] font-semibold leading-snug line-clamp-2">{k.title}</div>
+                    <div className="text-[9px] text-zinc-600 mt-1">{(k.props?.kol as string) === 'steve-jobs' ? '🍎 Steve Jobs' : '🪟 Bill Gates'} · {k.props?.year as string}</div>
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+        </Card>
+      )}
 
       {/* 💬 3 CÂU MỖI NGÀY — AI nắm dần con người bạn */}
       {qaOpen && (() => {
@@ -962,7 +1030,7 @@ export function Engine({ folders }: { folders: N[] }) {
           {folders.slice(0, 12).map(f => <span key={f.id} className="text-xs rounded-lg bg-white/5 border border-white/10 px-3 py-1.5">📂 {f.title}</span>)}
           {folders.length === 0 && <span className="text-xs text-zinc-500">Tạo & học bài ở kho tri thức trước.</span>}
         </div>
-        <p className="text-xs text-zinc-600 mt-3">Chỉ bài Độ Thấm cao mới đủ điều kiện sinh content (cổng chất lượng).</p>
+        <p className="text-xs text-zinc-600 mt-3">Chỉ bài Độ Chuyển hoá cao mới đủ điều kiện sinh content (cổng chất lượng).</p>
       </Card>
     </div>
   )

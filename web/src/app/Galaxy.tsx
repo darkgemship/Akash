@@ -337,9 +337,9 @@ export default function Galaxy({ nodes, links, onOpen, onConnect }: {
       if (frame % 30 === 0 && emaDt > 26 && qual > 0.5) { qual -= 0.25; layout() }
       let nBeat = 0, nFireCl = -1, nFire = 0  // nhịp tim + vùng đang "firing"
       ctx.clearRect(0, 0, cv.width, cv.height)
-      // 🧠 NEURO: tự xoay + chiếu phối cảnh → ghi đè toạ độ pts (mọi vẽ/hit-test dùng chung)
+      // 🧠 NEURO: xoay RẤT chậm để đọc được (user feedback: "quay vòng vòng không nhìn được") — kéo nền để tự xoay
       if (mode === 'neuro') {
-        rotRef.current.a += 0.0028 * dtMs / 16.7
+        if (!panning.current) rotRef.current.a += 0.0006 * dtMs / 16.7
         const { a, b } = rotRef.current
         const ca = Math.cos(a), sa = Math.sin(a), cb = Math.cos(b), sb = Math.sin(b)
         const W2 = cv.clientWidth, H2 = cv.clientHeight
@@ -532,6 +532,33 @@ export default function Galaxy({ nodes, links, onOpen, onConnect }: {
           ctx.beginPath(); ctx.moveTo(SX(pp.x), SY(pp.y)); ctx.lineTo(SX(pp.x), SY(ySpine)); ctx.stroke()
           ctx.fillStyle = '#60a5fa'; ctx.beginPath(); ctx.arc(SX(pp.x), SY(ySpine), 2 * dpr, 0, 6.28); ctx.fill()
         })
+        // ===== HÔM NAY: vạch kim cương chia QUÁ KHỨ / TƯƠNG LAI; tương lai nhuộm vàng nhẹ =====
+        const nowTm = Date.now()
+        if (nowTm > mn && nowTm < mx) {
+          const xNow = X(nowTm)
+          // vùng tương lai — sương vàng
+          const fg = ctx.createLinearGradient(SX(xNow), 0, SX(W - 60), 0)
+          fg.addColorStop(0, 'rgba(245,185,66,.07)'); fg.addColorStop(1, 'rgba(245,185,66,.015)')
+          ctx.fillStyle = fg; ctx.fillRect(SX(xNow), 0, SX(W - 60) - SX(xNow), cv.height)
+          // vạch hôm nay
+          ctx.strokeStyle = 'rgba(245,185,66,.55)'; ctx.lineWidth = 1.5 * dpr
+          ctx.setLineDash([6 * dpr, 5 * dpr])
+          ctx.beginPath(); ctx.moveTo(SX(xNow), SY(40)); ctx.lineTo(SX(xNow), SY(H - 30)); ctx.stroke()
+          ctx.setLineDash([])
+          const gNow = glowSprite('#f5b942')
+          ctx.drawImage(gNow, SX(xNow) - 11 * dpr, SY(ySpine) - 11 * dpr, 22 * dpr, 22 * dpr)
+          ctx.fillStyle = '#f5b942'; ctx.font = `bold ${9.5 * dpr}px monospace`; ctx.textAlign = 'center'
+          ctx.fillText('◆ HÔM NAY', SX(xNow), SY(46))
+          ctx.fillStyle = 'rgba(148,163,184,.55)'; ctx.font = `${8.5 * dpr}px monospace`
+          ctx.textAlign = 'right'; ctx.fillText('◂ QUÁ KHỨ — chuyển hoá bài học', SX(xNow) - 10 * dpr, SY(58))
+          ctx.textAlign = 'left'; ctx.fillStyle = 'rgba(245,185,66,.7)'
+          ctx.fillText('TƯƠNG LAI — mốc cần lấp ▸', SX(xNow) + 10 * dpr, SY(58))
+        }
+        // ===== nhãn làn theo KHO: mỗi kho một dòng thời gian rõ ràng =====
+        ctx.textAlign = 'left'; ctx.font = `bold ${9 * dpr}px monospace`
+        ctx.fillStyle = 'rgba(167,139,250,.8)'; ctx.fillText('♾️ NHÂN LOẠI', SX(62), SY(ySpine - 170))
+        ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.fillText('🧠 ĐỜI TÔI — xương sống', SX(62), SY(ySpine - 48))
+        ctx.fillStyle = 'rgba(103,232,249,.8)'; ctx.fillText('🌐 QNET', SX(62), SY(ySpine + 36))
       }
 
       // CONTAINS = thẳng, mờ (trong mandala = cành cây)
@@ -1018,7 +1045,7 @@ export default function Galaxy({ nodes, links, onOpen, onConnect }: {
       {/* node chưa vào bản đồ (radar: chưa có chiều · dòng đời: chưa có ngày) */}
       {(mode === 'radar' || mode === 'timeline') && unplacedCount > 0 && (
         <button onClick={() => setUnplacedOpen(o => !o)} className="absolute bottom-9 right-3 z-10 text-[10px] rounded-lg bg-[#10101a]/85 border border-white/10 px-2.5 py-1.5 text-zinc-400 hover:text-white backdrop-blur">
-          ⬡ {unplacedRef.current.length} trang chưa vào {mode === 'radar' ? 'radar — Thấm để nối chiều' : 'dòng đời — mở & gắn 📅'}
+          ⬡ {unplacedRef.current.length} trang chưa vào {mode === 'radar' ? 'radar — Chuyển hoá để nối chiều' : 'dòng đời — mở & gắn 📅'}
         </button>
       )}
       {unplacedOpen && (mode === 'radar' || mode === 'timeline') && (

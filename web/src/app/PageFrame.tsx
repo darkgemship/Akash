@@ -24,7 +24,7 @@ type Field = { label: string; value: string }
 type LinkOut = { to_node: string; dimension: string | null; excerpt?: string | null }
 type LinkBack = { from_node: string; dimension: string | null; excerpt?: string | null }
 
-// 8 CHIỀU LIÊN KẾT — gốc rễ framework (docs/FRAMEWORK.md §1): màu cố định + câu hỏi khi Thấm
+// 8 CHIỀU LIÊN KẾT — gốc rễ framework (docs/FRAMEWORK.md §1): màu cố định + câu hỏi khi Chuyển hoá
 export const DIMS: Record<string, { label: string; color: string; icon: string; q: string }> = {
   knowledge: { label: 'Kiến thức', color: '#22d3ee', icon: '💧', q: 'Nguyên lý cốt lõi bằng MỘT CÂU của bạn? Nối tới trang lý thuyết nào?' },
   experience: { label: 'Trải nghiệm', color: '#f472b6', icon: '🌱', q: 'Bạn đã SỐNG qua điều này khi nào? Nối tới trang nhật ký.' },
@@ -221,7 +221,7 @@ export function PageFooter({ node, pages, outLinks, backLinks, mdText, canE, onO
       </Sect>
 
       {/* ❤️ LIÊN KẾT 8 CHIỀU — gốc rễ framework: trang chưa nối = chưa thuộc về cuộc đời bạn */}
-      <Sect title={`❤️ Liên kết 8 chiều (${litDims}/8 chiều sáng)`} hint="trang càng nối nhiều chiều càng Thấm sâu — bấm ＋ để nối ngay">
+      <Sect title={`❤️ Liên kết 8 chiều (${litDims}/8 chiều sáng)`} hint="trang càng nối nhiều chiều càng chuyển hoá sâu — bấm ＋ để nối ngay">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           {byDim.map(({ k, d, out, back }) => {
             const lit = out.length + back.length > 0

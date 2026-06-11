@@ -190,7 +190,7 @@ export default function Digest({ folder, others, orgId, userId, onClose, onSaved
     if (expStory.trim() && makeNote) {
       const { data: diary } = await supabase.from('nodes').select('id').eq('owner_id', userId).eq('title', 'Nhật ký hành trình').limit(1).maybeSingle()
       const nid = crypto.randomUUID()
-      await supabase.from('nodes').insert({ id: nid, org_id: orgId, owner_id: userId, layer: 'personal', kind: 'note', parent_id: diary?.id ?? null, title: expStory.slice(0, 60), md: `# ${expStory.slice(0, 60)}\n\n${expStory}\n\n_(rút từ Thấm bài "${folder.title}")_`, icon: '🌱', status: 'published', min_level: 1, event_date: eventDate || null })
+      await supabase.from('nodes').insert({ id: nid, org_id: orgId, owner_id: userId, layer: 'personal', kind: 'note', parent_id: diary?.id ?? null, title: expStory.slice(0, 60), md: `# ${expStory.slice(0, 60)}\n\n${expStory}\n\n_(rút từ Chuyển hoá bài "${folder.title}")_`, icon: '🌱', status: 'published', min_level: 1, event_date: eventDate || null })
       await addLink(folder.id, nid, 'experience')
       if (emo) await addLink(folder.id, nid, 'emotion')
     }
@@ -270,7 +270,7 @@ export default function Digest({ folder, others, orgId, userId, onClose, onSaved
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm grid place-items-center z-[60] p-6" onClick={onClose}>
       <div className="w-[620px] max-w-[94vw] max-h-[90vh] overflow-auto bg-[#0d0d18] border border-white/10 rounded-2xl p-6" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-3">
-          <div className="font-bold">🌸 Thấm: {folder.title}</div>
+          <div className="font-bold">🔥 Chuyển hoá: {folder.title}</div>
           <div className="flex items-center gap-2">
             {/* HOA THẤM 8 CÁNH */}
             <div className="flex gap-1" title={`${dimsCovered}/8 chiều đã chạm`}>
@@ -424,13 +424,13 @@ export default function Digest({ folder, others, orgId, userId, onClose, onSaved
             <div className="dq-step-in relative w-[420px] max-w-[92vw] rounded-3xl p-[1.5px] bg-gradient-to-br from-violet-500/70 via-white/10 to-cyan-500/70" onClick={e => e.stopPropagation()}>
               <div className="rounded-3xl bg-[#0d0d18]/97 p-8 text-center">
                 <div className="text-6xl mb-2 dq-pop">🌸</div>
-                <h2 className="text-2xl font-black mb-1">Đã Thấm!</h2>
+                <h2 className="text-2xl font-black mb-1">Đã chuyển hoá! Viên kim cương sáng thêm một mặt.</h2>
                 <p className="text-sm text-zinc-400 mb-4">"{folder.title}" giờ là một phần của bạn.</p>
                 <div className="flex justify-center gap-1.5 mb-4">
                   {DIM8.map(d => <span key={d.key} className="w-3.5 h-3.5 rounded-full" style={{ background: dims[d.key] ? d.color : '#ffffff15', boxShadow: dims[d.key] ? `0 0 10px ${d.color}` : 'none' }} />)}
                 </div>
                 <div className="text-5xl font-black bg-gradient-to-r from-violet-400 to-cyan-300 bg-clip-text text-transparent mb-1">{celebrate.score}</div>
-                <div className="text-[11px] uppercase tracking-widest text-zinc-500 mb-1">Độ Thấm</div>
+                <div className="text-[11px] uppercase tracking-widest text-zinc-500 mb-1">Độ Chuyển hoá</div>
                 <p className="text-xs text-zinc-500 mb-5">{celebrate.covered}/8 chiều · node sẽ sáng hơn trên Galaxy ✨ · hẹn ôn lại sau {[1,3,7,21,60][0]} ngày</p>
                 <button onClick={onClose} className="rounded-xl bg-gradient-to-r from-violet-500 via-blue-600 to-cyan-500 px-6 py-2.5 text-sm font-bold shadow-lg shadow-violet-500/30">Tiếp tục hành trình →</button>
               </div>
@@ -443,7 +443,7 @@ export default function Digest({ folder, others, orgId, userId, onClose, onSaved
           <span className="text-[10px] text-zinc-600">chiều nào cũng bỏ qua được — nhưng mỗi cánh sáng là một tầng sâu</span>
           {step < 6
             ? <button onClick={() => setStep(s => s + 1)} className="px-4 py-2 rounded-lg text-sm font-semibold bg-gradient-to-r from-violet-500 to-cyan-500">Tiếp →</button>
-            : <button disabled={busy} onClick={finish} className="px-4 py-2 rounded-lg text-sm font-semibold bg-gradient-to-r from-emerald-500 to-cyan-500 disabled:opacity-50">{busy ? 'Đang ghi…' : '🌸 Hoàn tất Thấm'}</button>}
+            : <button disabled={busy} onClick={finish} className="px-4 py-2 rounded-lg text-sm font-semibold bg-gradient-to-r from-emerald-500 to-cyan-500 disabled:opacity-50">{busy ? 'Đang ghi…' : '🌸 Hoàn tất Chuyển hoá'}</button>}
         </div>
       </div>
     </div>

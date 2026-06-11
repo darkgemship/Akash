@@ -6,7 +6,8 @@ import dynamic from 'next/dynamic'
 import type { PartialBlock } from '@blocknote/core'
 import Galaxy, { type GNode, type GLink } from './Galaxy'
 import Digest, { depthScore } from './Digest'
-import { Profile, Today, Engine, Board, ReviewQueue, UsersPage, Studio } from './Pages'
+import { Profile, Today, Board, Studio } from './Pages'
+import { KolFeed, ContentEngine, ReviewHub, MembersHub } from './Hubs'
 import Warp from './Warp'
 import { IVault, IHome, IPen, IBoard, ICheck, IUsers, IUser, ISearch, IPlus, IDots, IChevron, ILogout, IDoc, IOrbit, IUpload, ICode, ITarget, IRefresh, IMegaphone, IGrad, IX, IExpand, IEye, IEyeOff } from './Icons'
 import { DIMS, PAGE_TYPES, OUTPUT_FORMATS, PropsPanel, PageFooter } from './PageFrame'
@@ -145,7 +146,7 @@ function Login() {
             <div className="space-y-3">
               {([
                 [<IOrbit key="o" size={20} />, 'Galaxy tri thức đa chiều', '3 kho · liên kết 8 chiều · zoom như bản đồ sao'],
-                [<ITarget key="t" size={20} />, 'Độ Thấm 5 cạnh', 'Nối · Nghĩa · Chứng · Trải · Hành — học thật mới tính'],
+                [<ITarget key="t" size={20} />, 'Độ Chuyển hoá 5 cạnh', 'Nối · Nghĩa · Chứng · Trải · Hành — học thật mới tính'],
                 [<IMegaphone key="m" size={20} />, 'Học thật → dạy được', 'Bài chín tự động thành nguyên liệu content của bạn'],
               ] as [React.ReactNode, string, string][]).map(([ic, t, d]) => (
                 <div key={t} className="flex items-center gap-3.5 rounded-2xl bg-white/[0.04] border border-white/10 px-4 py-3 backdrop-blur-md">
@@ -197,7 +198,7 @@ function Login() {
   )
 }
 
-/* Radar 5 cạnh của Độ Thấm: Nối – Nghĩa – Chứng – Trải – Hành */
+/* Radar 5 cạnh của Độ Chuyển hoá: Nối – Nghĩa – Chứng – Trải – Hành */
 function Radar({ d }: { d: Depth }) {
   const vals = [d.connections, d.meaning, d.evidence, d.experience, d.action].map(v => Math.max(0, Math.min(4, v)) / 4)
   const labels = ['Nối', 'Nghĩa', 'Chứng', 'Trải', 'Hành']
@@ -228,7 +229,7 @@ function Workspace({ user }: { user: User }) {
   const [editJson, setEditJson] = useState<PartialBlock[] | null>(null)
   const [editTitle, setEditTitle] = useState('')
   const [savedMsg, setSavedMsg] = useState('')
-  const [page, setPage] = useState<'know' | 'today' | 'studio' | 'engine' | 'board' | 'review' | 'users' | 'profile'>('today')
+  const [page, setPage] = useState<'know' | 'today' | 'studio' | 'engine' | 'board' | 'review' | 'users' | 'profile' | 'kol'>('today')
   const [view, setView] = useState<'folder' | 'galaxy'>('folder')
   const [allNodes, setAllNodes] = useState<GNode[]>([])
   const [links, setLinks] = useState<GLink[]>([])
@@ -616,9 +617,9 @@ function Workspace({ user }: { user: User }) {
       <nav className="w-16 border-r border-white/10 flex flex-col items-center py-4 gap-2 shrink-0">
         <div className="mb-3"><AkashMark size={36} /></div>
         {([
-          ['today', <IHome key="i" size={19} />, 'Hôm nay'], ['know', <IVault key="i" size={19} />, 'Kho tri thức'], ['engine', <IPen key="i" size={19} />, 'Content Engine'], ['board', <IBoard key="i" size={19} />, 'Board'],
-          ...(role?.can_approve ? [['review', <ICheck key="i" size={19} />, 'Duyệt bài']] : []),
-          ...(role?.level === 5 ? [['users', <IUsers key="i" size={19} />, 'Thành viên']] : []),
+          ['today', <IHome key="i" size={19} />, 'Hôm nay'], ['know', <IVault key="i" size={19} />, 'Kho tri thức'], ['kol', <IMegaphone key="i" size={19} />, 'Người khổng lồ'], ['engine', <IPen key="i" size={19} />, 'Content Engine'], ['board', <IBoard key="i" size={19} />, 'Board'],
+          ...(role?.can_approve ? [['review', <ICheck key="i" size={19} />, 'Trung tâm biên tập']] : []),
+          ...(role?.can_approve ? [['users', <IUsers key="i" size={19} />, 'Nhân sự']] : []),
           ['profile', <IUser key="i" size={19} />, 'Hồ sơ'],
         ] as [typeof page, React.ReactNode, string][]).map(([p, ic, label]) => {
           const active = page === p
@@ -729,10 +730,10 @@ function Workspace({ user }: { user: User }) {
                   <div className="flex items-center gap-2 px-4 py-2 border-b border-white/5 shrink-0">
                     {depth?.learned
                       ? <>
-                          <span className="flex items-center gap-1.5 text-xs rounded-lg bg-violet-500/15 border border-violet-400/30 text-violet-300 px-2 py-1"><ITarget size={13} /> Độ Thấm {depthScore(depth)}</span>
+                          <span className="flex items-center gap-1.5 text-xs rounded-lg bg-violet-500/15 border border-violet-400/30 text-violet-300 px-2 py-1"><ITarget size={13} /> Độ Chuyển hoá {depthScore(depth)}</span>
                           <button onClick={() => setShowDigest(true)} className="flex items-center gap-1.5 text-xs rounded-lg bg-white/10 border border-white/10 px-2.5 py-1 hover:bg-white/15"><IRefresh size={13} /> Ôn lại</button>
                         </>
-                      : <button onClick={() => setShowDigest(true)} className="flex items-center gap-1.5 text-xs rounded-lg bg-gradient-to-r from-violet-500 to-cyan-500 px-3 py-1 font-semibold"><IGrad size={13} /> Thấm bài này</button>}
+                      : <button onClick={() => setShowDigest(true)} className="flex items-center gap-1.5 text-xs rounded-lg bg-gradient-to-r from-violet-500 to-cyan-500 px-3 py-1 font-semibold"><IGrad size={13} /> Chuyển hoá bài này</button>}
                     <span className="text-[10px] text-zinc-600 ml-auto">{backRaw.length} liên kết tới đây</span>
                   </div>
                   <div className="flex-1 overflow-auto px-4 py-3">
@@ -800,23 +801,23 @@ function Workspace({ user }: { user: User }) {
                   {depth?.learned ? (
                     <>
                       {/* LUỒNG HỌC: radar 5 cạnh → ôn lại → chuyển content */}
-                      <button onClick={() => setShowRadar(s => !s)} title="Xem radar Độ Thấm" className="flex items-center gap-1.5 text-xs rounded-lg bg-violet-500/15 border border-violet-400/30 text-violet-300 px-2.5 py-1 hover:bg-violet-500/25"><ITarget size={13} /> {depthScore(depth)}</button>
+                      <button onClick={() => setShowRadar(s => !s)} title="Xem radar Độ Chuyển hoá" className="flex items-center gap-1.5 text-xs rounded-lg bg-violet-500/15 border border-violet-400/30 text-violet-300 px-2.5 py-1 hover:bg-violet-500/25"><ITarget size={13} /> {depthScore(depth)}</button>
                       <button onClick={() => setShowDigest(true)} className="flex items-center gap-1.5 text-xs rounded-lg bg-white/10 border border-white/10 px-2.5 py-1 hover:bg-white/15"><IRefresh size={13} /> Ôn lại</button>
                       {nodeOf(editing.id)?.owner_id === user.id && <button onClick={toContent} title="Bài đã chín → tạo content" className="flex items-center gap-1.5 text-xs rounded-lg bg-gradient-to-r from-amber-500 to-yellow-400 px-2.5 py-1 font-semibold"><IMegaphone size={13} /> Content</button>}
                       {showRadar && (
                         <>
                           <div className="fixed inset-0 z-20" onClick={() => setShowRadar(false)} />
                           <div className="absolute right-0 top-9 z-30 rounded-2xl bg-[#1c1c26] border border-white/10 shadow-2xl p-4 w-[200px]">
-                            <div className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1 text-center">Độ Thấm 5 cạnh</div>
+                            <div className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1 text-center">Độ Chuyển hoá 5 cạnh</div>
                             <Radar d={depth} />
                             <div className="text-center text-2xl font-black bg-gradient-to-r from-violet-400 to-cyan-300 bg-clip-text text-transparent">{depthScore(depth)}</div>
-                            <button onClick={() => { setShowRadar(false); setShowDigest(true) }} className="w-full mt-2 text-xs rounded-lg bg-gradient-to-r from-violet-500 to-cyan-500 px-3 py-1.5 font-semibold">🔁 Thấm lại để tăng điểm</button>
+                            <button onClick={() => { setShowRadar(false); setShowDigest(true) }} className="w-full mt-2 text-xs rounded-lg bg-gradient-to-r from-violet-500 to-cyan-500 px-3 py-1.5 font-semibold">🔁 Chuyển hoá lại để tăng điểm</button>
                           </div>
                         </>
                       )}
                     </>
                   ) : (
-                    <button onClick={() => setShowDigest(true)} className="flex items-center gap-1.5 text-xs rounded-lg bg-gradient-to-r from-violet-500 to-cyan-500 px-3 py-1 font-semibold shadow-lg shadow-violet-500/25"><IGrad size={13} /> Thấm</button>
+                    <button onClick={() => setShowDigest(true)} className="flex items-center gap-1.5 text-xs rounded-lg bg-gradient-to-r from-violet-500 to-cyan-500 px-3 py-1 font-semibold shadow-lg shadow-violet-500/25"><IGrad size={13} /> Chuyển hoá</button>
                   )}
                   <button onClick={() => setEditing(null)} title="Đóng trang" className="w-7 h-7 grid place-items-center rounded-lg text-zinc-400 hover:bg-white/10 hover:text-white"><IX size={14} /></button>
                 </div>
@@ -1001,34 +1002,71 @@ function Workspace({ user }: { user: User }) {
         </>
       ) : page === 'today' ? <div className="flex-1 overflow-auto"><Today
             user={user}
+            role={role}
             stats={{ pages: tree.filter(n => n.kind !== 'kho').length, notes: tree.filter(n => n.kind === 'note').length, links: links.length }}
             recent={recent.map(id => nodeOf(id)).filter((n): n is TNode => !!n)}
             pages={personalPages.filter(n => n.kind === 'note' || n.kind === 'page')}
             editorial={tree.filter(n => n.owner_id === user.id && (n.status === 'pending' || n.status === 'draft')).map(n => ({ id: n.id, title: n.title, kind: n.kind, parent_id: n.parent_id, icon: n.icon, status: n.status, note: (n.props?.review_note as string) ?? '' }))}
             onOpen={(n) => { openNoteEditor(n as Node); setPage('know') }}
-            onCapture={(title) => {
-              // ghi nhanh → trang mới trong "Nhật ký hành trình" (nếu có), không thì kho cá nhân
-              const diary = tree.find(n => n.owner_id === user.id && n.title === 'Nhật ký hành trình')
+            onOpenId={(id) => { const t = nodeOf(id); if (t) { openNoteEditor(t); setPage('know') } }}
+            onCapture={(title, type, source) => {
+              // ghi nhanh CÓ LOẠI → đổ đúng cây gốc (KHO-CHUAN §2bis)
+              const hubOf = (h: string) => tree.find(n => n.owner_id === user.id && (n.props?.hub as string) === h)
               const kho = khoOf('personal')
-              createPage(diary?.id ?? (kho ? kho.id : null), 'personal', 'note', { title, md: `# ${title}\n\n## ⚡ Chuyện gì xảy ra\n\n\n## 🎓 Bài học rút ra\n- ` })
+              if (type === 'quote') {
+                // quote đắt → nối thêm vào Kim Chỉ Nam
+                const anchor = tree.find(n => n.owner_id === user.id && n.subtype === 'anchor_home')
+                if (anchor) {
+                  supabase.from('nodes').select('md').eq('id', anchor.id).single().then(async ({ data }) => {
+                    await supabase.from('nodes').update({ md: `${data?.md ?? ''}\n\n> ${title}${source ? `\n> — *${source}*` : ''}` }).eq('id', anchor.id)
+                    logEvent('create', anchor.id); openNoteEditor(anchor); setPage('know')
+                  })
+                  return
+                }
+              }
+              const isInsight = type === 'insight'
+              const parent = (isInsight ? hubOf('lessons') : hubOf('journey'))?.id ?? kho?.id ?? null
+              createPage(parent, 'personal', 'note', {
+                title,
+                md: isInsight
+                  ? `**Loại:** 🎓 Bài học · **Ngày sự kiện:** ${new Date().toLocaleDateString('vi')}\n\n**Tóm tắt 1 câu:** ${title}\n\n**Nguồn:** ${source || 'tự đúc rút'}\n\n## ⚡ Nguyên lý cốt lõi\n${title}\n\n## 🌍 Trải nghiệm gốc nào sinh ra insight này?\n- (nối chiều 🌱 trải nghiệm về trang chuyện gốc)\n\n## 🎯 Áp dụng\n- [ ] `
+                  : `**Loại:** 🌱 Trải nghiệm · **Ngày sự kiện:** ${new Date().toLocaleDateString('vi')}\n\n**Tóm tắt 1 câu:** ${title}\n\n**Nguồn:** tự trải nghiệm\n\n## 📍 Bối cảnh\n\n## ⚡ Chuyện gì xảy ra\n\n## ❤️ Cảm xúc\n\n## 🎓 Bài học rút ra\n- \n\n**Cảnh này nói gì về tôi:** `,
+              })
               setPage('know')
             }}
             onGalaxy={() => { setPage('know'); setView('galaxy') }}
             onDigest={(n) => { openNoteEditor(n as Node); setPage('know'); setShowDigest(true) }}
-            onRaw={() => { /* studio nằm ngay dưới */ document.querySelector('h2')?.scrollIntoView({ behavior: 'smooth' }) }}
+            onRaw={() => { if (role?.can_approve) { setPage('review') } else { document.querySelector('h2')?.scrollIntoView({ behavior: 'smooth' }) } }}
+            onKolAll={() => setPage('kol')}
             counts={{
-              values: tree.filter(n => n.subtype === 'core_value').length,
+              values: tree.filter(n => n.subtype === 'core_value' || (n.props?.role as string) === 'value').length,
               mantras: tree.filter(n => n.subtype === 'mantra').length,
-              people: tree.filter(n => n.subtype === 'person').length,
+              people: tree.filter(n => n.subtype === 'person' || (n.props?.page_type as string) === 'ho-so').length,
               dated: tree.filter(n => n.event_date && n.owner_id === user.id).length,
+              pendingAll: tree.filter(n => n.status === 'pending').length,
             }}
           />
           <Studio orgId={orgId} user={user} canEdit={!!role?.can_edit} canApprove={!!role?.can_approve} pages={tree.map(n => ({ id: n.id, title: n.title, layer: n.layer, kind: n.kind, parent_id: n.parent_id, icon: n.icon, subtype: n.subtype }))} onOpen={(id) => { const t = nodeOf(id); if (t) { openNoteEditor(t); setPage('know') } }} onReload={() => { if (orgId) { loadTree(orgId); loadGraph(orgId) } }} />
           </div>
-        : page === 'engine' ? <div className="flex-1 overflow-auto"><Engine folders={personalPages} /></div>
+        : page === 'engine' ? <div className="flex-1 overflow-auto"><ContentEngine user={user} orgId={orgId} pages={tree} onOpenPage={(id) => { const t = nodeOf(id); if (t) { openNoteEditor(t); setPage('know') } }} onCreatePlan={(title, md) => {
+            const studio = tree.find(n => n.owner_id === user.id && (n.props?.hub as string) === 'studio')
+            createPage(studio?.id ?? khoOf('personal')?.id ?? null, 'personal', 'page', { title, md })
+            setPage('know')
+          }} /></div>
+        : page === 'kol' ? <div className="flex-1 overflow-auto"><KolFeed user={user} canEdit={!!role?.can_edit} onOpenPage={(id) => { const t = nodeOf(id); if (t) { openNoteEditor(t); setPage('know') } }} onInsight={async (text, srcTitle, srcId) => {
+            // insight từ KOL → 💎 Kim cương bài học + tự nối chiều reference về bài gốc
+            const lessons = tree.find(n => n.owner_id === user.id && (n.props?.hub as string) === 'lessons')
+            const id = crypto.randomUUID()
+            await supabase.from('nodes').insert({ id, org_id: orgId, owner_id: user.id, layer: 'personal', kind: 'note', parent_id: lessons?.id ?? khoOf('personal')?.id ?? null, title: text.slice(0, 80), md: `**Loại:** 🎓 Bài học · **Ngày sự kiện:** ${new Date().toLocaleDateString('vi')}\n\n**Tóm tắt 1 câu:** ${text}\n\n**Nguồn:** ${srcTitle} (KOL feed)\n\n## ⚡ Insight\n${text}\n\n## 🎯 Áp dụng vào đời tôi\n- [ ] `, props: { page_type: 'bai-hoc', via: 'kol' }, status: 'published', min_level: 1 })
+            await supabase.from('links').insert({ org_id: orgId, from_node: id, to_node: srcId, dimension: 'reference', source: 'kol' })
+            logEvent('create', id)
+            if (orgId) { loadTree(orgId); loadGraph(orgId) }
+            const t = { id, title: text.slice(0, 80), kind: 'note', parent_id: lessons?.id ?? null }
+            openNoteEditor(t as Node); setPage('know')
+          }} /></div>
         : page === 'board' ? <div className="flex-1 overflow-auto"><Board orgId={orgId} userId={user.id} onOpen={(id) => { const t = nodeOf(id); if (t) { openNoteEditor(t); setPage('know') } }} /></div>
-        : page === 'review' ? <div className="flex-1 overflow-auto"><ReviewQueue orgId={orgId} onOpen={(id) => { const t = nodeOf(id); if (t) { openNoteEditor(t); setPage('know') } }} onChanged={() => { if (orgId) { loadTree(orgId); loadGraph(orgId) } }} /></div>
-        : page === 'users' ? <div className="flex-1 overflow-auto"><UsersPage me={user.id} /></div>
+        : page === 'review' ? <div className="flex-1 overflow-auto"><ReviewHub orgId={orgId} me={user.id} onOpen={(id) => { const t = nodeOf(id); if (t) { openNoteEditor(t); setPage('know') } }} onChanged={() => { if (orgId) { loadTree(orgId); loadGraph(orgId) } }} /></div>
+        : page === 'users' ? <div className="flex-1 overflow-auto"><MembersHub me={user.id} canAdmin={role?.level === 5 || !!role?.can_approve} onOpenPage={(id) => { const t = nodeOf(id); if (t) { openNoteEditor(t); setPage('know') } }} /></div>
         : <div className="flex-1 overflow-auto"><Profile user={user} /></div>}
       </div>
 
@@ -1223,7 +1261,7 @@ function Workspace({ user }: { user: User }) {
                         <h2 className="text-2xl font-black mb-1">Học thật → <span className="bg-gradient-to-r from-amber-200 to-yellow-400 bg-clip-text text-transparent">Content thật</span></h2>
                         <p className="text-sm text-zinc-500 mb-5">Vòng lặp giá trị của Akash — mỗi bài học là một tài sản:</p>
                         <div className="flex items-center justify-between gap-2 mb-5">
-                          {[['🎓', 'Thấm', '5 bước digest'], ['🎯', 'Độ Thấm', 'radar 5 cạnh'], ['📣', '→ Content', 'lên Board'], ['💰', 'Giá trị', 'dạy & thu nhập']].map(([ic, t, d], i) => (
+                          {[['🔥', 'Chuyển hoá', 'đi qua 8 chiều'], ['🎯', 'Độ Chuyển hoá', 'radar 5 cạnh'], ['📣', '→ Content', 'lên Board'], ['💰', 'Giá trị', 'dạy & thu nhập']].map(([ic, t, d], i) => (
                             <div key={t} className="flex items-center gap-2 flex-1">
                               <div className="flex-1 rounded-2xl bg-white/[0.04] border border-white/10 px-2 py-3 text-center">
                                 <div className="text-2xl mb-1">{ic}</div>
