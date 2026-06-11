@@ -30,6 +30,10 @@ Hàng đợi `ai_jobs` đã sẵn trong DB — cắm key là chạy, UI không p
 - **Notion/Drive MCP**: hút tài liệu mkt cũ của bạn vào Tủ nguồn.
 - **Meta/TikTok API (Phase 3)**: tự đăng content từ Board + kéo số liệu reach/lead về `content_results` — khép vòng lặp đo & tinh chỉnh.
 
+## 4bis. Quyết định thương hiệu cần bạn chốt (sau research premium UI 12/6 — docs/RESEARCH-VIZ-ARCH.md mũi 3)
+Linear/Raycast/Vercel "sang" nhờ công thức: **1 accent duy nhất trên chrome, màu rực chỉ sống trong DATA** (graph/badge), depth bằng surface-ladder + viền 1px thay glow/shadow. Akash hiện dùng gradient tím→cyan làm accent ở nhiều nút.
+→ Lựa chọn: (A) giữ gradient identity như BRANDING.md hiện tại, chỉ tiết chế tần suất; (B) chuyển hẳn 1-accent kiểu Linear — gradient chỉ còn ở logo + celebration + canvas. Tôi nghiêng về (B) cho cảm giác "đắt tiền" nhưng đây là căn tính thương hiệu — bạn chốt rồi tôi sweep một đêm là xong. Token surface-ladder + 4 tầng chữ đã sẵn trong research để áp ngay.
+
 ## 5. Ý tưởng đã ghi nhận nhưng CHƯA build (chờ data thật — rule §B4)
 - Wizard "Mục lục đời" làm onboarding bắt buộc cho user mới (đã có bộ câu hỏi LSI trong KHO-CHUAN §2bis; nên pilot tay trước với 2-3 người).
 - AI chấm chuyện theo agency/communion/redemption (chưa có bằng chứng LLM chấm chuẩn — xem caveat KHO-CHUAN).

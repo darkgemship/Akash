@@ -2,6 +2,18 @@
 
 > Ghi lại mỗi đợt build để lần sau làm tốt hơn. Quy trình chuẩn: **đọc docs → sửa code → `npm run build` → test thật trên preview (đăng nhập, bấm từng nút) → cập nhật docs**.
 
+## 2026-06-12 (đợt 2) — 💎 REDESIGN SẮC SẢO (feedback founder: thân chữ, 8 chiều, neuro nùi, engine rối, cắt thừa)
+1. **Data + tầng chữ**: 10 trang md chứa `\n` chữ → newline thật; bắt thủ phạm bằng số đo: BlockNote set 3em ở BLOCK heading → thân trang 74.4px > title 36px → ghìm block 16.5px (giờ 36 > 24.75 > 16.5 ✓).
+2. **Deep research 4 mũi** (docs/RESEARCH-VIZ-ARCH.md, nguồn kiểm chứng): graph-viz thực chiến (Obsidian/Gephi/ForceAtlas2/semantic-zoom) · kiến trúc derive-vs-store theo Anki/FSRS · premium dark UI (Linear/Raycast/Geist) · wizard UX (Typeform/GOV.UK/Jasper/HeyGen).
+3. **8 CHIỀU THỐNG NHẤT — bỏ radar 5 cạnh** (DECISIONS §A2 cập nhật): điểm Chuyển hoá DERIVE từ links + tín hiệu nội tại — công thức duy nhất `web/src/lib/transformScore.ts` (sat 1-2^-x chống farm, experience+anchor nặng nhất, learned=≥2 chiều giữ nguyên); `wisdom_depth` chỉ còn lịch ôn SM-2; UI = `Dim8Bars` 8 thanh màu framework (header trang + popup + peek), popup chỉ luôn "chiều chưa sáng + câu hỏi để thắp".
+4. **Neuro hết "khối nùi"** (theo research): orphan ring — trang 0 link KHÔNG vào khối não, treo vành ngoài thành vòng rỗng nét đứt pulse ("ký ức chưa được kết nối"), badge "⚠ N trang chưa nối — bấm mở & nối"; hover = focus 1-hop, mọi node khác lặn còn chấm mờ alpha 0.1; vị trí deterministic (seed cố định) — mental map ổn định.
+5. **Content Engine v2 — hết cognitive load** (theo research mũi 4): tách quyết định MỘT LẦN khỏi MỖI LẦN. Hồ sơ chưa đủ → wizard 5 màn (vai → khán giả → điểm mạnh+vùng cấm → ≤3 trụ → nhịp+định dạng), mỗi màn ≤2 quyết định, lưu từng bước, progress bar. Đủ rồi → MỘT màn "Hôm nay tạo gì?": 4 preset góc kể → chủ đề + đính kèm 1 chuyện thật (md nguyên văn vào prompt) → copy prompt hoàn chỉnh. Thư viện/21 câu thành panel phụ.
+6. **PropsPanel rõ ràng**: rừng chip → bảng label–value 2 cột, 2 section mono-eyebrow (Trường chuẩn tím / Trường của tôi cyan), input phẳng hover mới hiện viền.
+7. **Cắt thừa**: xoá MembersAdmin/UsersPage/ReviewQueue/Engine cũ (~190 dòng) — đã thay bằng Hubs từ đợt 1.
+8. **Timeline**: trục luôn chứa HÔM NAY + 6 tháng tương lai (hết hardcode 12/2025).
+**Verify**: đo computed font-size thật trên preview; đi trọn wizard 5 màn bằng tay; prompt cuối 1.9k ký tự có HỒ SƠ HỒN + CHUYỆN THẬT đính kèm; badge neuro "⚠ 96 trang chưa nối" sống; build xanh từng mốc, commit từng phase.
+**Bug tự gây & fix**: cắt dead code theo SỐ DÒNG sau khi file đã đổi → cắt chồng (mất VoiceCard/VOICE_QS) — bài học: cắt theo MARKER pattern, không theo line number; git checkout cứu.
+
 ## 2026-06-12 — 🌌 ĐÊM BUILD LỚN (5h tự hành, đa agent, deep research ×2)
 **Đã có git repo** (root, checkpoint từng phase — lần đầu dự án có version control).
 1. **Branding v2 "Vũ trụ Kim cương"** (docs/BRANDING.md): bỏ toàn bộ fuchsia/pink "quê" → quang phổ violet→blue→cyan→diamond + vàng hoàng đạo cho thời gian/Chuyển hoá; font Be Vietnam Pro + JetBrains Mono (subset vietnamese); tokens --ak-* + .ak-cta/.ak-grad; fix double-title (Studio không nhét `# title` vào md nữa, h1 thân bài 1.55em < title).
