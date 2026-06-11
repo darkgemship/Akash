@@ -129,45 +129,66 @@ export function KolFeed({ user, canEdit, onOpenPage, onInsight }: {
   )
 }
 
-/* ========================== 🎛️ CONTENT ENGINE ========================== */
-type Matrix = { strengths: string[]; exploit: string[]; avoid: string[]; freq: string; formats: string[]; channels: string[]; answers?: Record<string, string> }
+/* ========================== 🎛️ CONTENT ENGINE v2 ==========================
+   Research mũi 4 (Typeform/GOV.UK/Jasper/HeyGen): tách quyết định MỘT LẦN khỏi quyết định MỖI LẦN.
+   - Chưa có Hồ sơ Hồn → wizard 5 màn, mỗi màn ≤2 quyết định, lưu ngay từng bước.
+   - Đã có → MỘT màn "Hôm nay tạo gì?": preset → chủ đề → copy prompt. Hết rừng chip. */
+type Matrix = { role?: string; audience?: string; strengths: string[]; exploit: string[]; avoid: string[]; freq: string; formats: string[]; channels: string[]; answers?: Record<string, string> }
 const EMPTY_MATRIX: Matrix = { strengths: [], exploit: [], avoid: [], freq: '3/tuần', formats: [], channels: [] }
 const FORMATS = ['📰 Bài viết dài', '🎞️ Reel/Short', '🎬 Video dài', '💬 Caption + ảnh', '📧 Email/tin nhắn', '🎤 Bài chia sẻ']
-const CHANNELS = ['Facebook cá nhân', 'Group/Cộng đồng', 'TikTok', 'Instagram', 'YouTube', 'Zalo']
 const FREQS = ['1/tuần', '3/tuần', '5/tuần', 'mỗi ngày']
+const ROLES: [string, string, string][] = [
+  ['kol', '🌟 Người truyền cảm hứng', 'kể chuyện đời mình để dẫn dắt cộng đồng'],
+  ['builder', '🏗️ Người xây đội nhóm', 'content nuôi và tuyển những người đồng hành'],
+  ['educator', '🎓 Người dạy', 'biến kiến thức thành bài học dễ hiểu'],
+  ['seller', '🤝 Người bán tử tế', 'content tạo niềm tin trước khi bán'],
+]
+const PRESETS: { key: string; icon: string; name: string; desc: string; angle: string }[] = [
+  { key: 'story', icon: '🌱', name: 'Kể một chuyện thật', desc: 'một cảnh đời của bạn → bài học', angle: 'Kể lại MỘT cảnh thật trong đời tôi (đính kèm), theo 3 hồi: bối cảnh ngắn → khoảnh khắc bước ngoặt → bài học một câu. Không tô hồng.' },
+  { key: 'lesson', icon: '💎', name: 'Bài học từ sách/người thầy', desc: 'tri thức + góc nhìn riêng của bạn', angle: 'Lấy MỘT ý từ nguồn (đính kèm) + đối chiếu với trải nghiệm thật của tôi. Kết bằng câu hỏi mở cho người đọc.' },
+  { key: 'behind', icon: '🎬', name: 'Hậu trường nghề', desc: 'một ngày làm việc thật, không màu mè', angle: 'Tả MỘT khoảnh khắc hậu trường hôm nay (từ chối, cuộc gặp, thói quen sáng). Chân thật, có chi tiết cụ thể, không dạy đời.' },
+  { key: 'transform', icon: '🔥', name: 'Trước — Sau', desc: 'hành trình chuyển hoá của bạn', angle: 'So sánh TÔI CŨ và TÔI NAY quanh một chủ đề (đính kèm cảnh đời cũ). Trung thực về cái giá phải trả. Không hứa hẹn kết quả cho ai.' },
+]
 
 export function ContentEngine({ user, orgId, pages, onOpenPage, onCreatePlan }: {
   user: User
   orgId?: string | null
-  pages: AnyNode[]   // toàn bộ tree — để lấy giá trị, chuyện đời, viral lib
+  pages: AnyNode[]
   onOpenPage: (id: string) => void
   onCreatePlan: (title: string, md: string) => void
 }) {
-  const [tab, setTab] = useState<'matrix' | 'voice' | 'lib' | 'prompt'>('matrix')
   const [mx, setMx] = useState<Matrix>(EMPTY_MATRIX)
   const [mxId, setMxId] = useState<string | null>(null)
+  const [loaded, setLoaded] = useState(false)
+  const [wizard, setWizard] = useState(false)        // mở wizard (lần đầu tự bật; sau bấm "chỉnh Hồ sơ Hồn")
+  const [wStep, setWStep] = useState(0)
+  const [preset, setPreset] = useState<string | null>(null)
+  const [topic, setTopic] = useState('')
+  const [srcPage, setSrcPage] = useState<AnyNode | null>(null)
+  const [lib, setLib] = useState<AnyNode[]>([])
+  const [hooks, setHooks] = useState<{ text_vi: string; category: string }[]>([])
+  const [panel, setPanel] = useState<'none' | 'lib' | 'voice'>('none')
   const [qs, setQs] = useState<{ q_vi: string; why_vi: string; maps_to: string }[]>([])
   const [qIdx, setQIdx] = useState(0)
   const [qAns, setQAns] = useState('')
-  const [hooks, setHooks] = useState<{ text_vi: string; category: string }[]>([])
-  const [lib, setLib] = useState<AnyNode[]>([])
   const [copied, setCopied] = useState('')
   const [planDays, setPlanDays] = useState<30 | 60 | 180>(30)
   useEffect(() => {
-    // ma trận content của tôi (node ẩn trong kho cá nhân)
     supabase.from('nodes').select('id,props').eq('owner_id', user.id).eq('subtype', 'content_matrix').limit(1).maybeSingle().then(({ data }) => {
-      if (data) { setMxId(data.id); setMx({ ...EMPTY_MATRIX, ...((data.props as { matrix?: Matrix })?.matrix ?? {}) }) }
+      const m = { ...EMPTY_MATRIX, ...((data?.props as { matrix?: Matrix })?.matrix ?? {}) }
+      if (data) setMxId(data.id)
+      setMx(m); setLoaded(true)
+      if (!(m.role && m.strengths.length && m.exploit.length && m.formats.length)) setWizard(true) // hồ sơ chưa đủ → dẫn từng bước
     })
     supabase.from('nodes').select('id,title,md,props,subtype').in('subtype', ['brand_questions', 'viral_hooks', 'viral_script', 'viral_titles']).then(({ data }) => {
       const all = (data as AnyNode[]) ?? []
       setQs(((all.find(n => n.subtype === 'brand_questions')?.props?.questions) as { q_vi: string; why_vi: string; maps_to: string }[]) ?? [])
       setHooks(((all.find(n => n.subtype === 'viral_hooks')?.props?.hooks) as { text_vi: string; category: string }[]) ?? [])
-      setLib(all.filter(n => n.subtype === 'viral_script' || n.subtype === 'viral_titles' || n.subtype === 'viral_hooks'))
+      setLib(all.filter(n => n.subtype !== 'brand_questions'))
     })
   }, [user.id])
   const myValues = pages.filter(n => (n.props?.role as string) === 'value' || n.subtype === 'core_value')
   const myStories = pages.filter(n => (n.props?.page_type as string) === 'trai-nghiem' && n.owner_id === user.id).slice(0, 8)
-  // chống race: bấm chip liên tiếp trước khi node tồn tại → CHỈ tạo 1 lần (bug bắt được khi test 12/6)
   const creatingRef = useRef<Promise<string> | null>(null)
   async function ensureMatrixId(first: Matrix): Promise<string> {
     if (mxId) return mxId
@@ -176,7 +197,7 @@ export function ContentEngine({ user, orgId, pages, onOpenPage, onCreatePlan }: 
       if (ex) { setMxId(ex.id); return ex.id as string }
       const kho = pages.find(n => n.owner_id === user.id && n.layer === 'personal' && !n.parent_id)
       const id = crypto.randomUUID()
-      await supabase.from('nodes').insert({ id, org_id: orgId, owner_id: user.id, layer: 'personal', kind: 'page', parent_id: kho?.id ?? null, title: 'Ma trận content của tôi', icon: '🎛️', subtype: 'content_matrix', status: 'published', min_level: 1, props: { matrix: first } })
+      await supabase.from('nodes').insert({ id, org_id: orgId, owner_id: user.id, layer: 'personal', kind: 'page', parent_id: kho?.id ?? null, title: 'Hồ sơ Hồn', icon: '🎛️', subtype: 'content_matrix', status: 'published', min_level: 1, props: { matrix: first } })
       setMxId(id); return id
     })()
     return creatingRef.current
@@ -186,169 +207,216 @@ export function ContentEngine({ user, orgId, pages, onOpenPage, onCreatePlan }: 
     const id = await ensureMatrixId(next)
     await supabase.from('nodes').update({ props: { matrix: next } }).eq('id', id)
   }
-  const chip = (on: boolean) => `px-2.5 py-1 rounded-lg text-[11px] border transition ${on ? 'bg-violet-500/25 border-violet-400/50 text-white' : 'bg-white/5 border-white/10 text-zinc-400 hover:border-white/30'}`
-  const toggle = (arr: string[], v: string) => arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v]
   function copy(t: string, key: string) { navigator.clipboard?.writeText(t); setCopied(key); setTimeout(() => setCopied(''), 1500) }
-  // ===== PROMPT máy sinh từ ma trận + kho =====
-  const anchor = pages.find(n => n.subtype === 'anchor_home' && n.owner_id === user.id)
-  const masterPrompt = `Bạn là người viết content thay tôi. GIỌNG CỦA TÔI:\n- Giá trị cốt lõi: ${myValues.map(v => v.title).join(', ') || '(chưa khai báo)'}\n- Điểm mạnh khai thác: ${mx.strengths.join(', ') || '(chưa chọn)'}\n- Chủ đề tôi muốn nói: ${mx.exploit.join(', ') || '(chưa chọn)'}\n- TUYỆT ĐỐI KHÔNG nhắc tới: ${mx.avoid.join(', ') || '(không có)'}\n- Không hứa hẹn thu nhập, không thổi phồng. Kể chuyện thật, có chi tiết cụ thể.\n\nCHẤT LIỆU: dùng câu chuyện thật của tôi (đính kèm bên dưới) + châm ngôn của tôi.\nNHIỆM VỤ: viết {định dạng} về chủ đề {chủ đề}, mở đầu bằng 1 hook từ thư viện, kết bằng câu hỏi mở cho người đọc.\n\n[DÁN CHUYỆN THẬT CỦA BẠN VÀO ĐÂY — mở trang trong 📓 Hành trình và copy]`
+  const toggle = (arr: string[], v: string) => arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v]
+  const chip = (on: boolean) => `px-3 py-1.5 rounded-lg text-xs border transition ${on ? 'bg-violet-500/25 border-violet-400/50 text-white' : 'bg-white/5 border-white/10 text-zinc-400 hover:border-white/30'}`
+
+  // ===== prompt hoàn chỉnh = Hồ sơ Hồn + preset + chủ đề + trang nguồn =====
+  const pst = PRESETS.find(x => x.key === preset)
+  const finalPrompt = `Bạn viết content thay tôi — đúng GIỌNG TÔI, không phải giọng AI.
+
+HỒ SƠ HỒN CỦA TÔI:
+- Vai: ${ROLES.find(r => r[0] === mx.role)?.[1] ?? '—'}
+- Viết cho: ${mx.audience || '—'}
+- Giá trị cốt lõi: ${myValues.map(v => v.title).join(', ') || '—'}
+- Điểm mạnh: ${mx.strengths.join(', ')}
+- TUYỆT ĐỐI KHÔNG nhắc: ${mx.avoid.join(', ') || 'không có'} · không hứa hẹn thu nhập · không thổi phồng
+
+BÀI HÔM NAY:
+- Góc kể: ${pst?.angle ?? '(chọn preset)'}
+- Chủ đề/từ khoá: ${topic || '(bạn điền)'}
+- Định dạng: ${mx.formats[0] ?? 'bài viết'} · mở đầu bằng 1 hook giữ chân · kết bằng câu hỏi mở
+${srcPage ? `\nCHUYỆN THẬT ĐÍNH KÈM (nguồn sự thật — không bịa thêm chi tiết):\n${(srcPage.md ?? '').slice(0, 1500)}` : '\n[ĐÍNH KÈM 1 CHUYỆN THẬT: chọn ở mục "chất liệu" bên dưới]'}`
+
   function genPlan() {
     const perWeek = mx.freq === 'mỗi ngày' ? 7 : parseInt(mx.freq) || 3
     const weeks = Math.round(planDays / 7)
-    const pillars = [...mx.exploit, ...myValues.map(v => v.title ?? '')].filter(Boolean).slice(0, 4)
-    if (!pillars.length) pillars.push('Câu chuyện chuyển hoá của tôi')
+    const pillars = [...mx.exploit].slice(0, 4); if (!pillars.length) pillars.push('Câu chuyện chuyển hoá của tôi')
     const fmts = mx.formats.length ? mx.formats : ['💬 Caption + ảnh']
-    let md = `**Loại:** 📋 Quy trình · **Campaign:** Chiến lược ${planDays} ngày\n\n**Tóm tắt 1 câu:** Lịch content ${planDays} ngày — ${perWeek} bài/tuần xoay ${pillars.length} trụ: ${pillars.join(' · ')}.\n\n**Nguồn:** Ma trận content + kho chuyện thật của tôi\n\n## Nguyên tắc\n- Mỗi bài PHẢI neo về 1 chuyện thật hoặc 1 giá trị (link 8 chiều)\n- Tỉ lệ 4-1-1: 4 trao giá trị · 1 kể chuyện đời · 1 mời gọi nhẹ\n- Sau mỗi tuần: ghi lại bài nào chạy tốt vào Board → tinh chỉnh tuần sau\n`
+    let md = `**Loại:** 📋 Quy trình · **Campaign:** Chiến lược ${planDays} ngày\n\n**Tóm tắt 1 câu:** Lịch ${planDays} ngày — ${perWeek} bài/tuần xoay ${pillars.length} trụ: ${pillars.join(' · ')}.\n\n**Nguồn:** Hồ sơ Hồn + kho chuyện thật\n\n## Nguyên tắc\n- Mỗi bài neo về 1 chuyện thật/giá trị (link 8 chiều)\n- Tỉ lệ 4-1-1: 4 trao giá trị · 1 chuyện đời · 1 mời gọi nhẹ\n- Cuối tuần ghi kết quả vào Board → tinh chỉnh tuần sau\n`
     for (let w = 1; w <= weeks; w++) {
       md += `\n## Tuần ${w} — trụ: ${pillars[(w - 1) % pillars.length]}\n`
-      for (let d2 = 0; d2 < perWeek; d2++) md += `- [ ] Bài ${d2 + 1}: ${fmts[d2 % fmts.length]} · góc: ${['chuyện thật của tôi', 'bài học rút ra', 'sai lầm thường gặp', 'hỏi đáp khán giả', 'trích sách + cảm nhận', 'hậu trường công việc', 'số liệu/kết quả thật'][d2 % 7]}\n`
+      for (let d2 = 0; d2 < perWeek; d2++) md += `- [ ] ${fmts[d2 % fmts.length]} · góc: ${['chuyện thật', 'bài học rút ra', 'sai lầm thường gặp', 'hỏi đáp', 'trích nguồn + cảm nhận', 'hậu trường', 'kết quả thật'][d2 % 7]}\n`
     }
-    md += `\n## Đo & tinh chỉnh\n- [ ] Cuối mỗi tuần: cập nhật kết quả vào Board (reach/lead/phản hồi)\n- [ ] Cuối tháng: bài tốt nhất → nhân bản thành ${fmts.length > 1 ? 'định dạng khác' : 'series'}\n- [ ] Vòng lặp: thành công nối tiếp thành công — giữ gì, bỏ gì, thử gì mới?`
+    md += `\n## Đo & tinh chỉnh\n- [ ] Tuần: cập nhật reach/lead vào Board\n- [ ] Tháng: bài tốt nhất → nhân bản định dạng khác`
     onCreatePlan(`Chiến lược content ${planDays} ngày (${new Date().toLocaleDateString('vi')})`, md)
   }
-  const TABS: [typeof tab, string][] = [['matrix', '🎯 Ma trận content'], ['voice', '🎙️ 21 câu hỏi giọng'], ['lib', '🧨 Thư viện viral'], ['prompt', '🤖 Prompt & chiến lược']]
-  return (
-    <div className="px-8 py-6 max-w-5xl mx-auto">
-      <h2 className="text-xl font-extrabold mb-1">🎛️ Content Engine</h2>
-      <p className="text-zinc-500 text-sm mb-4">Chọn điểm mạnh → né vùng cấm → đặt nhịp → lấy prompt & lịch — vài dòng lệnh dùng cả kho tri thức của bạn.</p>
-      <div className="flex gap-1.5 mb-5 flex-wrap">
-        {TABS.map(([k, l]) => <button key={k} onClick={() => setTab(k)} className={`text-xs rounded-xl px-3.5 py-2 border transition ${tab === k ? 'ak-cta text-white font-bold border-transparent' : 'bg-white/5 border-white/10 text-zinc-400 hover:text-white'}`}>{l}</button>)}
-      </div>
 
-      {tab === 'matrix' && (
-        <div className="space-y-4">
-          <Card>
-            <Lbl>💪 Điểm mạnh của tôi — chọn từ chuyện đời thật (tối đa 5)</Lbl>
-            <div className="flex flex-wrap gap-1.5">
+  if (!loaded) return <div className="px-8 py-10 text-sm text-zinc-600">Đang mở Engine…</div>
+
+  /* ════════ WIZARD HỒ SƠ HỒN — 5 màn, mỗi màn ≤2 quyết định, lưu từng bước ════════ */
+  if (wizard) {
+    const steps = 5
+    const Next = ({ ok, label = 'Tiếp tục →' }: { ok: boolean; label?: string }) => (
+      <div className="flex items-center justify-between mt-8">
+        <button onClick={() => wStep > 0 ? setWStep(s => s - 1) : setWizard(false)} className="text-xs text-zinc-600 hover:text-zinc-300">← {wStep > 0 ? 'Quay lại' : 'Để sau'}</button>
+        <button onClick={() => wStep < steps - 1 ? setWStep(s => s + 1) : setWizard(false)} disabled={!ok}
+          className="rounded-xl ak-cta px-8 py-2.5 text-sm font-bold disabled:opacity-30">{wStep === steps - 1 ? '✓ Hoàn tất Hồ sơ Hồn' : label}</button>
+      </div>
+    )
+    return (
+      <div className="min-h-full grid place-items-center px-8 py-10">
+        <div className="w-full max-w-xl">
+          <div className="flex items-center gap-3 mb-10">
+            <div className="h-1 flex-1 rounded-full bg-white/5 overflow-hidden"><div className="h-full ak-grad transition-all duration-500" style={{ width: `${((wStep + 1) / steps) * 100}%` }} /></div>
+            <span className="font-mono text-[10px] text-zinc-600 tabular-nums">bước {wStep + 1}/{steps}</span>
+          </div>
+          {wStep === 0 && (<div className="dq-step-in">
+            <h2 className="text-2xl font-extrabold mb-1.5">Bạn viết với tư cách gì?</h2>
+            <p className="text-sm text-zinc-500 mb-6">Akash đọc kho của bạn để viết đúng hồn — bắt đầu từ chiếc mũ bạn đội.</p>
+            <div className="grid sm:grid-cols-2 gap-2.5">
+              {ROLES.map(([k, name, desc]) => (
+                <button key={k} onClick={() => saveMatrix({ ...mx, role: k })} className={`text-left rounded-2xl border p-4 transition ${mx.role === k ? 'bg-violet-500/15 border-violet-400/50' : 'bg-white/[0.03] border-white/10 hover:border-white/25'}`}>
+                  <div className="text-sm font-bold mb-0.5">{name}</div>
+                  <div className="text-[11px] text-zinc-500">{desc}</div>
+                </button>
+              ))}
+            </div>
+            <Next ok={!!mx.role} />
+          </div>)}
+          {wStep === 1 && (<div className="dq-step-in">
+            <h2 className="text-2xl font-extrabold mb-1.5">Bạn viết cho ai?</h2>
+            <p className="text-sm text-zinc-500 mb-6">Một câu mô tả người sẽ đọc — càng cụ thể content càng trúng.</p>
+            <textarea value={mx.audience ?? ''} onChange={e => setMx({ ...mx, audience: e.target.value })} onBlur={() => saveMatrix(mx)}
+              placeholder="vd: người 28–35 đi làm văn phòng, muốn thêm thu nhập nhưng sợ bị lừa…" className="w-full h-28 rounded-2xl bg-white/[0.04] border border-white/10 p-4 text-sm outline-none focus:border-violet-400/40" />
+            <div className="flex flex-wrap gap-1.5 mt-2">
+              {['người trẻ đang mất phương hướng sự nghiệp', 'bố mẹ bỉm sữa muốn thêm thu nhập tại nhà', 'người từng thất bại kinh doanh đang làm lại'].map(s => (
+                <button key={s} onClick={() => saveMatrix({ ...mx, audience: s })} className="text-[11px] rounded-lg bg-white/5 border border-white/10 px-2.5 py-1 text-zinc-400 hover:text-white">{s}</button>
+              ))}
+            </div>
+            <Next ok={!!mx.audience?.trim()} />
+          </div>)}
+          {wStep === 2 && (<div className="dq-step-in">
+            <h2 className="text-2xl font-extrabold mb-1.5">Điểm mạnh & vùng cấm</h2>
+            <p className="text-sm text-zinc-500 mb-5">Chọn ≤5 điểm mạnh để khai thác — và những điều AI không bao giờ được nhắc.</p>
+            <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-violet-300/80 mb-2">Điểm mạnh</div>
+            <div className="flex flex-wrap gap-1.5 mb-5">
               {['Kể chuyện thật', 'Kiên trì sau thất bại', 'Phân tích số liệu', 'Lắng nghe sâu', 'Hài hước tự trào', 'Kỷ luật buổi sáng', 'Kiến thức đầu tư', 'Trải nghiệm du học', 'Làm cha mẹ', 'Networking tử tế', 'Đọc sách & đúc rút', 'Thiền & tĩnh tâm'].map(s => (
                 <button key={s} onClick={() => saveMatrix({ ...mx, strengths: toggle(mx.strengths, s).slice(0, 5) })} className={chip(mx.strengths.includes(s))}>{s}</button>
               ))}
             </div>
-          </Card>
-          <div className="grid md:grid-cols-2 gap-4">
-            <Card>
-              <Lbl>🎯 Điều tôi muốn khai thác</Lbl>
-              <div className="flex flex-wrap gap-1.5">
-                {['Hành trình vấp ngã → đứng dậy', 'Tài chính cá nhân tử tế', 'Thói quen & kỷ luật', 'Chuyện gia đình & làm cha', 'Bài học kinh doanh', 'Sách & người thầy', 'Hậu trường nghề', 'Phát triển đội nhóm'].map(s => (
-                  <button key={s} onClick={() => saveMatrix({ ...mx, exploit: toggle(mx.exploit, s) })} className={chip(mx.exploit.includes(s))}>{s}</button>
-                ))}
-              </div>
-            </Card>
-            <Card>
-              <Lbl>🚫 Vùng KHÔNG nhắc tới — AI sẽ tránh tuyệt đối</Lbl>
-              <div className="flex flex-wrap gap-1.5">
-                {['Số thu nhập cụ thể', 'So sánh công ty khác', 'Chính trị/tôn giáo', 'Chuyện riêng gia đình lớn', 'Khoe của', 'Hứa hẹn kết quả', 'Drama cá nhân'].map(s => (
-                  <button key={s} onClick={() => saveMatrix({ ...mx, avoid: toggle(mx.avoid, s) })} className={`px-2.5 py-1 rounded-lg text-[11px] border transition ${mx.avoid.includes(s) ? 'bg-red-500/20 border-red-400/50 text-red-200' : 'bg-white/5 border-white/10 text-zinc-400'}`}>{s}</button>
-                ))}
-              </div>
-            </Card>
-          </div>
-          <div className="grid md:grid-cols-3 gap-4">
-            <Card><Lbl>📆 Nhịp ra bài</Lbl><div className="flex flex-wrap gap-1.5">{FREQS.map(f => <button key={f} onClick={() => saveMatrix({ ...mx, freq: f })} className={chip(mx.freq === f)}>{f}</button>)}</div></Card>
-            <Card><Lbl>🎬 Định dạng mạnh</Lbl><div className="flex flex-wrap gap-1.5">{FORMATS.map(f => <button key={f} onClick={() => saveMatrix({ ...mx, formats: toggle(mx.formats, f) })} className={chip(mx.formats.includes(f))}>{f}</button>)}</div></Card>
-            <Card><Lbl>📡 Kênh</Lbl><div className="flex flex-wrap gap-1.5">{CHANNELS.map(f => <button key={f} onClick={() => saveMatrix({ ...mx, channels: toggle(mx.channels, f) })} className={chip(mx.channels.includes(f))}>{f}</button>)}</div></Card>
-          </div>
-          <Card className="border-violet-400/20">
-            <Lbl>📖 Chất liệu sẵn có từ kho của bạn</Lbl>
+            <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-red-300/70 mb-2">Không nhắc tới</div>
             <div className="flex flex-wrap gap-1.5">
-              {myValues.map(v => <span key={v.id} className="text-[11px] rounded-lg bg-violet-500/15 border border-violet-400/30 text-violet-200 px-2 py-1">⭐ {v.title}</span>)}
-              {myStories.map(s => <button key={s.id} onClick={() => onOpenPage(s.id)} className="text-[11px] rounded-lg bg-white/5 border border-white/10 px-2 py-1 text-zinc-400 hover:text-white">🌱 {s.title}</button>)}
-              {myValues.length + myStories.length === 0 && <p className="text-xs text-zinc-600">Chưa có — ghi trải nghiệm & giá trị trước, content sẽ có hồn.</p>}
+              {['Số thu nhập cụ thể', 'So sánh công ty khác', 'Chính trị/tôn giáo', 'Chuyện riêng gia đình lớn', 'Khoe của', 'Hứa hẹn kết quả', 'Drama cá nhân'].map(s => (
+                <button key={s} onClick={() => saveMatrix({ ...mx, avoid: toggle(mx.avoid, s) })} className={`px-3 py-1.5 rounded-lg text-xs border transition ${mx.avoid.includes(s) ? 'bg-red-500/20 border-red-400/50 text-red-200' : 'bg-white/5 border-white/10 text-zinc-400'}`}>{s}</button>
+              ))}
             </div>
-          </Card>
+            <Next ok={mx.strengths.length > 0} />
+          </div>)}
+          {wStep === 3 && (<div className="dq-step-in">
+            <h2 className="text-2xl font-extrabold mb-1.5">Chọn tối đa 3 trụ nội dung</h2>
+            <p className="text-sm text-zinc-500 mb-6">Trụ = chủ đề bạn sẽ xoay vòng. Ít trụ, sâu — hơn nhiều trụ, loãng.</p>
+            <div className="flex flex-wrap gap-1.5">
+              {['Hành trình vấp ngã → đứng dậy', 'Tài chính cá nhân tử tế', 'Thói quen & kỷ luật', 'Chuyện gia đình & làm cha', 'Bài học kinh doanh', 'Sách & người thầy', 'Hậu trường nghề', 'Phát triển đội nhóm'].map(s => (
+                <button key={s} onClick={() => saveMatrix({ ...mx, exploit: toggle(mx.exploit, s).slice(0, 3) })} className={chip(mx.exploit.includes(s))}>{s}</button>
+              ))}
+            </div>
+            <Next ok={mx.exploit.length > 0} />
+          </div>)}
+          {wStep === 4 && (<div className="dq-step-in">
+            <h2 className="text-2xl font-extrabold mb-1.5">Nhịp & định dạng</h2>
+            <p className="text-sm text-zinc-500 mb-6">Cam kết được bao nhiêu, đặt bấy nhiêu — nhất quán thắng động lực.</p>
+            <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-zinc-500 mb-2">Nhịp ra bài</div>
+            <div className="flex gap-1.5 mb-5">{FREQS.map(f => <button key={f} onClick={() => saveMatrix({ ...mx, freq: f })} className={chip(mx.freq === f)}>{f}</button>)}</div>
+            <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-zinc-500 mb-2">Định dạng mạnh (chọn ≤3)</div>
+            <div className="flex flex-wrap gap-1.5">{FORMATS.map(f => <button key={f} onClick={() => saveMatrix({ ...mx, formats: toggle(mx.formats, f).slice(0, 3) })} className={chip(mx.formats.includes(f))}>{f}</button>)}</div>
+            <Next ok={mx.formats.length > 0} />
+          </div>)}
         </div>
-      )}
+      </div>
+    )
+  }
 
-      {tab === 'voice' && (
-        <Card>
-          {qs.length === 0 ? <p className="text-sm text-zinc-600">Chưa nạp bộ câu hỏi (trang “21 câu hỏi khai mở giọng thương hiệu” trong Thư viện viral).</p> : (
-            <>
-              <div className="flex items-center justify-between mb-3">
-                <Lbl>🎙️ Câu {qIdx + 1}/{qs.length}</Lbl>
-                <div className="h-1.5 w-40 rounded-full bg-white/10 overflow-hidden"><div className="h-full ak-grad" style={{ width: `${((qIdx) / qs.length) * 100}%` }} /></div>
+  /* ════════ MÀN CHÍNH "HÔM NAY TẠO GÌ?" — 1 luồng: preset → chủ đề → copy ════════ */
+  return (
+    <div className="px-8 py-6 max-w-3xl mx-auto">
+      <div className="flex items-center justify-between mb-1">
+        <h2 className="text-xl font-extrabold">Hôm nay tạo gì?</h2>
+        <div className="flex items-center gap-1.5 text-[11px]">
+          <button onClick={() => setPanel(panel === 'lib' ? 'none' : 'lib')} className={`rounded-lg border px-2.5 py-1 ${panel === 'lib' ? 'bg-white/10 border-white/20 text-white' : 'border-white/10 text-zinc-500 hover:text-white'}`}>Thư viện viral</button>
+          <button onClick={() => setPanel(panel === 'voice' ? 'none' : 'voice')} className={`rounded-lg border px-2.5 py-1 ${panel === 'voice' ? 'bg-white/10 border-white/20 text-white' : 'border-white/10 text-zinc-500 hover:text-white'}`}>21 câu hỏi giọng</button>
+          <button onClick={() => { setWizard(true); setWStep(0) }} className="rounded-lg border border-white/10 px-2.5 py-1 text-zinc-500 hover:text-white" title="Sửa vai, khán giả, điểm mạnh, trụ, nhịp">⚙ Hồ sơ Hồn</button>
+        </div>
+      </div>
+      <p className="text-sm text-zinc-500 mb-5">{ROLES.find(r => r[0] === mx.role)?.[1]} · viết cho <span className="text-zinc-300">{(mx.audience ?? '').slice(0, 48)}…</span> · {mx.freq}</p>
+
+      {panel === 'lib' && (
+        <Card className="mb-4">
+          <div className="grid md:grid-cols-2 gap-2 mb-3">
+            {lib.filter(n => n.subtype !== 'viral_hooks').map(n => (
+              <button key={n.id} onClick={() => onOpenPage(n.id)} className="text-left rounded-xl bg-white/[0.03] border border-white/10 px-3 py-2 hover:border-violet-400/40 text-xs">{n.subtype === 'viral_titles' ? '✨' : '🎬'} {n.title}</button>
+            ))}
+          </div>
+          <div className="max-h-48 overflow-auto space-y-2 pr-1">
+            {Object.entries(hooks.reduce<Record<string, string[]>>((a, h) => { (a[h.category] ??= []).push(h.text_vi); return a }, {})).map(([cat, hs]) => (
+              <div key={cat}>
+                <div className="text-[10px] font-mono uppercase tracking-wider text-amber-300/60 mb-1">{cat}</div>
+                <div className="flex flex-wrap gap-1">{hs.slice(0, 8).map((h, i) => <button key={i} onClick={() => copy(h, cat + i)} className={`text-left text-[11px] rounded-md border px-2 py-0.5 ${copied === cat + i ? 'bg-emerald-500/20 border-emerald-400/40 text-emerald-200' : 'bg-white/[0.03] border-white/10 text-zinc-400 hover:border-amber-400/30'}`}>{copied === cat + i ? '✓' : h}</button>)}</div>
               </div>
-              <h3 className="text-lg font-bold mb-1">{qs[qIdx].q_vi}</h3>
-              <p className="text-[11px] text-zinc-500 mb-1">Vì sao hỏi: {qs[qIdx].why_vi}</p>
-              <p className="text-[10px] text-zinc-600 mb-3">→ đổ vào: {qs[qIdx].maps_to}</p>
-              <textarea value={qAns} onChange={e => setQAns(e.target.value)} placeholder="Kể thật — càng cụ thể càng quý…" className="w-full h-32 rounded-xl bg-white/5 border border-white/10 p-3 text-sm outline-none focus:border-violet-400/50 mb-3" />
+            ))}
+          </div>
+        </Card>
+      )}
+      {panel === 'voice' && (
+        <Card className="mb-4">
+          {qs.length === 0 ? <p className="text-xs text-zinc-600">Chưa nạp bộ câu hỏi.</p> : (
+            <>
+              <div className="flex items-center justify-between mb-2"><Lbl>Câu {qIdx + 1}/{qs.length}</Lbl><span className="text-[10px] text-zinc-600">đã trả lời {Object.values(mx.answers ?? {}).filter(Boolean).length}</span></div>
+              <h3 className="text-base font-bold mb-1">{qs[qIdx].q_vi}</h3>
+              <p className="text-[10px] text-zinc-600 mb-2">{qs[qIdx].why_vi}</p>
+              <textarea value={qAns} onChange={e => setQAns(e.target.value)} className="w-full h-24 rounded-xl bg-white/5 border border-white/10 p-3 text-sm outline-none focus:border-violet-400/40 mb-2" />
               <div className="flex gap-2">
-                {qIdx > 0 && <button onClick={() => { setQIdx(i => i - 1); setQAns(mx.answers?.[qs[qIdx - 1].q_vi] ?? '') }} className="rounded-xl bg-white/5 border border-white/10 px-4 py-2 text-sm text-zinc-400">← Trước</button>}
+                {qIdx > 0 && <button onClick={() => { setQIdx(i => i - 1); setQAns(mx.answers?.[qs[qIdx - 1].q_vi] ?? '') }} className="rounded-lg bg-white/5 border border-white/10 px-3 py-1.5 text-xs text-zinc-400">←</button>}
                 <button onClick={async () => {
                   const answers = { ...(mx.answers ?? {}), [qs[qIdx].q_vi]: qAns.trim() }
                   await saveMatrix({ ...mx, answers })
-                  if (qAns.trim()) {
-                    // ghi vào trang "Tôi là ai" để AI đọc
-                    const me = pages.find(n => n.subtype === 'profile_me' && n.owner_id === user.id)
-                    if (me) { const { data } = await supabase.from('nodes').select('md').eq('id', me.id).single(); await supabase.from('nodes').update({ md: `${data?.md ?? ''}\n\n**${qs[qIdx].q_vi}**\n${qAns.trim()}` }).eq('id', me.id) }
-                  }
+                  if (qAns.trim()) { const me = pages.find(n => n.subtype === 'profile_me' && n.owner_id === user.id); if (me) { const { data } = await supabase.from('nodes').select('md').eq('id', me.id).single(); await supabase.from('nodes').update({ md: `${data?.md ?? ''}\n\n**${qs[qIdx].q_vi}**\n${qAns.trim()}` }).eq('id', me.id) } }
                   setQAns(answers[qs[qIdx + 1]?.q_vi] ?? ''); setQIdx(i => Math.min(i + 1, qs.length - 1))
-                }} className="flex-1 rounded-xl ak-cta py-2 text-sm font-bold">{qIdx === qs.length - 1 ? '✓ Hoàn thành' : 'Lưu & câu tiếp →'}</button>
+                }} className="flex-1 rounded-lg ak-cta py-1.5 text-xs font-bold">Lưu & tiếp →</button>
               </div>
-              <p className="text-[10px] text-zinc-600 mt-2">Đã trả lời: {Object.values(mx.answers ?? {}).filter(Boolean).length}/{qs.length} — câu trả lời tự ghi vào trang “Tôi là ai” cho AI đọc.</p>
             </>
           )}
         </Card>
       )}
 
-      {tab === 'lib' && (
-        <div className="space-y-4">
-          <Card>
-            <Lbl>🪝 Hook giữ chân ({hooks.length}) — bấm để copy</Lbl>
-            <div className="max-h-72 overflow-auto space-y-3 pr-1">
-              {Object.entries(hooks.reduce<Record<string, string[]>>((acc, h) => { (acc[h.category] ??= []).push(h.text_vi); return acc }, {})).map(([cat, hs]) => (
-                <div key={cat}>
-                  <div className="text-[10px] uppercase tracking-wider text-amber-300/70 mb-1">{cat}</div>
-                  <div className="flex flex-wrap gap-1.5">{hs.map((h, i) => <button key={i} onClick={() => copy(h, cat + i)} className={`text-left text-[11px] rounded-lg border px-2 py-1 transition ${copied === cat + i ? 'bg-emerald-500/20 border-emerald-400/50 text-emerald-200' : 'bg-white/5 border-white/10 text-zinc-300 hover:border-amber-400/40'}`}>{copied === cat + i ? '✓ đã copy' : h}</button>)}</div>
-                </div>
-              ))}
-              {hooks.length === 0 && <p className="text-xs text-zinc-600">Chưa nạp hooks.</p>}
-            </div>
-          </Card>
-          <div className="grid md:grid-cols-2 gap-3">
-            {lib.filter(n => n.subtype !== 'viral_hooks').map(n => (
-              <button key={n.id} onClick={() => onOpenPage(n.id)} className="text-left rounded-2xl bg-white/[0.04] border border-white/10 p-4 hover:border-violet-400/50 transition">
-                <div className="text-2xl mb-1">{n.subtype === 'viral_titles' ? '✨' : '🎬'}</div>
-                <div className="text-sm font-bold">{n.title}</div>
-                <div className="text-[11px] text-zinc-500 mt-0.5">{(n.props?.use_case as string) ?? 'mở để xem cấu trúc từng beat'}</div>
-              </button>
-            ))}
-          </div>
-          <Card>
-            <Lbl>📤 Nạp skill/tài liệu marketing của bạn</Lbl>
-            <p className="text-xs text-zinc-500 mb-2">Có tài liệu hay lượm trên mạng? Dán vào <b className="text-zinc-300">📥 Nhập liệu</b> (Home) chọn loại 📋 Quy trình → nó vào kho và Engine dùng được ngay. File .md thì kéo vào nút <b className="text-zinc-300">.md</b> trên thanh Kho tri thức.</p>
-          </Card>
-        </div>
-      )}
+      {/* BƯỚC 1 — chọn preset (1 quyết định) */}
+      <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-zinc-500 mb-2">1 · Chọn góc kể</div>
+      <div className="grid sm:grid-cols-2 gap-2.5 mb-5">
+        {PRESETS.map(ps => (
+          <button key={ps.key} onClick={() => setPreset(ps.key)} className={`text-left rounded-2xl border p-4 transition ${preset === ps.key ? 'bg-violet-500/15 border-violet-400/50' : 'bg-white/[0.03] border-white/10 hover:border-white/25'}`}>
+            <div className="text-xl mb-1">{ps.icon}</div>
+            <div className="text-sm font-bold">{ps.name}</div>
+            <div className="text-[11px] text-zinc-500 mt-0.5">{ps.desc}</div>
+          </button>
+        ))}
+      </div>
 
-      {tab === 'prompt' && (
-        <div className="space-y-4">
-          <Card>
-            <div className="flex items-center justify-between mb-2"><Lbl>🤖 Master prompt — giọng của bạn (máy sinh từ ma trận + kho)</Lbl>
-              <button onClick={() => copy(masterPrompt, 'mp')} className={`text-[10px] rounded-lg border px-2.5 py-1 ${copied === 'mp' ? 'bg-emerald-500/20 border-emerald-400/50 text-emerald-200' : 'bg-white/5 border-white/10 text-zinc-400 hover:text-white'}`}>{copied === 'mp' ? '✓ đã copy' : '📋 Copy'}</button>
-            </div>
-            <pre className="text-[11px] leading-relaxed text-zinc-300 whitespace-pre-wrap font-mono bg-black/30 rounded-xl border border-white/10 p-3 max-h-56 overflow-auto">{masterPrompt}</pre>
-            <p className="text-[10px] text-zinc-600 mt-2">Dán vào Claude/ChatGPT kèm 1 chuyện thật từ 📓 Hành trình — khi cắm API, Akash tự làm bước này. {anchor ? '⚓ Kim Chỉ Nam của bạn sẽ được đính kèm tự động.' : ''}</p>
-          </Card>
-          <Card>
-            <Lbl>📅 Sinh chiến lược content {planDays} ngày từ ma trận</Lbl>
-            <div className="flex items-center gap-2 mb-3">
-              {([30, 60, 180] as const).map(d2 => <button key={d2} onClick={() => setPlanDays(d2)} className={chip(planDays === d2)}>{d2} ngày</button>)}
-              <span className="text-[10px] text-zinc-600">nhịp {mx.freq} · {mx.formats.length || 1} định dạng · trụ từ "điều muốn khai thác"</span>
-            </div>
-            <button onClick={genPlan} className="w-full rounded-xl ak-cta py-2.5 text-sm font-bold">⚡ Tạo lịch {planDays} ngày → lưu vào 🎬 Xưởng content</button>
-            <p className="text-[10px] text-zinc-600 mt-2">Lịch = trang checklist trong Xưởng content: mỗi tuần một trụ, tỉ lệ 4-1-1, có mục đo & tinh chỉnh cuối tuần — vòng lặp thành công nối tiếp thành công.</p>
-          </Card>
-          <Card>
-            <Lbl>🎥 Pipeline media (chuẩn bị cho AI — theo nghiên cứu Higgsfield/Runway/HeyGen)</Lbl>
-            <div className="grid sm:grid-cols-5 gap-1.5 text-center">
-              {[['📖', 'Chuyện thật', 'từ kho của bạn'], ['✍️', 'Script', 'Claude — giọng bạn'], ['🖼️', 'Ảnh/Storyboard', 'Flux/Midjourney'], ['🎬', 'Video', 'Kling/Runway/Higgsfield'], ['🗣️', 'Voice', 'ElevenLabs']].map(([ic, t, d2]) => (
-                <div key={t} className="rounded-xl bg-white/[0.04] border border-white/10 px-2 py-3"><div className="text-xl mb-1">{ic}</div><div className="text-[11px] font-bold">{t}</div><div className="text-[9px] text-zinc-600">{d2}</div></div>
-              ))}
-            </div>
-            <p className="text-[10px] text-zinc-600 mt-2">Mỗi khâu đã có hàng đợi <code className="text-cyan-300">ai_jobs</code> trong DB — cắm key là chạy, human-in-the-loop trước khi đăng.</p>
-          </Card>
+      {/* BƯỚC 2 — chủ đề + chất liệu (2 quyết định) */}
+      {preset && (<div className="dq-step-in">
+        <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-zinc-500 mb-2">2 · Chủ đề & chất liệu thật</div>
+        <input value={topic} onChange={e => setTopic(e.target.value)} placeholder="Chủ đề hôm nay — vd: lần đầu bị khách từ chối…" className="w-full rounded-2xl bg-white/[0.04] border border-white/10 px-4 py-3 text-sm outline-none focus:border-violet-400/40 mb-2.5" />
+        <div className="flex flex-wrap gap-1.5 mb-5">
+          {myStories.map(s => (
+            <button key={s.id} onClick={async () => { const { data } = await supabase.from('nodes').select('id,title,md').eq('id', s.id).single(); setSrcPage((data as AnyNode) ?? s) }}
+              className={`text-[11px] rounded-lg border px-2.5 py-1 transition ${srcPage?.id === s.id ? 'bg-amber-500/20 border-amber-400/50 text-amber-100' : 'bg-white/5 border-white/10 text-zinc-400 hover:border-amber-400/30'}`}>🌱 {s.title}</button>
+          ))}
+          {myStories.length === 0 && <span className="text-[11px] text-zinc-600">Chưa có chuyện thật — ghi 1 trải nghiệm ở Home trước, content sẽ có hồn.</span>}
         </div>
-      )}
+
+        {/* BƯỚC 3 — một nút */}
+        <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-zinc-500 mb-2">3 · Lấy prompt — dán vào Claude/ChatGPT (AI tự chạy khi cắm key)</div>
+        <div className="rounded-2xl border border-white/10 bg-black/30 p-3.5 mb-2.5 max-h-44 overflow-auto">
+          <pre className="text-[11px] leading-relaxed text-zinc-400 whitespace-pre-wrap font-mono">{finalPrompt}</pre>
+        </div>
+        <button onClick={() => copy(finalPrompt, 'fp')} className={`w-full rounded-2xl py-3 text-sm font-bold transition ${copied === 'fp' ? 'bg-emerald-500/20 border border-emerald-400/50 text-emerald-200' : 'ak-cta'}`}>{copied === 'fp' ? '✓ Đã copy — dán vào AI của bạn' : '📋 Copy prompt hoàn chỉnh'}</button>
+      </div>)}
+
+      {/* phụ: chiến lược dài hạn */}
+      <div className="mt-8 pt-5 border-t border-white/[0.06] flex items-center gap-2 flex-wrap">
+        <span className="text-[11px] text-zinc-600">Chiến lược dài hạn:</span>
+        {([30, 60, 180] as const).map(d2 => <button key={d2} onClick={() => setPlanDays(d2)} className={`text-[11px] rounded-lg border px-2.5 py-1 ${planDays === d2 ? 'bg-white/10 border-white/25 text-white' : 'border-white/10 text-zinc-500'}`}>{d2} ngày</button>)}
+        <button onClick={genPlan} className="text-[11px] rounded-lg border border-amber-400/30 bg-amber-500/10 text-amber-200 px-3 py-1 hover:bg-amber-500/20">⚡ Tạo lịch → Xưởng content</button>
+      </div>
     </div>
   )
 }
