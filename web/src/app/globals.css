@@ -272,8 +272,10 @@ html:not([data-theme='light']) .bg-\[\#1c1c26\] {
 
 /* ===== EDITOR TYPOGRAPHY — soạn thảo đẹp như đọc sách ===== */
 .dq-editor [data-content-type] { font-size: 16.5px; line-height: 1.78; color: #d6d6e0; }
-/* h1 thân bài LUÔN nhỏ hơn title trang (text-4xl) — tầng chữ BRANDING §2 */
-.dq-editor h1 { font-size: 1.55em !important; font-weight: 800 !important; letter-spacing: -0.4px; margin-top: .4em; color: #fff !important; }
+/* TẦNG CHỮ THÂN TRANG (BRANDING §2): BlockNote set 3em ở cấp BLOCK heading (→74px, to hơn title 36px!)
+   → ghìm block về 16.5px rồi mới scale h1/h2/h3 — heading thân LUÔN < title trang */
+.dq-editor [data-content-type='heading'] { font-size: 16.5px !important; }
+.dq-editor h1 { font-size: 1.5em !important; font-weight: 800 !important; letter-spacing: -0.4px; margin-top: .4em; color: #fff !important; }
 .dq-editor h2 {
   font-size: 1.4em !important; font-weight: 700 !important; margin-top: .9em;
   color: #c4b5fd !important;

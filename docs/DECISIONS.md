@@ -5,7 +5,8 @@
 ## A. QUYẾT ĐỊNH CUỐI CÙNG (không bàn lại, chỉ thực thi)
 
 1. **Tên & nhận diện**: App tên **Akash** (akasha — hư không lưu trữ tri thức). Logo chữ "A" gradient tím→cyan. Identity màu: tím #8b5cf6 · cyan #22d3ee; light theme "paper" #faf9fc giữ identity, galaxy + login vĩnh viễn dark.
-2. **FRAMEWORK gốc rễ = 8 chiều liên kết** (knowledge/experience/emotion/values/people/time/reference/anchor — màu cố định trong FRAMEWORK.md §1). Radar 5 cạnh (Nối·Nghĩa·Chứng·Trải·Hành) là THƯỚC ĐO Độ Thấm, không phải gốc. Đã BỎ nhánh "truyền dạy/transmission".
+2. **FRAMEWORK gốc rễ = 8 chiều liên kết** (knowledge/experience/emotion/values/people/time/reference/anchor — màu cố định trong FRAMEWORK.md §1). Đã BỎ nhánh "truyền dạy/transmission".
+   **[CẬP NHẬT 2026-06-12, founder chốt]**: BỎ radar 5 cạnh — thước đo Độ Chuyển hoá CŨNG là 8 chiều, DERIVE từ bảng links + tín hiệu nội tại (công thức duy nhất: `web/src/lib/transformScore.ts`, căn cứ nghiên cứu docs/RESEARCH-VIZ-ARCH.md mũi 2). `wisdom_depth` chỉ còn vai trò lịch ôn SM-2. Một chữ thống nhất từ 12/6: **"Chuyển hoá"**.
 3. **Một chữ thống nhất: "Thấm"** (không dùng Học bài/Thẩm thấu). Luồng Thấm = 7 màn đi qua 8 chiều, Hoa Thấm 8 cánh, learned cần ≥2 chiều, lịch ôn SM-2 (1-3-7-21-60 ngày).
 4. **Thời gian = event_date thực tế** (viết về quá khứ → ngày quá khứ), KHÔNG phải ngày tạo trang. Dòng đời cá nhân là trục gốc.
 5. **Liên kết mức câu/quote** (links.excerpt + from_block), không chỉ mức trang. Backlink tự động — đã giải thích trong UI.

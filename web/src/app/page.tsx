@@ -10,7 +10,8 @@ import { Profile, Today, Board, Studio } from './Pages'
 import { KolFeed, ContentEngine, ReviewHub, MembersHub } from './Hubs'
 import Warp from './Warp'
 import { IVault, IHome, IPen, IBoard, ICheck, IUsers, IUser, ISearch, IPlus, IDots, IChevron, ILogout, IDoc, IOrbit, IUpload, ICode, ITarget, IRefresh, IMegaphone, IGrad, IX, IExpand, IEye, IEyeOff } from './Icons'
-import { DIMS, PAGE_TYPES, OUTPUT_FORMATS, PropsPanel, PageFooter } from './PageFrame'
+import { DIMS, PAGE_TYPES, OUTPUT_FORMATS, PropsPanel, PageFooter, Dim8Bars } from './PageFrame'
+import { dimSignals, transformScore } from '@/lib/transformScore'
 
 const Editor = dynamic(() => import('./Editor'), { ssr: false })
 const Database = dynamic(() => import('./Database'), { ssr: false })
@@ -493,7 +494,7 @@ function Workspace({ user }: { user: User }) {
   }, [user.id])
   const loadGraph = useCallback(async (org: string) => {
     const [{ data: ns }, { data: ls }] = await Promise.all([
-      supabase.from('nodes').select('id,title,kind,parent_id,layer,event_date').eq('org_id', org).neq('kind', 'block').order('created_at'),
+      supabase.from('nodes').select('id,title,kind,parent_id,layer,event_date,subtype').eq('org_id', org).neq('kind', 'block').order('created_at'),
       supabase.from('links').select('from_node,to_node,dimension').eq('org_id', org),
     ])
     setAllNodes((ns as GNode[]) ?? []); setLinks((ls as GLink[]) ?? [])
@@ -742,7 +743,7 @@ function Workspace({ user }: { user: User }) {
                   <div className="flex items-center gap-2 px-4 py-2 border-b border-white/5 shrink-0">
                     {depth?.learned
                       ? <>
-                          <span className="flex items-center gap-1.5 text-xs rounded-lg bg-violet-500/15 border border-violet-400/30 text-violet-300 px-2 py-1"><ITarget size={13} /> Độ Chuyển hoá {depthScore(depth)}</span>
+                          <span className="flex items-center gap-1.5 text-xs rounded-lg bg-violet-500/15 border border-violet-400/30 text-violet-300 px-2 py-1 tabular-nums"><ITarget size={13} /> {(() => { const nd2 = nodeOf(editing.id); const t = transformScore(dimSignals({ out: outRaw, back: backRaw, event_date: nd2?.event_date, props: nd2?.props })); return `${t.total} · ${t.covered}/8` })()}</span>
                           <button onClick={() => setShowDigest(true)} className="flex items-center gap-1.5 text-xs rounded-lg bg-white/10 border border-white/10 px-2.5 py-1 hover:bg-white/15"><IRefresh size={13} /> Ôn lại</button>
                         </>
                       : <button onClick={() => setShowDigest(true)} className="flex items-center gap-1.5 text-xs rounded-lg bg-gradient-to-r from-violet-500 to-cyan-500 px-3 py-1 font-semibold"><IGrad size={13} /> Chuyển hoá bài này</button>}
@@ -810,27 +811,37 @@ function Workspace({ user }: { user: User }) {
                 <div className="flex items-center gap-2 shrink-0 relative">
                   <span className="text-[11px] text-zinc-600 hidden md:inline">{savedMsg}</span>
                   <button onClick={toggleMd} title="Xem dạng Markdown" className={`flex items-center gap-1 text-[11px] rounded-lg border px-2 py-1 ${mdView ? 'bg-violet-500/20 border-violet-400/40 text-violet-200' : 'bg-white/5 border-white/10 text-zinc-400 hover:text-white'}`}><ICode size={13} /> MD</button>
-                  {depth?.learned ? (
-                    <>
-                      {/* LUỒNG HỌC: radar 5 cạnh → ôn lại → chuyển content */}
-                      <button onClick={() => setShowRadar(s => !s)} title="Xem radar Độ Chuyển hoá" className="flex items-center gap-1.5 text-xs rounded-lg bg-violet-500/15 border border-violet-400/30 text-violet-300 px-2.5 py-1 hover:bg-violet-500/25"><ITarget size={13} /> {depthScore(depth)}</button>
-                      <button onClick={() => setShowDigest(true)} className="flex items-center gap-1.5 text-xs rounded-lg bg-white/10 border border-white/10 px-2.5 py-1 hover:bg-white/15"><IRefresh size={13} /> Ôn lại</button>
-                      {nodeOf(editing.id)?.owner_id === user.id && <button onClick={toContent} title="Bài đã chín → tạo content" className="flex items-center gap-1.5 text-xs rounded-lg bg-gradient-to-r from-amber-500 to-yellow-400 px-2.5 py-1 font-semibold"><IMegaphone size={13} /> Content</button>}
-                      {showRadar && (
-                        <>
-                          <div className="fixed inset-0 z-20" onClick={() => setShowRadar(false)} />
-                          <div className="absolute right-0 top-9 z-30 rounded-2xl bg-[#1c1c26] border border-white/10 shadow-2xl p-4 w-[200px]">
-                            <div className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1 text-center">Độ Chuyển hoá 5 cạnh</div>
-                            <Radar d={depth} />
-                            <div className="text-center text-2xl font-black bg-gradient-to-r from-violet-400 to-cyan-300 bg-clip-text text-transparent">{depthScore(depth)}</div>
-                            <button onClick={() => { setShowRadar(false); setShowDigest(true) }} className="w-full mt-2 text-xs rounded-lg bg-gradient-to-r from-violet-500 to-cyan-500 px-3 py-1.5 font-semibold">🔁 Chuyển hoá lại để tăng điểm</button>
-                          </div>
-                        </>
-                      )}
-                    </>
-                  ) : (
-                    <button onClick={() => setShowDigest(true)} className="flex items-center gap-1.5 text-xs rounded-lg bg-gradient-to-r from-violet-500 to-cyan-500 px-3 py-1 font-semibold shadow-lg shadow-violet-500/25"><IGrad size={13} /> Chuyển hoá</button>
-                  )}
+                  {(() => {
+                    // ĐỘ CHUYỂN HOÁ 8 CHIỀU — derive từ links thật của trang (RESEARCH-VIZ-ARCH mũi 2), khớp framework
+                    const nd = nodeOf(editing.id)
+                    const x8 = dimSignals({ out: outRaw, back: backRaw, event_date: nd?.event_date, props: nd?.props })
+                    const t8 = transformScore(x8)
+                    const weakest = Object.entries(DIMS).filter(([k]) => (x8[k as keyof typeof x8] ?? 0) === 0)[0]
+                    return depth?.learned ? (
+                      <>
+                        <button onClick={() => setShowRadar(s => !s)} title={`Độ Chuyển hoá ${t8.total} · ${t8.covered}/8 chiều sáng`} className="flex items-center gap-1.5 text-xs rounded-lg bg-violet-500/15 border border-violet-400/30 text-violet-300 px-2.5 py-1 hover:bg-violet-500/25 tabular-nums"><ITarget size={13} /> {t8.total} · {t8.covered}/8</button>
+                        <button onClick={() => setShowDigest(true)} className="flex items-center gap-1.5 text-xs rounded-lg bg-white/10 border border-white/10 px-2.5 py-1 hover:bg-white/15"><IRefresh size={13} /> Ôn lại</button>
+                        {nd?.owner_id === user.id && <button onClick={toContent} title="Bài đã chín → tạo content" className="flex items-center gap-1.5 text-xs rounded-lg bg-gradient-to-r from-amber-500 to-yellow-400 px-2.5 py-1 font-semibold"><IMegaphone size={13} /> Content</button>}
+                        {showRadar && (
+                          <>
+                            <div className="fixed inset-0 z-20" onClick={() => setShowRadar(false)} />
+                            <div className="absolute right-0 top-9 z-30 rounded-2xl bg-[#1c1c26] border border-white/10 shadow-2xl p-4 w-[240px]">
+                              <div className="text-[10px] uppercase tracking-wider text-zinc-500 mb-2 text-center">Độ Chuyển hoá — 8 chiều</div>
+                              <Dim8Bars x={x8} height={42} />
+                              <div className="text-center mt-2">
+                                <span className="text-2xl font-black ak-grad-text tabular-nums">{t8.total}</span>
+                                <span className="text-[10px] text-zinc-500 ml-1.5">{t8.tier} · {t8.covered}/8 chiều</span>
+                              </div>
+                              {weakest && <p className="text-[10px] text-zinc-500 mt-1.5 leading-snug"><span style={{ color: weakest[1].color }}>{weakest[1].icon} {weakest[1].label}</span> chưa sáng — {weakest[1].q}</p>}
+                              <button onClick={() => { setShowRadar(false); setShowDigest(true) }} className="w-full mt-2 text-xs rounded-lg ak-cta px-3 py-1.5 font-semibold">Chuyển hoá lại — thắp chiều còn tối</button>
+                            </div>
+                          </>
+                        )}
+                      </>
+                    ) : (
+                      <button onClick={() => setShowDigest(true)} className="flex items-center gap-1.5 text-xs rounded-lg bg-gradient-to-r from-violet-500 to-cyan-500 px-3 py-1 font-semibold shadow-lg shadow-violet-500/25"><IGrad size={13} /> Chuyển hoá{t8.covered > 0 ? ` · ${t8.covered}/8` : ''}</button>
+                    )
+                  })()}
                   <button onClick={() => setEditing(null)} title="Đóng trang" className="w-7 h-7 grid place-items-center rounded-lg text-zinc-400 hover:bg-white/10 hover:text-white"><IX size={14} /></button>
                 </div>
               </div>

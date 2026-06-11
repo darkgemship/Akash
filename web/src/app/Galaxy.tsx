@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
-export type GNode = { id: string; title: string | null; kind: string; parent_id: string | null; layer?: string; event_date?: string | null }
+export type GNode = { id: string; title: string | null; kind: string; parent_id: string | null; layer?: string; event_date?: string | null; subtype?: string | null }
 export type GLink = { from_node: string; to_node: string; dimension: string | null }
 
 type P = { x: number; y: number; r: number; color: string; node: GNode; phase: number }
@@ -68,6 +68,7 @@ export default function Galaxy({ nodes, links, onOpen, onConnect }: {
   // 🧠 NEURO 3D: vị trí 3D + góc xoay (kéo nền để xoay, tự quay chậm)
   const p3dRef = useRef<Map<string, { x: number; y: number; z: number; r: number; hue: number; c: number }>>(new Map())
   const neuroClustersRef = useRef(0)
+  const neuroOrphanRef = useRef<Set<string>>(new Set())   // trang 0 liên kết — "ký ức chưa được não kết nối", treo ở vành ngoài
   const rotRef = useRef({ a: 0.4, b: 0.25 })
   const [unplacedOpen, setUnplacedOpen] = useState(false)
   const [unplacedCount, setUnplacedCount] = useState(0)
@@ -263,8 +264,14 @@ export default function Galaxy({ nodes, links, onOpen, onConnect }: {
           const th = i * 2.39996
           return { x: Math.cos(th) * rr * R3, y: y * R3 * 0.8, z: Math.sin(th) * rr * R3 }
         })
+        // ORPHAN RING (research mũi 1): trang lá 0 liên kết KHÔNG vào khối não —
+        // treo ở vành ngoài như ký ức chưa được kết nối, biến view thành hành động "cần nối"
+        const orphans = nodes.filter(n => (degRef.current.get(n.id) ?? 0) === 0 && n.kind !== 'kho' && n.kind !== 'folder' && n.subtype !== 'hub')
+        neuroOrphanRef.current = new Set(orphans.map(o => o.id))
+        unplacedRef.current = orphans
         const p3 = new Map<string, { x: number; y: number; z: number; r: number; hue: number; c: number }>()
         for (const n of nodes) {
+          if (neuroOrphanRef.current.has(n.id)) { m.set(n.id, { x: cx, y: cy, r: 5, color: '#9aa3b2', node: n, phase: rand() * Math.PI * 2 }); continue }
           const ci = clusterOf.get(n.id) ?? 0
           const c = centers[ci]
           const jr = (n.kind === 'kho' ? 4 : n.kind === 'note' ? R3 * 0.34 : R3 * 0.18)
@@ -354,6 +361,18 @@ export default function Galaxy({ nodes, links, onOpen, onConnect }: {
           pp.y = H2 / 2 + y2 * sc
           pp.r = Math.max(1.2, q.r * sc * 1.25)
         })
+        // vành mồ côi: đứng yên ngoài khối não (không xoay) — mới nhất ở vị trí 12h
+        {
+          const orph = [...neuroOrphanRef.current]
+          const Rr = Math.min(W2, H2) * 0.465
+          orph.forEach((id, i) => {
+            const pp = pts.current.get(id); if (!pp) return
+            const a = (i / Math.max(1, orph.length)) * Math.PI * 2 - Math.PI / 2
+            pp.x = W2 / 2 + Math.cos(a) * Rr * 1.06
+            pp.y = H2 / 2 + Math.sin(a) * Rr * 0.92
+            pp.r = 5
+          })
+        }
         // ❤️ NHỊP TIM lub-dub (~1.1s): cả não phập phồng nhẹ + MỖI NHỊP một vùng bừng sáng
         const period = 130
         const ph = (t % period) / period
@@ -653,12 +672,44 @@ export default function Galaxy({ nodes, links, onOpen, onConnect }: {
         }
       })
 
+      // FOCUS 1-HOP (research mũi 1): hover trong neuro → chỉ node + hàng xóm sáng, còn lại lặn xuống — hết "nùi"
+      let focusSet: Set<string> | null = null
+      if (mode === 'neuro' && hv) {
+        focusSet = new Set([hv])
+        links.forEach(l => { if (l.from_node === hv) focusSet!.add(l.to_node); if (l.to_node === hv) focusSet!.add(l.from_node) })
+      }
       // NODES — sức mạnh theo số liên kết: hub càng nối nhiều càng to & sáng
       pts.current.forEach(p => {
         const w = wpos(p)
         const hot = hoverId.current === p.node.id
         const isPicked = pickRef.current === p.node.id
         const deg = degRef.current.get(p.node.id) ?? 0
+        // neuro: node ngoài vùng focus chỉ còn là chấm mờ
+        if (focusSet && !focusSet.has(p.node.id)) {
+          const gx1 = SX(w.x), gy1 = SY(w.y)
+          ctx.globalAlpha = 0.1
+          ctx.fillStyle = p.color
+          ctx.beginPath(); ctx.arc(gx1, gy1, Math.max(1.5 * dpr, S(w.r) * 0.5), 0, 6.28); ctx.fill()
+          ctx.globalAlpha = 1
+          return
+        }
+        // neuro: orphan = vòng rỗng nét đứt lơ lửng ở rìa — bấm để mở & nối chiều đầu tiên
+        if (mode === 'neuro' && neuroOrphanRef.current.has(p.node.id)) {
+          const gx1 = SX(w.x), gy1 = SY(w.y)
+          if (gx1 < -40 || gx1 > cv.width + 40 || gy1 < -40 || gy1 > cv.height + 40) return
+          const Ro = S(5) + (hot ? 2 * dpr : 0)
+          const pulse = 1 + 0.10 * Math.sin(t * 0.045 + p.phase * 9)
+          ctx.globalAlpha = hot ? 1 : 0.7
+          ctx.setLineDash([4 * dpr, 3 * dpr])
+          ctx.strokeStyle = hot ? '#f5b942' : '#8a8f98'
+          ctx.lineWidth = 1.2 * dpr
+          ctx.beginPath(); ctx.arc(gx1, gy1, Ro * pulse, 0, 6.28); ctx.stroke()
+          ctx.setLineDash([])
+          ctx.fillStyle = 'rgba(255,255,255,.3)'
+          ctx.beginPath(); ctx.arc(gx1, gy1, 1.5 * dpr, 0, 6.28); ctx.fill()
+          ctx.globalAlpha = 1
+          return
+        }
         const power = Math.min(5, deg * 0.6)
         // neuro: nhịp tim đập vào node — vùng firing bừng sáng mạnh
         let nb = 0
@@ -1043,12 +1094,12 @@ export default function Galaxy({ nodes, links, onOpen, onConnect }: {
       </div>
 
       {/* node chưa vào bản đồ (radar: chưa có chiều · dòng đời: chưa có ngày) */}
-      {(mode === 'radar' || mode === 'timeline') && unplacedCount > 0 && (
+      {(mode === 'radar' || mode === 'timeline' || mode === 'neuro') && unplacedCount > 0 && (
         <button onClick={() => setUnplacedOpen(o => !o)} className="absolute bottom-9 right-3 z-10 text-[10px] rounded-lg bg-[#10101a]/85 border border-white/10 px-2.5 py-1.5 text-zinc-400 hover:text-white backdrop-blur">
-          ⬡ {unplacedRef.current.length} trang chưa vào {mode === 'radar' ? 'radar — Chuyển hoá để nối chiều' : 'dòng đời — mở & gắn 📅'}
+          ⚠ {unplacedRef.current.length} trang chưa nối — {mode === 'radar' ? 'Chuyển hoá để nối chiều' : mode === 'neuro' ? 'đang lơ lửng ở vành ngoài, bấm mở & nối' : 'mở & gắn 📅'}
         </button>
       )}
-      {unplacedOpen && (mode === 'radar' || mode === 'timeline') && (
+      {unplacedOpen && (mode === 'radar' || mode === 'timeline' || mode === 'neuro') && (
         <div className="absolute bottom-20 right-3 z-10 w-[280px] max-h-[320px] overflow-auto rounded-2xl bg-[#10101a]/92 backdrop-blur border border-white/10 p-3">
           <div className="text-[10px] uppercase tracking-wider text-zinc-500 mb-2">⬡ Chưa vào bản đồ — bấm để mở</div>
           <div className="space-y-1">

@@ -46,6 +46,24 @@ export const OUTPUT_FORMATS: [string, string][] = [
 ]
 
 const kindIcon = (k: string) => k === 'kho' ? '📦' : k === 'folder' ? '📁' : k === 'database' ? '🗂️' : '📄'
+
+/* ── ĐỘ CHUYỂN HOÁ 8 CHIỀU — thanh mini đồng bộ màu framework (thay radar 5 cạnh cũ) ── */
+export function Dim8Bars({ x, height = 26 }: { x: Record<string, number>; height?: number }) {
+  const sat = (v: number) => 1 - Math.pow(2, -v)
+  return (
+    <div className="flex items-end gap-1" style={{ height }}>
+      {Object.entries(DIMS).map(([k, d]) => {
+        const v = x[k] ?? 0
+        return (
+          <div key={k} title={`${d.icon} ${d.label}: ${v > 0 ? `${v} tín hiệu` : 'chưa nối — ' + d.q}`} className="flex-1 min-w-[7px] rounded-sm relative group cursor-help" style={{ height }}>
+            <div className="absolute inset-0 rounded-sm" style={{ background: d.color + '1a' }} />
+            <div className="absolute bottom-0 left-0 right-0 rounded-sm transition-all" style={{ height: `${Math.max(v > 0 ? 14 : 0, sat(v) * 100)}%`, background: d.color, boxShadow: v > 0 ? `0 0 6px ${d.color}66` : 'none' }} />
+          </div>
+        )
+      })}
+    </div>
+  )
+}
 const Sect = ({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) => (
   <div className="mt-6 pt-5 border-t border-white/10">
     <div className="text-[11px] uppercase tracking-wide text-zinc-500 mb-2">{title} {hint && <span className="normal-case text-zinc-600">— {hint}</span>}</div>
@@ -98,65 +116,100 @@ export function PropsPanel({ node, canE, isEditor, onSetProp, onSaveDate, childr
     if (lbl?.trim()) onSetProp(key, [...arr, { label: lbl.trim(), value: '' }])
   }
 
+  // hàng label–value: label cột trái cố định mờ, control bên phải — đọc như hồ sơ, không phải rừng chip
+  const Row = ({ label, hint, children: c }: { label: string; hint?: string; children: React.ReactNode }) => (
+    <div className="flex items-center gap-3 min-h-[30px]">
+      <span className="w-[96px] shrink-0 text-[11px] text-zinc-500" title={hint}>{label}</span>
+      <div className="flex-1 min-w-0">{c}</div>
+    </div>
+  )
+  const flat = 'w-full rounded-lg bg-transparent border border-transparent hover:border-white/10 focus:border-violet-400/40 focus:bg-white/[0.03] px-2 py-1 outline-none text-zinc-200 disabled:opacity-50 transition-colors'
   return (
-    <div className="mb-4 text-xs border-b border-white/5 pb-3 space-y-2.5">
-      {/* ── 📌 TRƯỜNG CHUẨN — ban biên tập đặt khi tạo, fix cứng ── */}
-      <div>
-        <div className="flex items-center gap-1.5 mb-1.5">
-          <span className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold">📌 Trường chuẩn</span>
-          <span className="text-[10px] text-zinc-600">— ban biên tập đặt khi tạo trang{canFix ? '' : ' · 🔒 fix cứng, bạn chỉ điền'}</span>
-          {canFix && <button onClick={() => addField('fixed_fields', fixed)} title="Thêm trường chuẩn — cả trang dùng chung, thành viên thường không xoá được" className="text-[10px] rounded bg-violet-500/15 border border-violet-400/30 text-violet-200 px-1.5 py-0.5 hover:bg-violet-500/25">＋ trường chuẩn</button>}
+    <div className="mb-5 rounded-2xl border border-white/[0.07] bg-white/[0.02] overflow-hidden text-xs">
+      {/* ── TRƯỜNG CHUẨN — khung cố định của org ── */}
+      <div className="px-4 pt-3 pb-2.5">
+        <div className="flex items-center gap-2 mb-2">
+          <span className="font-mono text-[9.5px] uppercase tracking-[0.18em] text-violet-300/80">Trường chuẩn</span>
+          <span className="text-[10px] text-zinc-600">{canFix ? 'khung chung của org' : 'khung cố định — bạn chỉ điền'}</span>
+          {canFix && <button onClick={() => addField('fixed_fields', fixed)} title="Thêm trường chuẩn — cả org dùng chung" className="ml-auto text-[10px] rounded-md border border-white/10 text-zinc-400 px-2 py-0.5 hover:text-white hover:border-white/25">＋ trường chuẩn</button>}
         </div>
-        <div className="flex flex-wrap items-center gap-1.5">
-          <select disabled={!canE} value={(p.page_type as string) ?? ''} onChange={e => onSetProp('page_type', e.target.value)} className={inputCls}>
-            <option value="">Loại trang…</option>
-            {PAGE_TYPES.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
-          </select>
-          <label className="flex items-center gap-1 rounded-lg bg-white/5 border border-white/10 px-2 py-1" title="Thời gian sự kiện THỰC TẾ (viết về quá khứ → ngày quá khứ)">
-            📅 <input disabled={!canE} type="date" value={node.event_date ?? ''} onChange={e => onSaveDate(e.target.value)} className="bg-transparent outline-none text-zinc-300 disabled:opacity-50" />
-          </label>
-          <input disabled={!canE} key={node.id + '-sum'} defaultValue={(p.summary as string) ?? ''} onBlur={e => { if (e.target.value !== ((p.summary as string) ?? '')) onSetProp('summary', e.target.value) }} placeholder="🧭 Tóm tắt 1 câu (AI trích dẫn)…" className={`${inputCls} w-64`} />
-          <input disabled={!canE} key={node.id + '-kw'} defaultValue={(p.keywords as string) ?? ''} onBlur={e => { if (e.target.value !== ((p.keywords as string) ?? '')) onSetProp('keywords', e.target.value) }} placeholder="🔑 Từ khoá, cách nhau dấu phẩy…" className={`${inputCls} w-52`} />
-          <input disabled={!canE} key={node.id + '-src'} defaultValue={(p.source as string) ?? ''} onBlur={e => { if (e.target.value !== ((p.source as string) ?? '')) onSetProp('source', e.target.value) }} placeholder="📖 Nguồn…" className={`${inputCls} w-36`} />
-          {(p.board as string) && <select disabled={!canE} value={(p.output_format as string) ?? ''} onChange={e => onSetProp('output_format', e.target.value)} className={inputCls}><option value="">Đầu ra…</option>{OUTPUT_FORMATS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>}
-          {(p.board as string) && <input disabled={!canE} key={node.id + '-camp'} defaultValue={(p.campaign as string) ?? ''} onBlur={e => { if (e.target.value !== ((p.campaign as string) ?? '')) onSetProp('campaign', e.target.value) }} placeholder="🚩 Campaign…" className={`${inputCls} w-32`} />}
+        <div className="grid sm:grid-cols-2 gap-x-8 gap-y-0.5">
+          <Row label="Loại trang" hint="1 trong 7 loại tri thức — quyết định template & cây gốc">
+            <select disabled={!canE} value={(p.page_type as string) ?? ''} onChange={e => onSetProp('page_type', e.target.value)} className={flat}>
+              <option value="">— chọn loại —</option>
+              {PAGE_TYPES.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+            </select>
+          </Row>
+          <Row label="Ngày sự kiện" hint="Thời gian THỰC TẾ xảy ra (viết về quá khứ → ngày quá khứ)">
+            <input disabled={!canE} type="date" value={node.event_date ?? ''} onChange={e => onSaveDate(e.target.value)} className={`${flat} [color-scheme:dark]`} />
+          </Row>
+          <Row label="Tóm tắt 1 câu" hint="AI dùng làm snippet khi trích dẫn">
+            <input disabled={!canE} key={node.id + '-sum'} defaultValue={(p.summary as string) ?? ''} onBlur={e => { if (e.target.value !== ((p.summary as string) ?? '')) onSetProp('summary', e.target.value) }} placeholder="cốt lõi của trang trong một câu…" className={flat} />
+          </Row>
+          <Row label="Nguồn" hint="sách / URL / người kể / tự trải nghiệm">
+            <input disabled={!canE} key={node.id + '-src'} defaultValue={(p.source as string) ?? ''} onBlur={e => { if (e.target.value !== ((p.source as string) ?? '')) onSetProp('source', e.target.value) }} placeholder="—" className={flat} />
+          </Row>
+          <Row label="Từ khoá" hint="cách nhau dấu phẩy — phục vụ tìm kiếm & AI">
+            <input disabled={!canE} key={node.id + '-kw'} defaultValue={(p.keywords as string) ?? ''} onBlur={e => { if (e.target.value !== ((p.keywords as string) ?? '')) onSetProp('keywords', e.target.value) }} placeholder="—" className={flat} />
+          </Row>
+          {(p.board as string) && (
+            <Row label="Đầu ra media" hint="định dạng content (chỉ thẻ Xưởng)">
+              <div className="flex gap-2">
+                <select disabled={!canE} value={(p.output_format as string) ?? ''} onChange={e => onSetProp('output_format', e.target.value)} className={flat}><option value="">—</option>{OUTPUT_FORMATS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>
+                <input disabled={!canE} key={node.id + '-camp'} defaultValue={(p.campaign as string) ?? ''} onBlur={e => { if (e.target.value !== ((p.campaign as string) ?? '')) onSetProp('campaign', e.target.value) }} placeholder="campaign…" className={flat} />
+              </div>
+            </Row>
+          )}
           {(((p.page_type as string) === 'ho-so') || node.subtype === 'person') && (
             <>
-              <select disabled={!canE} value={(p.giai_doan as string) ?? ''} onChange={e => onSetProp('giai_doan', e.target.value)} className="rounded-lg bg-emerald-500/10 border border-emerald-400/30 text-emerald-200 px-2 py-1.5 outline-none">
-                <option value="">🚦 Giai đoạn…</option>
-                {['🧊 Lạnh', '🌤 Ấm', '🔥 Nóng', '✍️ Đã ký', '💚 Chăm sóc'].map(g => <option key={g} value={g}>{g}</option>)}
-              </select>
-              <input disabled={!canE} key={node.id + '-need'} defaultValue={(p.nhu_cau as string) ?? ''} onBlur={e => { if (e.target.value !== ((p.nhu_cau as string) ?? '')) onSetProp('nhu_cau', e.target.value) }} placeholder="🎯 Nhu cầu…" className="rounded-lg bg-emerald-500/10 border border-emerald-400/30 text-emerald-200 px-2 py-1.5 outline-none w-36" />
-              <input disabled={!canE} key={node.id + '-kenh'} defaultValue={(p.kenh as string) ?? ''} onBlur={e => { if (e.target.value !== ((p.kenh as string) ?? '')) onSetProp('kenh', e.target.value) }} placeholder="📱 Kênh…" className="rounded-lg bg-emerald-500/10 border border-emerald-400/30 text-emerald-200 px-2 py-1.5 outline-none w-28" />
+              <Row label="Giai đoạn" hint="trạng thái quan hệ">
+                <select disabled={!canE} value={(p.giai_doan as string) ?? ''} onChange={e => onSetProp('giai_doan', e.target.value)} className={flat}>
+                  <option value="">—</option>
+                  {['🧊 Lạnh', '🌤 Ấm', '🔥 Nóng', '✍️ Đã ký', '💚 Chăm sóc'].map(g => <option key={g} value={g}>{g}</option>)}
+                </select>
+              </Row>
+              <Row label="Nhu cầu · kênh">
+                <div className="flex gap-2">
+                  <input disabled={!canE} key={node.id + '-need'} defaultValue={(p.nhu_cau as string) ?? ''} onBlur={e => { if (e.target.value !== ((p.nhu_cau as string) ?? '')) onSetProp('nhu_cau', e.target.value) }} placeholder="nhu cầu…" className={flat} />
+                  <input disabled={!canE} key={node.id + '-kenh'} defaultValue={(p.kenh as string) ?? ''} onBlur={e => { if (e.target.value !== ((p.kenh as string) ?? '')) onSetProp('kenh', e.target.value) }} placeholder="kênh…" className={flat} />
+                </div>
+              </Row>
             </>
           )}
-          {/* trường chuẩn thêm bởi ban biên tập — fix cứng: ai cũng thấy & điền (nếu sửa được trang), chỉ ban biên tập xoá */}
           {fixed.map((f, i) => (
-            <FieldChip key={node.id + '-fx' + i} id={node.id + '-fxi' + i} field={f} disabled={!canE} locked
-              onChange={v => setField('fixed_fields', fixed, i, v)}
-              onRemove={canFix ? () => onSetProp('fixed_fields', fixed.filter((_, j) => j !== i)) : undefined} />
+            <Row key={node.id + '-fx' + i} label={f.label} hint="trường chuẩn do ban biên tập thêm">
+              <div className="flex items-center gap-1">
+                <input key={node.id + '-fxi' + i} defaultValue={f.value} disabled={!canE} placeholder="—"
+                  onBlur={e => { if (e.target.value !== f.value) setField('fixed_fields', fixed, i, e.target.value) }} className={flat} />
+                {canFix && <button onClick={() => onSetProp('fixed_fields', fixed.filter((_, j) => j !== i))} title="Xoá trường" className="text-zinc-700 hover:text-red-300 px-1">✕</button>}
+              </div>
+            </Row>
           ))}
         </div>
       </div>
-      {/* ── ✏️ TRƯỜNG CỦA TÔI — user thường tự thêm, giống trường chuẩn nhưng của riêng trang/người này ── */}
-      <div>
-        <div className="flex items-center gap-1.5 mb-1.5">
-          <span className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold">✏️ Trường của tôi</span>
-          <span className="text-[10px] text-zinc-600">— bạn tự thêm trường riêng cho trang này</span>
-          {canE && <button onClick={() => addField('custom_fields', mine)} className="text-[10px] rounded bg-white/10 border border-white/10 text-zinc-300 px-1.5 py-0.5 hover:bg-white/15">＋ Thêm trường</button>}
+      {/* ── TRƯỜNG CỦA TÔI — riêng trang này ── */}
+      <div className="px-4 py-2.5 border-t border-white/[0.06] bg-white/[0.015]">
+        <div className="flex items-center gap-2 mb-1">
+          <span className="font-mono text-[9.5px] uppercase tracking-[0.18em] text-cyan-300/70">Trường của tôi</span>
+          <span className="text-[10px] text-zinc-600">riêng cho trang này</span>
+          {canE && <button onClick={() => addField('custom_fields', mine)} className="ml-auto text-[10px] rounded-md border border-white/10 text-zinc-400 px-2 py-0.5 hover:text-white hover:border-white/25">＋ thêm trường</button>}
         </div>
         {mine.length > 0 ? (
-          <div className="flex flex-wrap items-center gap-1.5">
+          <div className="grid sm:grid-cols-2 gap-x-8 gap-y-0.5">
             {mine.map((f, i) => (
-              <FieldChip key={node.id + '-cf' + i} id={node.id + '-cfi' + i} field={f} disabled={!canE}
-                onChange={v => setField('custom_fields', mine, i, v)}
-                onRemove={canE ? () => onSetProp('custom_fields', mine.filter((_, j) => j !== i)) : undefined} />
+              <Row key={node.id + '-cf' + i} label={f.label}>
+                <div className="flex items-center gap-1">
+                  <input key={node.id + '-cfi' + i} defaultValue={f.value} disabled={!canE} placeholder="—"
+                    onBlur={e => { if (e.target.value !== f.value) setField('custom_fields', mine, i, e.target.value) }} className={flat} />
+                  {canE && <button onClick={() => onSetProp('custom_fields', mine.filter((_, j) => j !== i))} title="Xoá trường" className="text-zinc-700 hover:text-red-300 px-1">✕</button>}
+                </div>
+              </Row>
             ))}
           </div>
-        ) : <p className="text-[11px] text-zinc-700">Chưa có trường riêng nào{canE ? ' — bấm ＋ Thêm trường.' : '.'}</p>}
+        ) : <p className="text-[10.5px] text-zinc-700">Chưa có — dùng cho thông tin chỉ trang này cần (vd: Độ ưu tiên, Khu vực…).</p>}
       </div>
       {/* ── dải hành động: trạng thái duyệt / đề xuất / template / đính kèm… ── */}
-      {children && <div className="flex flex-wrap items-center gap-1.5">{children}</div>}
+      {children && <div className="px-4 py-2 border-t border-white/[0.06] flex flex-wrap items-center gap-1.5">{children}</div>}
     </div>
   )
 }
