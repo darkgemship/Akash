@@ -213,7 +213,7 @@ export default function Galaxy({ nodes, links, onOpen, onConnect }: {
         unplacedRef.current = nodes.filter(n => !n.event_date && n.kind !== 'kho' && n.kind !== 'folder')
         if (dated.length) {
           const ts = dated.map(n => new Date(n.event_date!).getTime())
-          let mn = Math.min(...ts), mx = Math.max(...ts, 1765400000000)
+          let mn = Math.min(...ts), mx = Math.max(...ts, Date.now() + 180 * 86400000) // trục luôn chứa HÔM NAY + 6 tháng tương lai
           // trang quá cổ (sách lịch sử) ghim mép trái — thang đo tối đa 60 năm cho đọc được
           mn = Math.max(mn, mx - 60 * 365.25 * 86400000)
           const pad = Math.max((mx - mn) * 0.04, 86400000 * 30)

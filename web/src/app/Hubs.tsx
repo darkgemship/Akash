@@ -485,7 +485,7 @@ export function ReviewHub({ orgId, me, onOpen, onChanged }: { orgId: string | nu
 /* ========================== 👥 MEMBERS HUB ========================== */
 type Member = { user_id: string; email: string; full_name: string | null; level: number; can_edit: boolean; can_approve: boolean }
 const LEVEL_NAME: Record<number, string> = { 5: '👑 Admin', 4: '✅ Tổng biên tập', 3: '✏️ Biên tập viên', 2: '🤝 Cộng tác viên', 1: '🌱 Thành viên' }
-export function MembersHub({ me, canAdmin, onOpenPage }: { me: string; canAdmin: boolean; onOpenPage: (id: string) => void }) {
+export function MembersHub({ me, orgId, canAdmin, onOpenPage }: { me: string; orgId?: string | null; canAdmin: boolean; onOpenPage: (id: string) => void }) {
   const [members, setMembers] = useState<Member[]>([])
   const [pagesBy, setPagesBy] = useState<Record<string, AnyNode[]>>({})
   const [statsBy, setStatsBy] = useState<Record<string, { pages: number; links: number }>>({})
@@ -569,7 +569,10 @@ export function MembersHub({ me, canAdmin, onOpenPage }: { me: string; canAdmin:
               </div>
               <button onClick={async () => {
                 const assignee = na.assignee || focus; if (!assignee || !na.title.trim()) return
-                await supabase.from('assignments').insert({ assignee, assigner: me, title: na.title.trim(), note: na.note || null, due: na.due || null, status: 'open' })
+                // P0 fix: org_id NOT NULL — thiếu là insert fail im lặng; giờ báo lỗi rõ
+                const { error } = await supabase.from('assignments').insert({ org_id: orgId, assignee, assigner: me, title: na.title.trim(), note: na.note || null, due: na.due || null, status: 'open' })
+                if (error) { setMsg('✗ ' + error.message); setTimeout(() => setMsg(''), 4000); return }
+                setMsg('✓ đã giao'); setTimeout(() => setMsg(''), 2000)
                 setNa({ assignee: '', title: '', note: '', due: '', node_id: '' }); load()
               }} disabled={!(na.assignee || focus) || !na.title.trim()} className="w-full rounded-xl ak-cta py-2 text-xs font-bold disabled:opacity-40">📨 Giao việc</button>
             </Card>

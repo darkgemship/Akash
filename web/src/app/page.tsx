@@ -332,14 +332,26 @@ function Workspace({ user }: { user: User }) {
     const sibs = tree.filter(n => n.parent_id === parentId)
     return sibs.reduce((m, s) => Math.max(m, s.position ?? 0), 0) + 10
   }
-  async function createPage(parentId: string | null, layer: string, kind: string = 'page', extra?: { title?: string; md?: string }) {
+  // P0 fix (audit 12/6): user mới chưa có cây gốc → tự tạo hub trước khi nạp, KHÔNG rơi về gốc kho
+  async function ensureHub(hub: string, title: string, icon: string): Promise<string | null> {
+    const ex = tree.find(n => n.owner_id === user.id && (n.props?.hub as string) === hub)
+    if (ex) return ex.id
+    const kho = khoOf('personal')
+    if (!orgId || !kho) return kho?.id ?? null
+    const id = crypto.randomUUID()
+    const { error } = await supabase.from('nodes').insert({ id, org_id: orgId, owner_id: user.id, layer: 'personal', kind: 'page', parent_id: kho.id, title, icon, subtype: 'hub', status: 'published', min_level: 1, props: { hub } })
+    if (error) return kho.id
+    await loadTree(orgId)
+    return id
+  }
+  async function createPage(parentId: string | null, layer: string, kind: string = 'page', extra?: { title?: string; md?: string; event_date?: string | null; props?: Record<string, unknown> }) {
     if (!orgId) return
     const id = crypto.randomUUID()
     const owner = layer === 'personal' ? user.id : null
     const title = extra?.title ?? (kind === 'database' ? 'Bảng dữ liệu' : 'Trang mới')
     // kho chung: chưa đủ quyền duyệt (cấp <4) → bài vào hàng chờ duyệt
     const status = layer !== 'personal' && (role?.level ?? 1) < 4 ? 'pending' : 'published'
-    const { error } = await supabase.from('nodes').insert({ id, org_id: orgId, owner_id: owner, layer, kind, parent_id: parentId, title, md: extra?.md ?? null, status, min_level: 1, position: nextPos(parentId) })
+    const { error } = await supabase.from('nodes').insert({ id, org_id: orgId, owner_id: owner, layer, kind, parent_id: parentId, title, md: extra?.md ?? null, event_date: extra?.event_date ?? null, props: extra?.props ?? null, status, min_level: 1, position: nextPos(parentId) })
     if (error) return setErr(error.message)
     if (parentId) setExpanded(s => new Set(s).add(parentId))
     if (status === 'pending') { setToast('📨 Đã gửi chờ duyệt — ban biên tập sẽ xem'); setTimeout(() => setToast(''), 3500) }
@@ -1009,25 +1021,31 @@ function Workspace({ user }: { user: User }) {
             editorial={tree.filter(n => n.owner_id === user.id && (n.status === 'pending' || n.status === 'draft')).map(n => ({ id: n.id, title: n.title, kind: n.kind, parent_id: n.parent_id, icon: n.icon, status: n.status, note: (n.props?.review_note as string) ?? '' }))}
             onOpen={(n) => { openNoteEditor(n as Node); setPage('know') }}
             onOpenId={(id) => { const t = nodeOf(id); if (t) { openNoteEditor(t); setPage('know') } }}
-            onCapture={(title, type, source) => {
-              // ghi nhanh CÓ LOẠI → đổ đúng cây gốc (KHO-CHUAN §2bis)
-              const hubOf = (h: string) => tree.find(n => n.owner_id === user.id && (n.props?.hub as string) === h)
-              const kho = khoOf('personal')
+            onCapture={async (title, type, source) => {
+              // ghi nhanh CÓ LOẠI → đổ đúng cây gốc; user mới chưa có cây thì ensureHub TỰ TẠO (P0 fix audit 12/6)
               if (type === 'quote') {
-                // quote đắt → nối thêm vào Kim Chỉ Nam
-                const anchor = tree.find(n => n.owner_id === user.id && n.subtype === 'anchor_home')
+                // quote đắt → Kim Chỉ Nam (chưa có thì tạo trong 🧭 La bàn) — không mất nguồn
+                let anchor = tree.find(n => n.owner_id === user.id && n.subtype === 'anchor_home')
+                if (!anchor && orgId) {
+                  const compass = await ensureHub('compass', 'La bàn giá trị', '🧭')
+                  const aid = crypto.randomUUID()
+                  const { error } = await supabase.from('nodes').insert({ id: aid, org_id: orgId, owner_id: user.id, layer: 'personal', kind: 'page', parent_id: compass, title: 'Kim Chỉ Nam', icon: '🧭', subtype: 'anchor_home', status: 'published', min_level: 1, md: '**Loại:** ⚓ Kim Chỉ Nam\n\nNhững câu châm ngôn của chính bạn — giọng nói tinh khiết nhất.' })
+                  if (!error) { await loadTree(orgId); anchor = { id: aid, title: 'Kim Chỉ Nam', kind: 'page', parent_id: compass, layer: 'personal', icon: '🧭', owner_id: user.id } as TNode }
+                }
                 if (anchor) {
-                  supabase.from('nodes').select('md').eq('id', anchor.id).single().then(async ({ data }) => {
-                    await supabase.from('nodes').update({ md: `${data?.md ?? ''}\n\n> ${title}${source ? `\n> — *${source}*` : ''}` }).eq('id', anchor.id)
-                    logEvent('create', anchor.id); openNoteEditor(anchor); setPage('know')
-                  })
+                  const { data } = await supabase.from('nodes').select('md').eq('id', anchor.id).single()
+                  await supabase.from('nodes').update({ md: `${data?.md ?? ''}\n\n> ${title}${source ? `\n> — *${source}*` : ''}` }).eq('id', anchor.id)
+                  logEvent('create', anchor.id); openNoteEditor(anchor); setPage('know')
                   return
                 }
               }
               const isInsight = type === 'insight'
-              const parent = (isInsight ? hubOf('lessons') : hubOf('journey'))?.id ?? kho?.id ?? null
+              const parent = isInsight ? await ensureHub('lessons', 'Kim cương bài học', '💎') : await ensureHub('journey', 'Hành trình của tôi', '📓')
+              const today = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10) // ngày LOCAL, không lệch UTC
               createPage(parent, 'personal', 'note', {
                 title,
+                event_date: today, // mắt xích GHI phải đan vào trục thời gian (KHO-CHUAN §2bis)
+                props: { page_type: isInsight ? 'bai-hoc' : 'trai-nghiem', via: 'capture' },
                 md: isInsight
                   ? `**Loại:** 🎓 Bài học · **Ngày sự kiện:** ${new Date().toLocaleDateString('vi')}\n\n**Tóm tắt 1 câu:** ${title}\n\n**Nguồn:** ${source || 'tự đúc rút'}\n\n## ⚡ Nguyên lý cốt lõi\n${title}\n\n## 🌍 Trải nghiệm gốc nào sinh ra insight này?\n- (nối chiều 🌱 trải nghiệm về trang chuyện gốc)\n\n## 🎯 Áp dụng\n- [ ] `
                   : `**Loại:** 🌱 Trải nghiệm · **Ngày sự kiện:** ${new Date().toLocaleDateString('vi')}\n\n**Tóm tắt 1 câu:** ${title}\n\n**Nguồn:** tự trải nghiệm\n\n## 📍 Bối cảnh\n\n## ⚡ Chuyện gì xảy ra\n\n## ❤️ Cảm xúc\n\n## 🎓 Bài học rút ra\n- \n\n**Cảnh này nói gì về tôi:** `,
@@ -1048,25 +1066,25 @@ function Workspace({ user }: { user: User }) {
           />
           <Studio orgId={orgId} user={user} canEdit={!!role?.can_edit} canApprove={!!role?.can_approve} pages={tree.map(n => ({ id: n.id, title: n.title, layer: n.layer, kind: n.kind, parent_id: n.parent_id, icon: n.icon, subtype: n.subtype }))} onOpen={(id) => { const t = nodeOf(id); if (t) { openNoteEditor(t); setPage('know') } }} onReload={() => { if (orgId) { loadTree(orgId); loadGraph(orgId) } }} />
           </div>
-        : page === 'engine' ? <div className="flex-1 overflow-auto"><ContentEngine user={user} orgId={orgId} pages={tree} onOpenPage={(id) => { const t = nodeOf(id); if (t) { openNoteEditor(t); setPage('know') } }} onCreatePlan={(title, md) => {
-            const studio = tree.find(n => n.owner_id === user.id && (n.props?.hub as string) === 'studio')
-            createPage(studio?.id ?? khoOf('personal')?.id ?? null, 'personal', 'page', { title, md })
+        : page === 'engine' ? <div className="flex-1 overflow-auto"><ContentEngine user={user} orgId={orgId} pages={tree} onOpenPage={(id) => { const t = nodeOf(id); if (t) { openNoteEditor(t); setPage('know') } }} onCreatePlan={async (title, md) => {
+            const studio = await ensureHub('studio', 'Xưởng content', '🎬')
+            createPage(studio, 'personal', 'page', { title, md, props: { page_type: 'quy-trinh', via: 'engine' } })
             setPage('know')
           }} /></div>
         : page === 'kol' ? <div className="flex-1 overflow-auto"><KolFeed user={user} canEdit={!!role?.can_edit} onOpenPage={(id) => { const t = nodeOf(id); if (t) { openNoteEditor(t); setPage('know') } }} onInsight={async (text, srcTitle, srcId) => {
-            // insight từ KOL → 💎 Kim cương bài học + tự nối chiều reference về bài gốc
-            const lessons = tree.find(n => n.owner_id === user.id && (n.props?.hub as string) === 'lessons')
+            // insight từ KOL → 💎 Kim cương bài học (tự tạo cây nếu thiếu) + nối chiều reference về bài gốc
+            const lessons = await ensureHub('lessons', 'Kim cương bài học', '💎')
             const id = crypto.randomUUID()
-            await supabase.from('nodes').insert({ id, org_id: orgId, owner_id: user.id, layer: 'personal', kind: 'note', parent_id: lessons?.id ?? khoOf('personal')?.id ?? null, title: text.slice(0, 80), md: `**Loại:** 🎓 Bài học · **Ngày sự kiện:** ${new Date().toLocaleDateString('vi')}\n\n**Tóm tắt 1 câu:** ${text}\n\n**Nguồn:** ${srcTitle} (KOL feed)\n\n## ⚡ Insight\n${text}\n\n## 🎯 Áp dụng vào đời tôi\n- [ ] `, props: { page_type: 'bai-hoc', via: 'kol' }, status: 'published', min_level: 1 })
+            await supabase.from('nodes').insert({ id, org_id: orgId, owner_id: user.id, layer: 'personal', kind: 'note', parent_id: lessons, title: text.slice(0, 80), event_date: new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10), md: `**Loại:** 🎓 Bài học · **Ngày sự kiện:** ${new Date().toLocaleDateString('vi')}\n\n**Tóm tắt 1 câu:** ${text}\n\n**Nguồn:** ${srcTitle} (KOL feed)\n\n## ⚡ Insight\n${text}\n\n## 🎯 Áp dụng vào đời tôi\n- [ ] `, props: { page_type: 'bai-hoc', via: 'kol' }, status: 'published', min_level: 1 })
             await supabase.from('links').insert({ org_id: orgId, from_node: id, to_node: srcId, dimension: 'reference', source: 'kol' })
             logEvent('create', id)
             if (orgId) { loadTree(orgId); loadGraph(orgId) }
-            const t = { id, title: text.slice(0, 80), kind: 'note', parent_id: lessons?.id ?? null }
+            const t = { id, title: text.slice(0, 80), kind: 'note', parent_id: lessons }
             openNoteEditor(t as Node); setPage('know')
           }} /></div>
         : page === 'board' ? <div className="flex-1 overflow-auto"><Board orgId={orgId} userId={user.id} onOpen={(id) => { const t = nodeOf(id); if (t) { openNoteEditor(t); setPage('know') } }} /></div>
         : page === 'review' ? <div className="flex-1 overflow-auto"><ReviewHub orgId={orgId} me={user.id} onOpen={(id) => { const t = nodeOf(id); if (t) { openNoteEditor(t); setPage('know') } }} onChanged={() => { if (orgId) { loadTree(orgId); loadGraph(orgId) } }} /></div>
-        : page === 'users' ? <div className="flex-1 overflow-auto"><MembersHub me={user.id} canAdmin={role?.level === 5 || !!role?.can_approve} onOpenPage={(id) => { const t = nodeOf(id); if (t) { openNoteEditor(t); setPage('know') } }} /></div>
+        : page === 'users' ? <div className="flex-1 overflow-auto"><MembersHub me={user.id} orgId={orgId} canAdmin={role?.level === 5 || !!role?.can_approve} onOpenPage={(id) => { const t = nodeOf(id); if (t) { openNoteEditor(t); setPage('know') } }} /></div>
         : <div className="flex-1 overflow-auto"><Profile user={user} /></div>}
       </div>
 

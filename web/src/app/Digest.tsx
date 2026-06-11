@@ -188,9 +188,11 @@ export default function Digest({ folder, others, orgId, userId, onClose, onSaved
     for (const id of rIn) await addLink(id, folder.id, 'reference')
     // M4: trải nghiệm + cảm xúc + người
     if (expStory.trim() && makeNote) {
-      const { data: diary } = await supabase.from('nodes').select('id').eq('owner_id', userId).eq('title', 'Nhật ký hành trình').limit(1).maybeSingle()
+      // P0 fix (audit 12/6): tìm cây Hành trình theo props.hub (title cũ đã đổi) + KHÔNG BAO GIỜ để trang lơ lửng
+      let { data: diary } = await supabase.from('nodes').select('id').eq('owner_id', userId).filter('props->>hub', 'eq', 'journey').limit(1).maybeSingle()
+      if (!diary) { const { data: kho } = await supabase.from('nodes').select('id').eq('owner_id', userId).eq('kind', 'kho').limit(1).maybeSingle(); diary = kho }
       const nid = crypto.randomUUID()
-      await supabase.from('nodes').insert({ id: nid, org_id: orgId, owner_id: userId, layer: 'personal', kind: 'note', parent_id: diary?.id ?? null, title: expStory.slice(0, 60), md: `# ${expStory.slice(0, 60)}\n\n${expStory}\n\n_(rút từ Chuyển hoá bài "${folder.title}")_`, icon: '🌱', status: 'published', min_level: 1, event_date: eventDate || null })
+      await supabase.from('nodes').insert({ id: nid, org_id: orgId, owner_id: userId, layer: 'personal', kind: 'note', parent_id: diary?.id ?? null, title: expStory.slice(0, 60), md: `${expStory}\n\n_(rút từ Chuyển hoá bài "${folder.title}")_`, icon: '🌱', status: 'published', min_level: 1, event_date: eventDate || null, props: { page_type: 'trai-nghiem', via: 'digest' } })
       await addLink(folder.id, nid, 'experience')
       if (emo) await addLink(folder.id, nid, 'emotion')
     }

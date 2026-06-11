@@ -742,7 +742,8 @@ export function Today({ user, role, stats, recent, pages, editorial = [], counts
       let st = 0; const d = new Date()
       while (days.has(d.toDateString())) { st++; d.setDate(d.getDate() - 1) }
       setStreak(st)
-      const PT2: Record<string, number> = { digest: 10, content: 5, link: 3, create: 1 }
+      // P0 fix: Digest log event type 'tham' — key 'digest' cũ không bao giờ được ghi → Chuyển hoá được 0 Qi
+      const PT2: Record<string, number> = { tham: 10, content: 5, link: 3, create: 1 }
       setQi(Math.round((data ?? []).reduce((s, e) => s + (PT2[e.type as string] ?? 0), 0)))
     })
     supabase.from('assignments').select('id,title,due,node_id,status,assignee').eq('assignee', user.id).neq('status', 'done').limit(5).then(({ data }) => setMyAsg((data as { id: string; title: string; due: string | null; node_id?: string | null }[]) ?? []))
@@ -761,8 +762,13 @@ export function Today({ user, role, stats, recent, pages, editorial = [], counts
   const hour = new Date().getHours()
   const greet = hour < 11 ? 'Chào buổi sáng' : hour < 14 ? 'Chào buổi trưa' : hour < 18 ? 'Chào buổi chiều' : 'Chào buổi tối'
   const learnedCount = pages.filter(p => learnedIds.has(p.id)).length
-  // gợi ý chuyển hoá: ưu tiên trang có event_date gần + chưa chuyển hoá (heuristic — AI thật thay sau)
-  const sugDigest = pages.filter(p => !learnedIds.has(p.id)).slice(0, 3).map((p, i) => ({ n: p, why: ['mới ghi gần nhất — chuyển hoá khi còn nóng', 'chưa nối chiều nào — đang là trang mồ côi', 'cùng mạch với bài bạn vừa chuyển hoá'][i] ?? 'tới lượt' }))
+  // gợi ý chuyển hoá — lý do TRUNG THỰC từ data thật (không bịa; AI thật thay khi cắm API)
+  const sugDigest = pages.filter(p => !learnedIds.has(p.id)).slice(0, 3).map((p, i) => ({
+    n: p,
+    why: (p as TodayNode & { event_date?: string | null }).event_date
+      ? `mốc ngày ${new Date((p as TodayNode & { event_date?: string }).event_date!).toLocaleDateString('vi')} — đan vào dòng đời khi còn nhớ rõ`
+      : i === 0 ? 'đứng đầu hàng đợi chưa chuyển hoá' : 'kế tiếp trong hàng đợi',
+  }))
   const pct = pages.length ? Math.round((learnedCount / pages.length) * 100) : 0
   const roleName = role?.level === 5 ? '👑 Admin' : role?.can_approve ? '✅ Tổng biên tập' : role?.can_edit ? '✏️ Biên tập viên' : '🌱 Thành viên'
   // ===== KHỐI CẦN LÀM (chỉ những việc THẬT) =====
@@ -1054,6 +1060,7 @@ export function Board({ orgId, userId, onOpen }: { orgId: string | null; userId:
   useEffect(() => {
     if (!orgId) return
     supabase.from('nodes').select('id,title,icon,props,event_date').eq('org_id', orgId).eq('owner_id', userId).eq('layer', 'personal').in('kind', ['note', 'page'])
+      .not('props->>board', 'is', null)
       .order('position', { nullsFirst: true }).then(({ data }) => setCards((data as BCard[]) ?? []))
   }, [orgId, userId])
   function colOf(c: BCard) { return (c.props?.board as string) ?? 'idea' }
@@ -1069,6 +1076,7 @@ export function Board({ orgId, userId, onOpen }: { orgId: string | null; userId:
   function reload() {
     if (!orgId) return
     supabase.from('nodes').select('id,title,icon,props,event_date').eq('org_id', orgId).eq('owner_id', userId).eq('layer', 'personal').in('kind', ['note', 'page'])
+      .not('props->>board', 'is', null)
       .order('position', { nullsFirst: true }).then(({ data }) => setCards((data as BCard[]) ?? []))
   }
   // thẻ mới: tự sống trong folder "🎬 Xưởng content" của kho cá nhân (tự tạo nếu chưa có)

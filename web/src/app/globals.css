@@ -214,6 +214,10 @@ aside ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radi
 [data-theme='light'] .text-amber-300:not(.dq-dark):not(.dq-dark *),
 [data-theme='light'] .text-amber-200:not(.dq-dark):not(.dq-dark *) { color: #b45309 !important; }
 [data-theme='light'] .text-violet-200:not(.dq-dark):not(.dq-dark *) { color: #6d28d9 !important; }
+/* class Akash mới (đêm 12/6) trên light */
+[data-theme='light'] .ak-grad-text:not(.dq-dark *) { background-image: linear-gradient(95deg, #6d28d9, #1d4ed8 45%, #0e7490); }
+[data-theme='light'] .bg-\[\#10121d\]:not(.dq-dark):not(.dq-dark *) { background: #ffffff !important; }
+[data-theme='light'] .bg-\[\#0d0d18\]:not(.dq-dark):not(.dq-dark *) { background: #ffffff !important; }
 [data-theme='light'] .dq-pagelink { background: rgba(124,58,237,.10); color: #6d28d9; }
 [data-theme='light'] .dq-editor .mantine-Menu-dropdown,
 [data-theme='light'] .dq-editor .bn-suggestion-menu,
