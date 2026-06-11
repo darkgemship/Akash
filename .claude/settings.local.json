@@ -1,0 +1,35 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls -la /Users/nguyenvanhongngoc/.claude/downloads/ 2>/dev/null; echo \"---\"; which claude 2>/dev/null; echo \"---node---\"; which node 2>/dev/null && node --version 2>/dev/null; echo \"---arch---\"; uname -m)",
+      "Bash(curl -sI https://claude.ai/install.sh)",
+      "Bash(curl -fsSL https://claude.ai/install.sh -o /tmp/claude-install.sh)",
+      "Bash(bash /tmp/claude-install.sh)",
+      "Read(//Users/nguyenvanhongngoc/.local/bin/**)",
+      "Read(//Users/nguyenvanhongngoc/.claude/**)",
+      "Bash(open \"/Users/nguyenvanhongngoc/Desktop/Data Qi/mockups/index.html\")",
+      "Bash(node -e ' *)",
+      "mcp__b3c274bd-5ccc-4a06-98e9-f671b4435857__list_projects",
+      "mcp__b3c274bd-5ccc-4a06-98e9-f671b4435857__list_tables",
+      "mcp__b3c274bd-5ccc-4a06-98e9-f671b4435857__apply_migration",
+      "mcp__b3c274bd-5ccc-4a06-98e9-f671b4435857__get_advisors",
+      "mcp__b3c274bd-5ccc-4a06-98e9-f671b4435857__get_project_url",
+      "mcp__b3c274bd-5ccc-4a06-98e9-f671b4435857__get_publishable_keys",
+      "Bash(npx --yes create-next-app@latest web --ts --tailwind --eslint --app --src-dir --import-alias \"@/*\" --use-npm --yes)",
+      "Bash(npm install *)",
+      "Bash(node -p \"require\\('next/package.json'\\).version\")",
+      "Bash(npm run *)",
+      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code}\\\\n\" http://localhost:3000)",
+      "mcp__b3c274bd-5ccc-4a06-98e9-f671b4435857__execute_sql",
+      "Bash(curl -s -o /dev/null -w \"app HTTP %{http_code}\\\\n\" http://localhost:3000)",
+      "Bash(curl -s -o /dev/null -w \"dev HTTP %{http_code}\\\\n\" http://localhost:3000)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(d.get\\('scripts',{}\\),indent=2\\)\\); print\\('--- deps ---'\\); print\\(' '.join\\(list\\(d.get\\('dependencies',{}\\).keys\\(\\)\\)[:20]\\)\\)\")",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('name:',d.get\\('name'\\)\\); print\\(json.dumps\\(d.get\\('scripts',{}\\),indent=2\\)\\); deps=list\\(d.get\\('dependencies',{}\\).keys\\(\\)\\); print\\('deps:', ' '.join\\(deps[:25]\\)\\)\")",
+      "Bash(mkdir -p /tmp/pwtest)",
+      "Read(//tmp/**)",
+      "Bash(npm init *)",
+      "Bash(npm i *)",
+      "Bash(node verify-neuro.mjs)"
+    ]
+  }
+}
