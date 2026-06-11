@@ -1,10 +1,10 @@
-# Data Qi — AI Framework (thiết kế để AI chạy thông minh nhất)
+# Akash — AI Framework (thiết kế để AI chạy thông minh nhất)
 
 > Mục tiêu: khi cắm Anthropic API vào, AI đọc kho như một "bộ não wiki" và sinh content chất lượng cao. Tài liệu này chốt **cách biến data thành tri thức** dựa trên best practices của các hệ LLM knowledge-base (RAG, GraphRAG, Obsidian/Notion AI).
 
 ## 1. Vì sao cấu trúc hiện tại đã AI-ready
 
-| Nguyên tắc LLM wiki | Data Qi đã có |
+| Nguyên tắc LLM wiki | Akash đã có |
 |---|---|
 | Stable IDs để trích dẫn | `nodes.id` UUID — không đổi khi sửa bài |
 | Tách cây chứa (taxonomy) khỏi liên kết ngữ nghĩa | `parent_id` (CONTAINS) ≠ bảng `links` (8 chiều có type) |

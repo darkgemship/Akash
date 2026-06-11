@@ -1,4 +1,4 @@
-# Data Qi — Roles & Chức năng (Role Functions)
+# Akash — Roles & Chức năng (Role Functions)
 
 > Ai làm được gì. Đồng bộ với schema (`memberships`) + RLS trong Supabase project **data QI** (`vntndprivvkgjbeutand`).
 

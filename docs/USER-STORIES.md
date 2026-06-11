@@ -1,4 +1,4 @@
-# Data Qi — User Stories (luồng từng vai)
+# Akash — User Stories (luồng từng vai)
 
 > Câu chuyện hành trình mỗi vai. Dùng để chỉnh tính năng có logic đồng bộ. Mỗi story: **As a … I want … so that …** + các bước + chạm vào file/function nào.
 

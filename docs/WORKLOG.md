@@ -1,4 +1,4 @@
-# Data Qi — Worklog & Upgrade Flow
+# Akash — Worklog & Upgrade Flow
 
 > Ghi lại mỗi đợt build để lần sau làm tốt hơn. Quy trình chuẩn: **đọc docs → sửa code → `npm run build` → test thật trên preview (đăng nhập, bấm từng nút) → cập nhật docs**.
 

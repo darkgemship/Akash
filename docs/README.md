@@ -1,4 +1,4 @@
-# Data Qi — Documentation Index
+# Akash — Documentation Index
 
 Tài liệu dự án, chia 2 nhóm: **Thiết kế (vision)** và **App đã build**.
 

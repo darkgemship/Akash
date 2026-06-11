@@ -6,7 +6,7 @@
    ✅ ReviewHub     — trung tâm biên tập: thấy kho/trang/comment, xem-sửa-rồi-duyệt
    👥 MembersHub    — nhân sự: profile + role + việc được giao + trang đang build
 ===================================================================== */
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { User } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabaseClient'
 
@@ -167,13 +167,24 @@ export function ContentEngine({ user, orgId, pages, onOpenPage, onCreatePlan }: 
   }, [user.id])
   const myValues = pages.filter(n => (n.props?.role as string) === 'value' || n.subtype === 'core_value')
   const myStories = pages.filter(n => (n.props?.page_type as string) === 'trai-nghiem' && n.owner_id === user.id).slice(0, 8)
+  // chống race: bấm chip liên tiếp trước khi node tồn tại → CHỈ tạo 1 lần (bug bắt được khi test 12/6)
+  const creatingRef = useRef<Promise<string> | null>(null)
+  async function ensureMatrixId(first: Matrix): Promise<string> {
+    if (mxId) return mxId
+    if (!creatingRef.current) creatingRef.current = (async () => {
+      const { data: ex } = await supabase.from('nodes').select('id').eq('owner_id', user.id).eq('subtype', 'content_matrix').limit(1).maybeSingle()
+      if (ex) { setMxId(ex.id); return ex.id as string }
+      const kho = pages.find(n => n.owner_id === user.id && n.layer === 'personal' && !n.parent_id)
+      const id = crypto.randomUUID()
+      await supabase.from('nodes').insert({ id, org_id: orgId, owner_id: user.id, layer: 'personal', kind: 'page', parent_id: kho?.id ?? null, title: 'Ma trận content của tôi', icon: '🎛️', subtype: 'content_matrix', status: 'published', min_level: 1, props: { matrix: first } })
+      setMxId(id); return id
+    })()
+    return creatingRef.current
+  }
   async function saveMatrix(next: Matrix) {
     setMx(next)
-    if (mxId) { await supabase.from('nodes').update({ props: { matrix: next } }).eq('id', mxId); return }
-    const kho = pages.find(n => n.owner_id === user.id && n.layer === 'personal' && !n.parent_id)
-    const id = crypto.randomUUID()
-    await supabase.from('nodes').insert({ id, org_id: orgId, owner_id: user.id, layer: 'personal', kind: 'page', parent_id: kho?.id ?? null, title: 'Ma trận content của tôi', icon: '🎛️', subtype: 'content_matrix', status: 'published', min_level: 1, props: { matrix: next } })
-    setMxId(id)
+    const id = await ensureMatrixId(next)
+    await supabase.from('nodes').update({ props: { matrix: next } }).eq('id', id)
   }
   const chip = (on: boolean) => `px-2.5 py-1 rounded-lg text-[11px] border transition ${on ? 'bg-violet-500/25 border-violet-400/50 text-white' : 'bg-white/5 border-white/10 text-zinc-400 hover:border-white/30'}`
   const toggle = (arr: string[], v: string) => arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v]

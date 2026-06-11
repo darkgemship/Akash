@@ -1,4 +1,4 @@
-# Data Qi — App Flows & Button Map (đã build)
+# Akash — App Flows & Button Map (đã build)
 
 > Tài liệu kỹ thuật của app thật trong `/web`. Mỗi nút → làm gì → chạm function/bảng nào. Để sửa nhanh, không lệch logic.
 
