@@ -16,6 +16,8 @@
 **Verify thật trên preview** (login admin, 1440px): Home/KOL/Engine/Review/Members đều render; rút insight KOL → DB đúng (Kim cương + 1 link); sinh lịch 30 ngày → vào Xưởng content; duyệt bài: sửa md được lưu + status published + approved_by ✅. **Bug bắt & fix khi test**: bấm chip ma trận nhanh tạo N node trùng (race trước khi có mxId) → ensureMatrixId + dọn DB còn 1.
 **Bug đã gặp**: Be_Vietnam_Pro cần weight tường minh; event_date năm -10000 vỡ timestamp (null hoá); node script ESM phải nằm trong web/ mới resolve node_modules.
 
+
+- **Audit đa-persona cuối đêm** (4 persona, 12 agents, mọi P0 phản biện chéo): 8 P0 xác nhận → SỬA HẾT trong đêm (docs/AUDIT-2026-06-12.md); 19 P1 + 5 P2 thành backlog trước pilot. Security advisors sau migration: không lỗi mới.
 ## 2026-06-11 — 📂 Studio đợt 2: bước 2 hoàn thiện data nộp (user feedback)
 - **Cây folder chuyển lên bước 2** ngay dưới "Đưa vào đâu?" — bấm kho nào cây của kho đó bung ra như mind map (user yêu cầu); bước 3 chỉ còn dòng tóm tắt `Sẽ nạp vào: … › … · 🕸️ N liên kết` + nút "✎ đổi" quay lại bước 2.
 - **📋 Trường chuẩn ngay bước 2** (theo STANDARD-TEMPLATE.md): 📅 Ngày sự kiện (máy tự bắt "hôm nay/sáng nay…" → điền hôm nay; lưu cột `event_date`) · 🚩 Campaign (`props.campaign`) · ✏️ Tóm tắt 1 câu (máy lấy câu đầu raw; **bắt buộc** — thiếu thì viền hổ phách + khoá nút AI tạo) · 🔗 Nguồn. `generate()` đổ cả 4 vào head bản chuẩn.
