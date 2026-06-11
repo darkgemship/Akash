@@ -19,46 +19,6 @@ const ROLE_NAME: Record<number, string> = { 5: '👑 Admin', 4: '✅ Tổng biê
 
 type Member = { user_id: string; email: string; full_name: string | null; level: number; can_edit: boolean; can_approve: boolean }
 
-function MembersAdmin({ me }: { me: string }) {
-  const [members, setMembers] = useState<Member[] | null>(null)
-  const [msg, setMsg] = useState('')
-  function load() { supabase.rpc('admin_list_members').then(({ data, error }) => { if (!error) setMembers((data as Member[]) ?? []) }) }
-  useEffect(() => { load() }, []) // eslint-disable-line react-hooks/exhaustive-deps
-  if (!members) return null // không phải admin → ẩn
-  async function setMember(m: Member, patch: Partial<Member>) {
-    const next = { ...m, ...patch }
-    const { error } = await supabase.rpc('admin_set_member', { p_user: m.user_id, p_level: next.level, p_can_edit: next.can_edit, p_can_approve: next.can_approve })
-    setMsg(error ? '⚠️ ' + error.message : '✅ Đã cập nhật quyền')
-    load()
-  }
-  return (
-    <Card className="mb-4">
-      <Lbl>👑 Quản trị thành viên ({members.length})</Lbl>
-      <div className="space-y-2">
-        {members.map(m => (
-          <div key={m.user_id} className="flex items-center gap-3 rounded-xl bg-white/[0.03] border border-white/10 px-3 py-2 flex-wrap">
-            <div className="flex-1 min-w-[140px]">
-              <div className="text-sm font-medium truncate">{m.full_name || m.email.split('@')[0]} {m.user_id === me && <span className="text-zinc-500 text-xs">(bạn)</span>}</div>
-              <div className="text-xs text-zinc-500 truncate">{m.email}</div>
-            </div>
-            <select value={m.level} disabled={m.user_id === me} onChange={e => setMember(m, { level: +e.target.value })} className="rounded-lg bg-[#15151f] border border-white/10 px-2 py-1.5 text-xs outline-none disabled:opacity-50">
-              {[5, 4, 3, 2, 1].map(l => <option key={l} value={l}>{ROLE_NAME[l]}</option>)}
-            </select>
-            <label className={`text-xs flex items-center gap-1 ${m.user_id === me ? 'opacity-50' : 'cursor-pointer'}`}>
-              <input type="checkbox" checked={m.can_edit} disabled={m.user_id === me} onChange={e => setMember(m, { can_edit: e.target.checked })} className="accent-violet-500" />Sửa kho chung
-            </label>
-            <label className={`text-xs flex items-center gap-1 ${m.user_id === me ? 'opacity-50' : 'cursor-pointer'}`}>
-              <input type="checkbox" checked={m.can_approve} disabled={m.user_id === me} onChange={e => setMember(m, { can_approve: e.target.checked })} className="accent-violet-500" />Duyệt bài
-            </label>
-          </div>
-        ))}
-      </div>
-      {msg && <p className="text-xs mt-2 text-zinc-300">{msg}</p>}
-      <p className="text-xs text-zinc-600 mt-3">Người đăng ký mới tự vào org chung với vai 👤 Thành viên (chỉ đọc kho chung, có kho cá nhân riêng). Nâng vai tại đây.</p>
-    </Card>
-  )
-}
-
 const VOICE_QS = [
   'Bạn muốn người đọc cảm thấy gì sau mỗi bài của bạn?',
   '3 từ mô tả giọng nói của bạn (vd: chân thành, hài, thẳng)?',
@@ -171,117 +131,6 @@ export function Profile({ user }: { user: User }) {
     </div>
   )
 }
-
-/* ---------- USERS (👑 admin) ---------- */
-export function UsersPage({ me }: { me: string }) {
-  return (
-    <div className="p-8 max-w-3xl mx-auto">
-      <h1 className="text-3xl font-extrabold mb-1">👑 Quản lý thành viên</h1>
-      <p className="text-zinc-500 text-sm mb-6">Chỉ Admin thấy mục này. Phân vai, bật/tắt quyền sửa kho chung & duyệt bài.</p>
-      <MembersAdmin me={me} />
-      <Card>
-        <Lbl>📜 Ma trận quyền</Lbl>
-        <div className="text-xs text-zinc-400 space-y-1.5 leading-relaxed">
-          <p>👑 <b className="text-zinc-200">Admin (5)</b> — toàn quyền + quản lý thành viên + duyệt bài</p>
-          <p>✅ <b className="text-zinc-200">Tổng biên tập (4)</b> — sửa kho chung, bài đăng thẳng, duyệt bài người khác</p>
-          <p>✏️ <b className="text-zinc-200">Biên tập viên (3)</b> — sửa kho chung, bài mới vào hàng <b>chờ duyệt</b></p>
-          <p>🤝 <b className="text-zinc-200">Cộng tác viên (2)</b> — đề xuất nội dung (chờ duyệt) nếu được bật quyền sửa</p>
-          <p>👤 <b className="text-zinc-200">Thành viên (1)</b> — kho cá nhân riêng + đọc kho chung, không sửa</p>
-        </div>
-      </Card>
-    </div>
-  )
-}
-
-/* ---------- REVIEW (✅ ban biên tập) ---------- */
-type PendingNode = { id: string; title: string | null; icon: string | null; layer: string; kind: string; created_at: string; owner_id: string | null; md: string | null; props: Record<string, unknown> | null }
-type Feedback = { id: string; node_id: string; question: string; created_at: string; status: string }
-export function ReviewQueue({ orgId, onOpen, onChanged }: { orgId: string | null; onOpen: (id: string) => void; onChanged: () => void }) {
-  const [items, setItems] = useState<PendingNode[]>([])
-  const [fbs, setFbs] = useState<Feedback[]>([])
-  const [emails, setEmails] = useState<Record<string, string>>({})
-  const [msg, setMsg] = useState('')
-  const load = () => {
-    if (!orgId) return
-    supabase.from('nodes').select('id,title,icon,layer,kind,created_at,owner_id,md,props').eq('org_id', orgId).eq('status', 'pending').neq('kind', 'block').order('created_at', { ascending: false })
-      .then(({ data }) => setItems((data as PendingNode[]) ?? []))
-    supabase.from('open_questions').select('id,node_id,question,created_at,status').eq('status', 'feedback').order('created_at', { ascending: false }).limit(20)
-      .then(({ data }) => setFbs((data as Feedback[]) ?? []))
-    supabase.rpc('admin_list_members').then(({ data }) => {
-      if (data) setEmails(Object.fromEntries((data as { user_id: string; email: string }[]).map(m => [m.user_id, m.email])))
-    })
-  }
-  useEffect(load, [orgId]) // eslint-disable-line react-hooks/exhaustive-deps
-  async function approve(n: PendingNode) {
-    const np = { ...(n.props ?? {}), last_published_md: n.md ?? '', approved_at: new Date().toISOString() }
-    const { error } = await supabase.from('nodes').update({ status: 'published', props: np }).eq('id', n.id)
-    setMsg(error ? '⚠️ ' + error.message : '✅ Đã duyệt & xuất bản')
-    setTimeout(() => setMsg(''), 2500); load(); onChanged()
-  }
-  async function reject(n: PendingNode) {
-    const note = window.prompt('Lý do trả lại (tác giả sẽ thấy trên trang):')
-    if (note === null) return
-    const np = { ...(n.props ?? {}), review_note: note || 'Cần chỉnh sửa thêm' }
-    const { error } = await supabase.from('nodes').update({ status: 'draft', props: np }).eq('id', n.id)
-    setMsg(error ? '⚠️ ' + error.message : '↩️ Đã trả lại kèm góp ý')
-    setTimeout(() => setMsg(''), 2500); load(); onChanged()
-  }
-  const excerpt = (md: string | null) => (md ?? '').replace(/^#.*$/m, '').replace(/[#>*`\-\[\]]/g, '').trim().slice(0, 150)
-  return (
-    <div className="p-8 max-w-3xl mx-auto">
-      <h1 className="text-3xl font-extrabold mb-1">✅ Duyệt bài</h1>
-      <p className="text-zinc-500 text-sm mb-6">Bài chờ duyệt vào kho chung + góp ý từ thành viên. Duyệt = xuất bản cho cả tổ chức.</p>
-      {items.length === 0 ? (
-        <Card className="mb-5"><p className="text-sm text-zinc-500 text-center py-6">🎉 Không có bài nào chờ duyệt.</p></Card>
-      ) : (
-        <div className="space-y-2.5 mb-6">
-          {items.map(n => (
-            <div key={n.id} className="rounded-2xl bg-white/[0.04] border border-white/10 px-4 py-3.5">
-              <div className="flex items-center gap-3">
-                <span className="text-2xl shrink-0">{n.icon || '📄'}</span>
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-semibold truncate">{n.title || 'Chưa đặt tên'}</div>
-                  <div className="text-[11px] text-zinc-500">
-                    {n.layer === 'corporate' ? '🌐 Kho tập đoàn' : '♾️ Kho nhân loại'} · ✍️ {n.owner_id ? (emails[n.owner_id] ?? 'thành viên').split('@')[0] : 'hệ thống'} · {new Date(n.created_at).toLocaleDateString('vi')}
-                    {(n.props?.proposed_from as string) ? ' · 💡 đề xuất từ kho cá nhân' : ''}
-                    {(n.props?.review_note as string) ? ' · 🔁 gửi lại sau góp ý' : ''}
-                  </div>
-                </div>
-                <button onClick={() => onOpen(n.id)} className="text-xs rounded-lg bg-white/10 border border-white/10 px-3 py-1.5 hover:bg-white/15 shrink-0">👁 Xem</button>
-                <button onClick={() => approve(n)} className="text-xs rounded-lg bg-gradient-to-r from-emerald-500 to-cyan-500 px-3 py-1.5 font-semibold shrink-0">✅ Duyệt</button>
-                <button onClick={() => reject(n)} className="text-xs rounded-lg bg-white/5 border border-white/10 text-zinc-400 px-3 py-1.5 hover:text-red-300 hover:border-red-400/40 shrink-0">↩ Trả lại</button>
-              </div>
-              {excerpt(n.md) && <p className="text-xs text-zinc-500 mt-2 pl-10 leading-relaxed">{excerpt(n.md)}…</p>}
-              {(n.props?.proposal as { reason?: string; goal?: string } | undefined)?.reason && (
-                <p className="text-[11px] text-violet-200/80 mt-1.5 pl-10">💡 Lý do đề xuất: {(n.props!.proposal as { reason: string }).reason}{(n.props!.proposal as { goal?: string }).goal ? ` · 🎯 ${(n.props!.proposal as { goal: string }).goal}` : ''}</p>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-      {/* GÓP Ý TỪ THÀNH VIÊN (bài kho QNET) */}
-      <Card>
-        <Lbl>💬 Góp ý từ thành viên ({fbs.length})</Lbl>
-        {fbs.length === 0 ? <p className="text-xs text-zinc-600">Chưa có góp ý nào.</p> : (
-          <div className="space-y-1.5">
-            {fbs.map(f => (
-              <div key={f.id} className="flex items-start gap-2 rounded-xl bg-white/[0.03] border border-white/10 px-3 py-2">
-                <span className="text-sm shrink-0">💬</span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs text-zinc-300 leading-relaxed">{f.question}</p>
-                  <button onClick={() => onOpen(f.node_id)} className="text-[10px] text-cyan-300 hover:underline">mở bài liên quan →</button>
-                </div>
-                <button onClick={async () => { await supabase.from('open_questions').update({ status: 'resolved' }).eq('id', f.id); load() }} className="text-[10px] rounded-lg bg-white/5 border border-white/10 px-2 py-1 text-zinc-500 hover:text-emerald-300 shrink-0">✓ Đã xử lý</button>
-              </div>
-            ))}
-          </div>
-        )}
-      </Card>
-      {msg && <p className="text-xs mt-3 text-zinc-300">{msg}</p>}
-    </div>
-  )
-}
-
 
 /* ---------- STUDIO NHẬP LIỆU (dashboard riêng: raw → đề xuất → duyệt + phân việc) ---------- */
 const PT: [string, string][] = [['ghi-chu', '📝 Ghi chú'], ['bai-hoc', '🎓 Bài học'], ['trai-nghiem', '🌱 Trải nghiệm'], ['blog', '📰 Blog'], ['video', '🎬 Video'], ['kich-ban', '🎞️ Kịch bản'], ['khach-hang', '🤝 Khách hàng'], ['sach', '📕 Sách']]
@@ -1000,44 +849,6 @@ export function Today({ user, role, stats, recent, pages, editorial = [], counts
           </div>
         )
       })()}
-    </div>
-  )
-}
-
-/* ---------- CONTENT ENGINE (gallery template) ---------- */
-const TEMPLATES = [
-  { icon: '📘', name: 'Bài Facebook', desc: 'Storytelling 200–400 chữ từ một bài học đã chín.' },
-  { icon: '🎬', name: 'Kịch bản Reel 30s', desc: 'Hook 3 giây → bài học → call-to-action.' },
-  { icon: '📧', name: 'Tin nhắn chăm khách', desc: 'Follow-up cá nhân hoá theo từng khách hàng.' },
-  { icon: '🎤', name: 'Dàn ý chia sẻ 5 phút', desc: 'Cho buổi event / zoom đội nhóm.' },
-  { icon: '📝', name: 'Bài blog dài', desc: 'Tổng hợp nhiều note thành bài chuyên sâu có trích nguồn.' },
-  { icon: '💬', name: 'Caption ngắn', desc: '3 phương án caption + hashtag theo giọng của bạn.' },
-]
-export function Engine({ folders }: { folders: N[] }) {
-  return (
-    <div className="p-8 max-w-4xl mx-auto">
-      <h1 className="text-3xl font-extrabold mb-1">✍️ Content Engine</h1>
-      <p className="text-zinc-500 text-sm mb-6">Biến bài học đã chín thành content theo giọng của bạn. <span className="text-amber-300">(Phase 2 — chờ kết nối AI key)</span></p>
-      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-6">
-        {TEMPLATES.map(t => (
-          <div key={t.name} className="group rounded-2xl bg-white/[0.04] border border-white/10 p-4 hover:border-violet-400/50 hover:bg-white/[0.06] transition cursor-not-allowed relative overflow-hidden">
-            <div className="text-3xl mb-2">{t.icon}</div>
-            <div className="font-semibold text-sm mb-1">{t.name}</div>
-            <p className="text-xs text-zinc-500 leading-relaxed">{t.desc}</p>
-            <span className="absolute top-3 right-3 text-[9px] uppercase tracking-wider rounded bg-amber-500/15 border border-amber-400/30 text-amber-300 px-1.5 py-0.5">soon</span>
-          </div>
-        ))}
-      </div>
-      <Card className="mb-4"><Lbl>🎙️ Giọng thương hiệu</Lbl>
-        <p className="text-sm text-zinc-400">20 câu onboarding → AI hiểu giọng + giá trị của bạn để viết authentic, không giống ai.</p>
-      </Card>
-      <Card><Lbl>⚡ Bài học sẵn sàng tạo content</Lbl>
-        <div className="flex flex-wrap gap-2 mt-1">
-          {folders.slice(0, 12).map(f => <span key={f.id} className="text-xs rounded-lg bg-white/5 border border-white/10 px-3 py-1.5">📂 {f.title}</span>)}
-          {folders.length === 0 && <span className="text-xs text-zinc-500">Tạo & học bài ở kho tri thức trước.</span>}
-        </div>
-        <p className="text-xs text-zinc-600 mt-3">Chỉ bài Độ Chuyển hoá cao mới đủ điều kiện sinh content (cổng chất lượng).</p>
-      </Card>
     </div>
   )
 }
