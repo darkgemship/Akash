@@ -334,7 +334,7 @@ ${srcPage ? `\nCHUYỆN THẬT ĐÍNH KÈM (nguồn sự thật — không bịa
         <h2 className="text-xl font-extrabold">Hôm nay tạo gì?</h2>
         <div className="flex items-center gap-1.5 text-[11px]">
           <button onClick={() => setPanel(panel === 'lib' ? 'none' : 'lib')} className={`rounded-lg border px-2.5 py-1 ${panel === 'lib' ? 'bg-white/10 border-white/20 text-white' : 'border-white/10 text-zinc-500 hover:text-white'}`}>Thư viện viral</button>
-          <button onClick={() => setPanel(panel === 'voice' ? 'none' : 'voice')} className={`rounded-lg border px-2.5 py-1 ${panel === 'voice' ? 'bg-white/10 border-white/20 text-white' : 'border-white/10 text-zinc-500 hover:text-white'}`}>21 câu hỏi giọng</button>
+          <button onClick={() => { const next = panel === 'voice' ? 'none' : 'voice'; setPanel(next as 'none' | 'voice'); if (next === 'voice') setQAns(mx.answers?.[qs[qIdx]?.q_vi] ?? '') }} className={`rounded-lg border px-2.5 py-1 ${panel === 'voice' ? 'bg-white/10 border-white/20 text-white' : 'border-white/10 text-zinc-500 hover:text-white'}`}>21 câu hỏi giọng</button>
           <button onClick={() => { setWizard(true); setWStep(0) }} className="rounded-lg border border-white/10 px-2.5 py-1 text-zinc-500 hover:text-white" title="Sửa vai, khán giả, điểm mạnh, trụ, nhịp">⚙ Hồ sơ Hồn</button>
         </div>
       </div>
@@ -368,7 +368,8 @@ ${srcPage ? `\nCHUYỆN THẬT ĐÍNH KÈM (nguồn sự thật — không bịa
               <div className="flex gap-2">
                 {qIdx > 0 && <button onClick={() => { setQIdx(i => i - 1); setQAns(mx.answers?.[qs[qIdx - 1].q_vi] ?? '') }} className="rounded-lg bg-white/5 border border-white/10 px-3 py-1.5 text-xs text-zinc-400">←</button>}
                 <button onClick={async () => {
-                  const answers = { ...(mx.answers ?? {}), [qs[qIdx].q_vi]: qAns.trim() }
+                  // KHÔNG ghi đè rỗng lên câu trả lời đã lưu (bug audit 12/6 — mất dữ liệu)
+                  const answers = qAns.trim() ? { ...(mx.answers ?? {}), [qs[qIdx].q_vi]: qAns.trim() } : (mx.answers ?? {})
                   await saveMatrix({ ...mx, answers })
                   if (qAns.trim()) { const me = pages.find(n => n.subtype === 'profile_me' && n.owner_id === user.id); if (me) { const { data } = await supabase.from('nodes').select('md').eq('id', me.id).single(); await supabase.from('nodes').update({ md: `${data?.md ?? ''}\n\n**${qs[qIdx].q_vi}**\n${qAns.trim()}` }).eq('id', me.id) } }
                   setQAns(answers[qs[qIdx + 1]?.q_vi] ?? ''); setQIdx(i => Math.min(i + 1, qs.length - 1))

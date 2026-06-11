@@ -5,12 +5,12 @@ import { supabase } from '@/lib/supabaseClient'
 import dynamic from 'next/dynamic'
 import type { PartialBlock } from '@blocknote/core'
 import Galaxy, { type GNode, type GLink } from './Galaxy'
-import Digest, { depthScore } from './Digest'
+import Digest from './Digest'
 import { Profile, Today, Board, Studio } from './Pages'
 import { KolFeed, ContentEngine, ReviewHub, MembersHub } from './Hubs'
 import Warp from './Warp'
 import { IVault, IHome, IPen, IBoard, ICheck, IUsers, IUser, ISearch, IPlus, IDots, IChevron, ILogout, IDoc, IOrbit, IUpload, ICode, ITarget, IRefresh, IMegaphone, IGrad, IX, IExpand, IEye, IEyeOff } from './Icons'
-import { DIMS, PAGE_TYPES, OUTPUT_FORMATS, PropsPanel, PageFooter, Dim8Bars } from './PageFrame'
+import { DIMS, PAGE_TYPES, PropsPanel, PageFooter, Dim8Bars } from './PageFrame'
 import { dimSignals, transformScore } from '@/lib/transformScore'
 
 const Editor = dynamic(() => import('./Editor'), { ssr: false })
@@ -19,7 +19,7 @@ const Database = dynamic(() => import('./Database'), { ssr: false })
 type Depth = { connections: number; meaning: number; evidence: number; experience: number; action: number; learned: boolean }
 
 type Node = { id: string; title: string | null; kind: string; parent_id: string | null }
-type TNode = Node & { layer: string; icon: string | null; owner_id: string | null; position?: number | null; status?: string; subtype?: string | null; created_at?: string; event_date?: string | null; props?: Record<string, unknown> | null }
+type TNode = Node & { layer: string; icon: string | null; owner_id: string | null; position?: number | null; status?: string; subtype?: string | null; created_at?: string; event_date?: string | null; emotion?: string | null; props?: Record<string, unknown> | null }
 
 const LAYERS: { key: string; label: string; color: string }[] = [
   { key: 'personal', label: '🧠 Kho của bạn', color: 'text-white' },
@@ -199,28 +199,6 @@ function Login() {
   )
 }
 
-/* Radar 5 cạnh của Độ Chuyển hoá: Nối – Nghĩa – Chứng – Trải – Hành */
-function Radar({ d }: { d: Depth }) {
-  const vals = [d.connections, d.meaning, d.evidence, d.experience, d.action].map(v => Math.max(0, Math.min(4, v)) / 4)
-  const labels = ['Nối', 'Nghĩa', 'Chứng', 'Trải', 'Hành']
-  const cx = 70, cy = 64, R = 46
-  const pt = (i: number, f: number) => {
-    const a = -Math.PI / 2 + (i * 2 * Math.PI) / 5
-    return `${cx + Math.cos(a) * R * f},${cy + Math.sin(a) * R * f}`
-  }
-  const ring = (f: number) => Array.from({ length: 5 }, (_, i) => pt(i, f)).join(' ')
-  return (
-    <svg width="140" height="132" viewBox="0 0 140 132">
-      {[0.33, 0.66, 1].map(f => <polygon key={f} points={ring(f)} fill="none" stroke="rgba(255,255,255,.12)" strokeWidth="1" />)}
-      {Array.from({ length: 5 }, (_, i) => <line key={i} x1={cx} y1={cy} x2={pt(i, 1).split(',')[0]} y2={pt(i, 1).split(',')[1]} stroke="rgba(255,255,255,.08)" />)}
-      <polygon points={vals.map((v, i) => pt(i, Math.max(0.06, v))).join(' ')} fill="rgba(139,92,246,.35)" stroke="#a78bfa" strokeWidth="1.5" />
-      {labels.map((l, i) => {
-        const a = -Math.PI / 2 + (i * 2 * Math.PI) / 5
-        return <text key={l} x={cx + Math.cos(a) * (R + 12)} y={cy + Math.sin(a) * (R + 12) + 3} textAnchor="middle" fontSize="9" fill="#a1a1aa">{l}</text>
-      })}
-    </svg>
-  )
-}
 
 function Workspace({ user }: { user: User }) {
   const [orgId, setOrgId] = useState<string | null>(null)
@@ -295,7 +273,7 @@ function Workspace({ user }: { user: User }) {
   }, [])
 
   const loadTree = useCallback(async (org: string) => {
-    const { data } = await supabase.from('nodes').select('id,title,kind,parent_id,layer,icon,owner_id,position,status,subtype,event_date,props,created_at').eq('org_id', org).neq('kind', 'block').order('position', { nullsFirst: true }).order('created_at')
+    const { data } = await supabase.from('nodes').select('id,title,kind,parent_id,layer,icon,owner_id,position,status,subtype,event_date,emotion,props,created_at').eq('org_id', org).neq('kind', 'block').order('position', { nullsFirst: true }).order('created_at')
     const t = (data as TNode[]) ?? []
     setTree(t)
     setExpanded(prev => { const n = new Set(prev); t.filter(x => x.kind === 'kho').forEach(k => n.add(k.id)); return n })
@@ -743,7 +721,7 @@ function Workspace({ user }: { user: User }) {
                   <div className="flex items-center gap-2 px-4 py-2 border-b border-white/5 shrink-0">
                     {depth?.learned
                       ? <>
-                          <span className="flex items-center gap-1.5 text-xs rounded-lg bg-violet-500/15 border border-violet-400/30 text-violet-300 px-2 py-1 tabular-nums"><ITarget size={13} /> {(() => { const nd2 = nodeOf(editing.id); const t = transformScore(dimSignals({ out: outRaw, back: backRaw, event_date: nd2?.event_date, props: nd2?.props })); return `${t.total} · ${t.covered}/8` })()}</span>
+                          <span className="flex items-center gap-1.5 text-xs rounded-lg bg-violet-500/15 border border-violet-400/30 text-violet-300 px-2 py-1 tabular-nums"><ITarget size={13} /> {(() => { const nd2 = nodeOf(editing.id); const t = transformScore(dimSignals({ out: outRaw, back: backRaw, event_date: nd2?.event_date, emotion: nd2?.emotion, props: nd2?.props })); return `${t.total} · ${t.covered}/8` })()}</span>
                           <button onClick={() => setShowDigest(true)} className="flex items-center gap-1.5 text-xs rounded-lg bg-white/10 border border-white/10 px-2.5 py-1 hover:bg-white/15"><IRefresh size={13} /> Ôn lại</button>
                         </>
                       : <button onClick={() => setShowDigest(true)} className="flex items-center gap-1.5 text-xs rounded-lg bg-gradient-to-r from-violet-500 to-cyan-500 px-3 py-1 font-semibold"><IGrad size={13} /> Chuyển hoá bài này</button>}
@@ -814,10 +792,10 @@ function Workspace({ user }: { user: User }) {
                   {(() => {
                     // ĐỘ CHUYỂN HOÁ 8 CHIỀU — derive từ links thật của trang (RESEARCH-VIZ-ARCH mũi 2), khớp framework
                     const nd = nodeOf(editing.id)
-                    const x8 = dimSignals({ out: outRaw, back: backRaw, event_date: nd?.event_date, props: nd?.props })
+                    const x8 = dimSignals({ out: outRaw, back: backRaw, event_date: nd?.event_date, emotion: nd?.emotion, props: nd?.props })
                     const t8 = transformScore(x8)
                     const weakest = Object.entries(DIMS).filter(([k]) => (x8[k as keyof typeof x8] ?? 0) === 0)[0]
-                    return depth?.learned ? (
+                    return (depth?.learned || t8.learned) ? (
                       <>
                         <button onClick={() => setShowRadar(s => !s)} title={`Độ Chuyển hoá ${t8.total} · ${t8.covered}/8 chiều sáng`} className="flex items-center gap-1.5 text-xs rounded-lg bg-violet-500/15 border border-violet-400/30 text-violet-300 px-2.5 py-1 hover:bg-violet-500/25 tabular-nums"><ITarget size={13} /> {t8.total} · {t8.covered}/8</button>
                         <button onClick={() => setShowDigest(true)} className="flex items-center gap-1.5 text-xs rounded-lg bg-white/10 border border-white/10 px-2.5 py-1 hover:bg-white/15"><IRefresh size={13} /> Ôn lại</button>
@@ -1049,6 +1027,9 @@ function Workspace({ user }: { user: User }) {
                   logEvent('create', anchor.id); openNoteEditor(anchor); setPage('know')
                   return
                 }
+                // KHÔNG rơi xuyên xuống nhánh trải nghiệm (audit 12/6: quote thành note sai loại, mất nguồn)
+                setToast('⚠ Chưa lưu được quote — thử lại nhé'); setTimeout(() => setToast(''), 3000)
+                return
               }
               const isInsight = type === 'insight'
               const parent = isInsight ? await ensureHub('lessons', 'Kim cương bài học', '💎') : await ensureHub('journey', 'Hành trình của tôi', '📓')
