@@ -548,7 +548,7 @@ export function Studio({ orgId, user, canEdit, canApprove, pages, onOpen, onRelo
 /* ---------- TODAY (trung tâm hành động — không trùng chức năng kho) ---------- */
 type TodayNode = N & { icon?: string | null }
 const CAP_TYPES: [string, string, string][] = [
-  ['exp', '🌱 Trải nghiệm', 'Chuyện vừa xảy ra — vào 📓 Hành trình của tôi'],
+  ['exp', '🌱 Trải nghiệm', 'Chuyện vừa xảy ra — vào 📓 Hành trình anh hùng'],
   ['insight', '💎 Insight', 'Ý chợt loé — vào 💎 Kim cương bài học'],
   ['quote', '💬 Quote đắt', 'Câu nói hay vừa nghe/đọc — kèm nguồn'],
 ]

@@ -353,7 +353,7 @@ function Workspace({ user }: { user: User }) {
   // hoàn tất nạp trải nghiệm sau bước đào sâu — emotion vào CỘT, người/bài học vào đúng mục md
   async function finishCapture(text: string, emo: string, who: string, lesson: string) {
     setCapDeep(null)
-    const parent = await ensureHub('journey', 'Hành trình của tôi', '📓')
+    const parent = await ensureHub('journey', 'Hành trình anh hùng của tôi', '📓')
     const nowD = new Date()
     const today = new Date(Date.now() - nowD.getTimezoneOffset() * 60000).toISOString().slice(0, 10)
     const id = crypto.randomUUID()
@@ -368,6 +368,28 @@ function Workspace({ user }: { user: User }) {
     logEvent('capture_deep', id, { emo: !!emo, who: !!who.trim(), lesson: !!lesson.trim() })
     if (orgId) { await loadTree(orgId); loadGraph(orgId) }
     openNoteEditor({ id, title: 'Nhật ký', kind: 'note', parent_id: parent }); setPage('know')
+  }
+  // ÁNH XẠ kho chung → kho tôi (KHO-CHUAN §2bis cây 5): luồng chuẩn là bắn qua trạm Tủ nguồn
+  // (1 trang Cảm nhận / 1 bài gốc, link reference về) RỒI từ đó mới nối tiếp vào các trang cá nhân.
+  async function mirrorToMyKho(src: TNode) {
+    if (!orgId) return
+    const ex = tree.find(n => n.owner_id === user.id && (n.props?.mirror_of as string) === src.id)
+    if (ex) { openNoteEditor(ex); setToast('🪞 Bài này bạn đã ánh xạ — mở trang cảm nhận của bạn'); setTimeout(() => setToast(''), 3000); return }
+    const parent = await ensureHub('sources', 'Tủ nguồn tinh hoa', '📚')
+    const id = crypto.randomUUID()
+    const from = src.layer === 'humanity' ? 'Kho nhân loại' : 'Kho QNET'
+    const { error } = await supabase.from('nodes').insert({
+      id, org_id: orgId, owner_id: user.id, layer: 'personal', kind: 'page', parent_id: parent,
+      title: `Cảm nhận: ${src.title || 'bài chưa tên'}`, status: 'published', min_level: 1, position: nextPos(parent),
+      props: { page_type: 'nguon', mirror_of: src.id, source: `${src.title} — ${from}` },
+      md: `**Loại:** 📚 Nguồn · **Gốc:** ${src.icon || ''} ${src.title} (${from})\n\n**Tóm tắt 1 câu:** \n\n## 💎 Điều đắt nhất tôi rút ra\n- \n\n## 🌱 Nó chạm vào chuyện nào của đời tôi\n- (gõ @ để nối vào trải nghiệm / bài học của bạn)\n\n## ⚡ Tôi sẽ áp dụng thế nào\n- `,
+    })
+    if (error) { setErr(error.message); return }
+    await supabase.from('links').insert({ org_id: orgId, from_node: id, to_node: src.id, dimension: 'reference', source: 'mirror' })
+    logEvent('mirror', id, { src: src.id, from: src.layer })
+    await loadTree(orgId); loadGraph(orgId)
+    openNoteEditor({ id, title: `Cảm nhận: ${src.title}`, kind: 'page', parent_id: parent })
+    setToast('🪞 Đã ánh xạ về 📚 Tủ nguồn — viết cảm nhận rồi nối vào trang của bạn'); setTimeout(() => setToast(''), 4000)
   }
   async function ensureHub(hub: string, title: string, icon: string): Promise<string | null> {
     const ex = tree.find(n => n.owner_id === user.id && (n.props?.hub as string) === hub)
@@ -891,8 +913,11 @@ function Workspace({ user }: { user: User }) {
                   if (!node || isContainer(node)) return null
                   const p = (node.props ?? {}) as Record<string, unknown>
                   const canE = canEditLayer(layerOf(editing.id))
+                  // cây gốc = container gần kho nhất trong chuỗi tổ tiên (hub/folder), fallback chính kho
+                  const chain = ancestors(editing.id)
+                  const hubN = chain.find(a => a.id !== node.id && (a.kind === 'folder' || a.subtype === 'hub')) ?? chain.find(a => a.kind === 'kho')
                   return (
-                    <PropsPanel node={node} canE={canE} isEditor={!!role?.can_edit} onSetProp={setNodeProp} onSaveDate={saveEventDate}>
+                    <PropsPanel node={node} canE={canE} isEditor={!!role?.can_edit} hubLabel={hubN ? `${hubN.icon || ''} ${hubN.title || ''}`.trim() : null} onSetProp={setNodeProp} onSaveDate={saveEventDate}>
                       {node?.status === 'pending' && <span className="rounded-lg bg-amber-500/15 border border-amber-400/30 text-amber-300 px-2 py-1">⏳ Chờ duyệt</span>}
                       {/* duyệt ngay trong trang (người có quyền) */}
                       {node?.status === 'pending' && role?.can_approve && (
@@ -924,6 +949,10 @@ function Workspace({ user }: { user: User }) {
                       {/* đề xuất trang cá nhân lên Kho nhân loại */}
                       {node?.layer === 'personal' && node?.owner_id === user.id && !node?.subtype && node?.kind === 'page' && (
                         <button onClick={() => setProposeFor(editing.id)} title="Trả lời 3 câu → bản sao vào hàng chờ duyệt Kho nhân loại" className="rounded-lg bg-violet-500/15 border border-violet-400/30 text-violet-200 px-2.5 py-1 hover:bg-violet-500/25">♾️ Đề xuất lên nhân loại</button>
+                      )}
+                      {/* trang kho chung → ánh xạ về kho cá nhân qua trạm Tủ nguồn */}
+                      {node && node.layer !== 'personal' && !isContainer(node) && (
+                        <button onClick={() => mirrorToMyKho(node)} title="Tạo trang Cảm nhận trong 📚 Tủ nguồn tinh hoa (nối chiều Tham chiếu về bài gốc) — rồi từ đó nối tiếp vào trang của bạn" className="rounded-lg bg-cyan-500/15 border border-cyan-400/30 text-cyan-200 px-2.5 py-1 hover:bg-cyan-500/25">🪞 Ánh xạ về kho tôi</button>
                       )}
                       {/* thành viên góp ý bài kho chung */}
                       {!canE && node?.layer !== 'personal' && (
@@ -1177,7 +1206,7 @@ function Workspace({ user }: { user: User }) {
       )}
       {lifeWiz && (
         <LifeChaptersWizard onClose={() => setLifeWiz(false)} onCreate={async (chapters) => {
-          const journey = await ensureHub('journey', 'Hành trình của tôi', '📓')
+          const journey = await ensureHub('journey', 'Hành trình anh hùng của tôi', '📓')
           for (let i = 0; i < chapters.length; i++) {
             const c = chapters[i]
             const yr = parseInt(c.year)

@@ -2,6 +2,14 @@
 
 > Ghi lại mỗi đợt build để lần sau làm tốt hơn. Quy trình chuẩn: **đọc docs → sửa code → `npm run build` → test thật trên preview (đăng nhập, bấm từng nút) → cập nhật docs**.
 
+## 2026-06-13 (đợt 11) — 🪞 Ánh xạ kho chung → kho tôi + Cây gốc thành property + 100% trang có loại
+**Yêu cầu founder**: đổi "Hành trình" → "Hành trình anh hùng của tôi"; kho cá nhân có phần ánh xạ từ nhân loại/QNET vào (đi qua ánh xạ rồi mới link vào page cụ thể); phân đủ loại trang cho mọi page + "rơi vào cây nào" thành trường Properties cố định.
+1. **Đổi tên cây 1**: DB (props->>hub='journey') + 2 chỗ ensureHub trong page.tsx + caption capture ở Pages.tsx.
+2. **Luồng ánh xạ chốt** (KHO-CHUAN cây 5 cập nhật): trang kho chung (humanity/corporate, không phải container) có nút **🪞 Ánh xạ về kho tôi** → `mirrorToMyKho()` tạo trang "Cảm nhận: <gốc>" trong 📚 Tủ nguồn tinh hoa với `props.mirror_of` + link `reference` về bài gốc + md khung 3 mục (điều đắt nhất / chạm chuyện nào đời tôi / áp dụng); bấm lần 2 mở trang cảm nhận cũ (1 gốc = 1 trạm). Logic: ánh xạ TRƯỚC, từ trạm mới nối tiếp vào page cá nhân cụ thể; link thẳng vẫn được phép như tham chiếu nhanh.
+3. **Cây gốc = trường chuẩn read-only**: PropsPanel nhận `hubLabel` (page.tsx derive từ ancestors: container gần kho nhất, fallback kho) — Row "Cây gốc · cố định" ngay cạnh Loại trang. Trang chỉ có MỘT nhà.
+4. **Backfill loại trang 100%**: 11 trang kind=page (case-by-case) + toàn bộ kind=note theo nhánh (humanity→bai-hoc, B→nguon, C→ho-so, E→quy-trinh, A/D/F→bai-hoc, title ~'^(cách|kịch bản|quy trình|follow)'→quy-trinh, Ý tưởng content→ghi-chu, Mục tiêu 2026→quy-trinh) → **0/176 trang thiếu loại**.
+**Verify preview**: "Hệ thống > mục tiêu" (Atomic Habits) hiện Cây gốc "🧘 Minh triết & triết lý · cố định" → bấm Ánh xạ → trang "Cảm nhận: Hệ thống > mục tiêu" mở ra trong Tủ nguồn, DB xác nhận mirror_of + 1 link reference. Build xanh.
+
 ## 2026-06-12 (đợt 10) — 🏷 PROPERTIES/FOOTER chính danh + trang tổng = mục lục thuần
 **Yêu cầu founder**: đặt tên theo framework — các trường = **Properties**, các mục cuối trang = **Footer**; trang TỔNG của kho (cây/hub) không có mấy cái đó, chỉ page bên trong mới có; trang tổng cũng không có "học thẩm thấu".
 1. **PageFrame.tsx**: PropsPanel thêm eyebrow mono `PROPERTIES — hồ sơ của trang, AI đọc từ đây`; PageFooter thêm eyebrow `FOOTER — chân trang…` + prop `lite` (true → chỉ render 🗂 Trang con, bỏ 8 chiều/liên kết/trích dẫn/nguồn/đính kèm).

@@ -78,10 +78,11 @@ const Sect = ({ title, hint, children }: { title: string; hint?: string; childre
    - ✏️ Trường của tôi: user thường tự thêm trường riêng (props.custom_fields)
    - children = dải nút hành động (duyệt / đề xuất / template / đính kèm…) từ page.tsx
 ===================================================================== */
-export function PropsPanel({ node, canE, isEditor, onSetProp, onSaveDate, children }: {
+export function PropsPanel({ node, canE, isEditor, hubLabel, onSetProp, onSaveDate, children }: {
   node: FrameNode
   canE: boolean        // được sửa trang này (kho cá nhân: luôn; kho chung: biên tập viên+)
   isEditor: boolean    // thuộc ban biên tập (sửa kho chung) — được sửa ĐỊNH NGHĨA trường chuẩn
+  hubLabel?: string | null  // cây gốc đang chứa trang — hiển thị read-only (trang chỉ có MỘT nhà)
   onSetProp: (key: string, val: unknown) => void
   onSaveDate: (d: string) => void
   children?: React.ReactNode
@@ -126,6 +127,9 @@ export function PropsPanel({ node, canE, isEditor, onSetProp, onSaveDate, childr
               <option value="">— chọn loại —</option>
               {PAGE_TYPES.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
             </select>
+          </Row>
+          <Row label="Cây gốc" hint="nhà duy nhất của trang — cố định theo loại, mọi nơi khác chỉ liên kết về">
+            <div className="px-2 py-1.5 text-[13.5px] text-zinc-300 truncate">{hubLabel ?? '—'} <span className="text-[10px] text-zinc-600">· cố định</span></div>
           </Row>
           <Row label="Ngày sự kiện" hint="Thời gian THỰC TẾ xảy ra (viết về quá khứ → ngày quá khứ)">
             <input disabled={!canE} type="date" value={node.event_date ?? ''} onChange={e => onSaveDate(e.target.value)} className={`${flat} [color-scheme:dark]`} />
