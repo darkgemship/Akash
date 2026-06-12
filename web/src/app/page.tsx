@@ -10,7 +10,7 @@ import { Profile, Today, Board, Studio, LifeChaptersWizard } from './Pages'
 import { KolFeed, ContentEngine, ReviewHub, MembersHub } from './Hubs'
 import Warp from './Warp'
 import { IVault, IHome, IPen, IBoard, ICheck, IUsers, IUser, ISearch, IPlus, IDots, IChevron, ILogout, IDoc, IOrbit, IUpload, ICode, ITarget, IRefresh, IMegaphone, IGrad, IX, IExpand, IEye, IEyeOff } from './Icons'
-import { DIMS, PAGE_TYPES, PropsPanel, PageFooter, Dim8Bars } from './PageFrame'
+import { DIMS, PropsPanel, PageFooter, Dim8Bars } from './PageFrame'
 import { dimSignals, transformScore } from '@/lib/transformScore'
 
 const Editor = dynamic(() => import('./Editor'), { ssr: false })
