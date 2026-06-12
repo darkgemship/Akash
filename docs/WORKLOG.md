@@ -180,3 +180,9 @@
 
 ## 2026-06-12 (đợt 3) — 🎯 1-ACCENT chốt (founder: 'ok luôn')
 - Sweep toàn app theo research Linear/Raycast: chrome = 1 accent tím solid (.ak-cta), gradient CHỈ còn logo/login/onboarding/celebration/canvas; surface ladder #0c0d10→#101113→#1c1d21; bỏ shadow màu trên nút; sửa 2 chuỗi marketing lỗi thời 'radar 5 cạnh' → 8 chiều. BRANDING.md cập nhật mapping. Build xanh, console sạch, verify login + Home trên preview 1440px.
+
+## 2026-06-12 (đợt 4) — 🕹️ GALAXY TƯƠNG TÁC OBSIDIAN-STYLE (founder feedback)
+- **Click chọn node** = highlight 1-hop (node khác lặn thành chấm mờ) + sóng trắng "bắn ra" trên hàng xóm + **mũi tên vector** ở đầu mỗi link đang sáng → thấy ngay link hướng về đâu / backlink từ đâu; click nền = bỏ chọn. **Kéo node** như Obsidian (mode 2D, trừ kho) — vị trí lưu manualPos, sống sót qua re-layout; kéo xong không mở nhầm trang (suppress click).
+- **Dòng đời 3 THANG THỜI GIAN RIÊNG**: mỗi kho một trục min/max độc lập (nhân loại trải thế kỷ với tick bước 50-200 năm, QNET thập kỷ, đời tôi + 6 tháng tương lai); ◆ HÔM NAY trên từng band; band nhân loại vẽ **đoạn vàng "◆ đời bạn — một chấm của vô tận"** = đời user chiếu lên thang nhân loại; chân mốc rơi đúng spine kho mình, vạch QUÁ KHỨ/TƯƠNG LAI chỉ ở band ĐỜI TÔI.
+- **Trackpad macbook chuẩn Figma**: native wheel listener passive:false (hết zoom cả trang) — pinch = zoom tại con trỏ (clamp 0.8-1.25/tick, verify 100→125%), 2 ngón = pan (neuro: 2 ngón = xoay não); **semantic node size** k^0.55 — zoom sâu node không choán màn.
+- Verify: build xanh, tsc sạch, timeline 3 band render đúng trên preview, zoom đo bằng dispatch WheelEvent.
