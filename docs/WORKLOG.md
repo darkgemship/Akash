@@ -2,6 +2,14 @@
 
 > Ghi lại mỗi đợt build để lần sau làm tốt hơn. Quy trình chuẩn: **đọc docs → sửa code → `npm run build` → test thật trên preview (đăng nhập, bấm từng nút) → cập nhật docs**.
 
+## 2026-06-12 (đợt 10) — 🏷 PROPERTIES/FOOTER chính danh + trang tổng = mục lục thuần
+**Yêu cầu founder**: đặt tên theo framework — các trường = **Properties**, các mục cuối trang = **Footer**; trang TỔNG của kho (cây/hub) không có mấy cái đó, chỉ page bên trong mới có; trang tổng cũng không có "học thẩm thấu".
+1. **PageFrame.tsx**: PropsPanel thêm eyebrow mono `PROPERTIES — hồ sơ của trang, AI đọc từ đây`; PageFooter thêm eyebrow `FOOTER — chân trang…` + prop `lite` (true → chỉ render 🗂 Trang con, bỏ 8 chiều/liên kết/trích dẫn/nguồn/đính kèm).
+2. **page.tsx**: helper `isContainer(n)` = kind ∈ {kho, folder} HOẶC subtype ∈ {hub, kol_home, viral_home, content_matrix}. Container → ẩn PropsPanel, PageFooter lite, ẩn nút Chuyển hoá/Ôn lại/điểm 8 chiều ở cả header toàn trang LẪN thanh peek. `anchor_home`/`person`/`core_value` vẫn là trang thật → giữ đủ.
+3. **Data fix**: 3 nhánh QNET top-level (B. Sản phẩm / E. Kỹ năng bán hàng / F. Hệ thống & văn hoá) thiếu `subtype='hub'` → UPDATE DB (A/C/D vốn kind=folder nên đã được bắt).
+**Verify preview**: hub "Kim cương bài học" chỉ còn FOOTER + Trang con, không nút Chuyển hoá; page con "Nhất quán thắng động lực" đủ PROPERTIES + điểm 26·3/8 + Ôn lại. Build xanh.
+**Bug tự gây & fix**: script python tìm marker `## Đợt` trong WORKLOG nhưng format thật là `## 2026-… (đợt N)` → entry không được ghi mà commit vẫn chạy (lệnh nối bằng newline, không phải &&) — bài học: xem format file TRƯỚC khi viết script chèn, và nối lệnh phụ thuộc bằng `&&`.
+
 ## 2026-06-12 (đợt 2) — 💎 REDESIGN SẮC SẢO (feedback founder: thân chữ, 8 chiều, neuro nùi, engine rối, cắt thừa)
 1. **Data + tầng chữ**: 10 trang md chứa `\n` chữ → newline thật; bắt thủ phạm bằng số đo: BlockNote set 3em ở BLOCK heading → thân trang 74.4px > title 36px → ghìm block 16.5px (giờ 36 > 24.75 > 16.5 ✓).
 2. **Deep research 4 mũi** (docs/RESEARCH-VIZ-ARCH.md, nguồn kiểm chứng): graph-viz thực chiến (Obsidian/Gephi/ForceAtlas2/semantic-zoom) · kiến trúc derive-vs-store theo Anki/FSRS · premium dark UI (Linear/Raycast/Geist) · wizard UX (Typeform/GOV.UK/Jasper/HeyGen).
