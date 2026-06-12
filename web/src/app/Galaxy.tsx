@@ -6,7 +6,7 @@ export type GLink = { from_node: string; to_node: string; dimension: string | nu
 
 type P = { x: number; y: number; r: number; color: string; node: GNode; phase: number }
 
-const COLOR: Record<string, string> = { kho: '#ffffff', folder: '#22d3ee', page: '#f472b6', database: '#fbbf24', note: '#a78bfa', block: '#34d399' }
+const COLOR: Record<string, string> = { kho: '#ffffff', folder: '#22d3ee', page: '#c4b5fd', database: '#fbbf24', note: '#94a3b8', block: '#34d399' }
 const SIZE: Record<string, number> = { kho: 12, folder: 7, page: 7, database: 7, note: 4, block: 3 }
 export const DIM_COLOR: Record<string, string> = {
   knowledge: '#22d3ee', experience: '#f472b6', emotion: '#fbbf24', values: '#a78bfa',
@@ -547,19 +547,19 @@ export default function Galaxy({ nodes, links, onOpen, onConnect }: {
           }
           const lx = SX(cx + Math.cos(th) * (Rmax + 34)), ly = SY(cy + Math.sin(th) * (Rmax + 34))
           ctx.fillStyle = off ? '#52525b' : DIM_COLOR[d]
-          ctx.font = `bold ${11.5 * dpr}px Inter, sans-serif`; ctx.textAlign = 'center'
+          ctx.font = `bold ${11.5 * dpr}px var(--font-geist-mono), monospace`; ctx.textAlign = 'center'
           ctx.fillText(DIM_LABEL[d], lx, ly)
           const cnt = [...primaryDimRef.current.values()].filter(v => v === d).length
-          ctx.fillStyle = '#71717a'; ctx.font = `${9.5 * dpr}px Inter, sans-serif`
+          ctx.fillStyle = '#71717a'; ctx.font = `${9.5 * dpr}px var(--font-geist-mono), monospace`
           ctx.fillText(`(${cnt})`, lx, ly + 13 * dpr)
           ctx.globalAlpha = 1
         })
         const g2 = ctx.createRadialGradient(SX(cx), SY(cy), 0, SX(cx), SY(cy), S(Rmin))
         g2.addColorStop(0, 'rgba(255,255,255,.12)'); g2.addColorStop(1, 'rgba(255,255,255,0)')
         ctx.fillStyle = g2; ctx.beginPath(); ctx.arc(SX(cx), SY(cy), S(Rmin), 0, 6.28); ctx.fill()
-        ctx.fillStyle = '#cbd5e1'; ctx.font = `bold ${14 * dpr}px Inter, sans-serif`; ctx.textAlign = 'center'
+        ctx.fillStyle = '#cbd5e1'; ctx.font = `bold ${14 * dpr}px var(--font-geist-mono), monospace`; ctx.textAlign = 'center'
         ctx.fillText(String(links.length), SX(cx), SY(cy) + 5 * dpr)
-        ctx.fillStyle = '#71717a'; ctx.font = `${8.5 * dpr}px Inter, sans-serif`
+        ctx.fillStyle = '#71717a'; ctx.font = `${8.5 * dpr}px var(--font-geist-mono), monospace`
         ctx.fillText('liên kết', SX(cx), SY(cy) + 17 * dpr)
       }
       // 📜 DÒNG ĐỜI — CỘT HÔM NAY là trục tham chiếu chung, 3 dòng thời gian neo vào cùng một cột
@@ -900,7 +900,7 @@ export default function Galaxy({ nodes, links, onOpen, onConnect }: {
           : (mode === 'mandala' || mode === 'timeline') ? (cam.current.k > 1.15 || hot) : true
         if (showLabel) {
           ctx.fillStyle = hot ? '#fff' : '#cbd5e1'
-          ctx.font = `${(p.node.kind === 'kho' ? 13 : 10.5) * dpr}px Inter, sans-serif`
+          ctx.font = `${(p.node.kind === 'kho' ? 13 : 10.5) * dpr}px var(--font-geist-mono), monospace`
           const lab = (p.node.title || '').slice(0, 20)
           if (mode === 'neuro' && p.node.kind !== 'note') {
             // nhãn ĐÓNG KHUNG kiểu neurolink HUD — bề rộng chữ lấy từ cache

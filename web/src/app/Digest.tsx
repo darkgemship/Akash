@@ -236,7 +236,7 @@ export default function Digest({ folder, others, orgId, userId, onClose, onSaved
     }
     // nguyên lý + hành động
     const { data: cur } = await supabase.from('nodes').select('props').eq('id', folder.id).single()
-    const props = { ...((cur?.props as Record<string, unknown>) ?? {}), ...(principle.trim() ? { principle: principle.trim() } : {}), ...(action.trim() ? { action: { text: action.trim(), due: due || null } } : {}) }
+    const props = { ...((cur?.props as Record<string, unknown>) ?? {}), ...(principle.trim() ? { principle: principle.trim() } : {}), ...(action.trim() ? { action: { text: action.trim(), due: due || null } } : {}), ...(refs.length ? { refs } : {}) }
     await supabase.from('nodes').update({ props }).eq('id', folder.id)
     // RADAR: map 8 chiều → 5 cạnh, merge GREATEST
     const totalLinks = kOut.length + kIn.length + rOut.length + rIn.length + refs.length + valIds.length + lifeSel.length + (newLife.title ? 1 : 0) + (personName && personStory ? 1 : 0)
@@ -409,6 +409,8 @@ export default function Digest({ folder, others, orgId, userId, onClose, onSaved
                 <input type="date" value={due} onChange={e => setDue(e.target.value)} className="rounded-lg bg-[#15151f] border border-white/10 px-2.5 py-1.5 text-xs outline-none" />
                 <label className="flex items-center gap-2 text-xs text-zinc-400"><input type="checkbox" checked={evi} onChange={e => setEvi(e.target.checked)} /> 👁️ Đã thấy người khác làm & thành công</label>
               </div>
+              {/* ❓ còn lấn cấn → open_questions (DECISIONS P1#9 — ô từng bị mất, khôi phục theo audit) */}
+              <input value={lingering} onChange={e => setLingering(e.target.value)} placeholder="❓ Điều gì còn lấn cấn / chưa hiểu? (sẽ vào Hộp câu hỏi mở)" className={inputCls + ' mb-3'} />
               <div className="rounded-xl bg-white/[0.03] border border-white/10 p-3 flex items-center gap-4">
                 <div className="flex gap-1.5">{DIM8.map(d => <span key={d.key} title={d.label} className="w-3.5 h-3.5 rounded-full" style={{ background: dims[d.key] ? d.color : '#ffffff15', boxShadow: dims[d.key] ? `0 0 8px ${d.color}` : 'none' }} />)}</div>
                 <div className="text-xs text-zinc-400">{dimsCovered}/8 cánh hoa đã sáng {dimsCovered === 8 ? '— 🌸 THẤM TRỌN!' : dimsCovered >= 4 ? '— rất sâu rồi' : '— quay lại thắp thêm cánh nào'}</div>

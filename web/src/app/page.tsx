@@ -6,7 +6,7 @@ import dynamic from 'next/dynamic'
 import type { PartialBlock } from '@blocknote/core'
 import Galaxy, { type GNode, type GLink } from './Galaxy'
 import Digest from './Digest'
-import { Profile, Today, Board, Studio } from './Pages'
+import { Profile, Today, Board, Studio, LifeChaptersWizard } from './Pages'
 import { KolFeed, ContentEngine, ReviewHub, MembersHub } from './Hubs'
 import Warp from './Warp'
 import { IVault, IHome, IPen, IBoard, ICheck, IUsers, IUser, ISearch, IPlus, IDots, IChevron, ILogout, IDoc, IOrbit, IUpload, ICode, ITarget, IRefresh, IMegaphone, IGrad, IX, IExpand, IEye, IEyeOff } from './Icons'
@@ -26,7 +26,7 @@ const LAYERS: { key: string; label: string; color: string }[] = [
   { key: 'corporate', label: '🌐 Kho tập đoàn', color: 'text-cyan-300' },
   { key: 'humanity', label: '♾️ Kho nhân loại', color: 'text-violet-300' },
 ]
-const COVERS = ['linear-gradient(135deg,#8b5cf6,#22d3ee)', 'linear-gradient(135deg,#ec4899,#fbbf24)', 'linear-gradient(135deg,#34d399,#22d3ee)', 'linear-gradient(135deg,#1e1b4b,#0e7490)', 'linear-gradient(135deg,#7c2d12,#b45309)', '']
+const COVERS = ['linear-gradient(135deg,#8b5cf6,#22d3ee)', 'linear-gradient(135deg,#f5b942,#fbbf24)', 'linear-gradient(135deg,#34d399,#22d3ee)', 'linear-gradient(135deg,#1e1b4b,#0e7490)', 'linear-gradient(135deg,#7c2d12,#b45309)', '']
 const ICONS = ['📄', '📝', '📁', '🗂️', '💡', '🎯', '🔥', '🌱', '⚡', '🧠', '❤️', '📚', '🚀', '✨', '🏆', '📊']
 function kindIcon(k: string) { return k === 'kho' ? '📦' : k === 'folder' ? '📁' : k === 'database' ? '🗂️' : '📄' }
 // PAGE_TYPES / OUTPUT_FORMATS / DIMS / khung properties + footer chuẩn → PageFrame.tsx
@@ -235,11 +235,10 @@ function Workspace({ user }: { user: User }) {
   const [showRadar, setShowRadar] = useState(false)
   const [toast, setToast] = useState('')
   const [tplFor, setTplFor] = useState<{ parentId: string | null; layer: string } | null>(null)
-  const [rawOpen, setRawOpen] = useState(false)
+  const [lifeWiz, setLifeWiz] = useState(false)
+  const [mobileNav, setMobileNav] = useState(false)
   const [themeLight, setThemeLight] = useState(false)
   useEffect(() => { setThemeLight(typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'light') }, [])
-  const [rawText, setRawText] = useState('')
-  const [rawType, setRawType] = useState('ghi-chu')
   const [ob, setOb] = useState(false)
   const [obStep, setObStep] = useState(0)
   const [backRaw, setBackRaw] = useState<{ from_node: string; dimension: string | null; excerpt?: string | null }[]>([])
@@ -378,22 +377,6 @@ function Workspace({ user }: { user: User }) {
     if (orgId) loadTree(orgId)
     setToast('🧩 Đã lưu làm template — chỉnh nó trong trang 🧩 Template'); setTimeout(() => setToast(''), 3200)
   }
-  // RAW → TRANG CHUẨN: dán liệu thô, chọn loại → trang theo chuẩn + xếp hàng AI
-  async function createFromRaw() {
-    if (!orgId || !rawText.trim()) return
-    const kho = khoOf('personal')
-    const firstLine = rawText.trim().split('\n')[0].replace(/^#+\s*/, '').slice(0, 80)
-    const tplLabel = PAGE_TYPES.find(t => t[0] === rawType)?.[1] ?? ''
-    const md = `# ${firstLine}\n\n> ${tplLabel} · tạo từ dữ liệu thô — AI sẽ chuẩn hoá theo template khi cắm API\n\n## 📥 Nội dung gốc\n\n${rawText.trim()}`
-    const id = crypto.randomUUID()
-    const { error } = await supabase.from('nodes').insert({ id, org_id: orgId, owner_id: user.id, layer: 'personal', kind: 'page', parent_id: kho?.id ?? null, title: firstLine, md, props: { page_type: rawType }, status: 'published', min_level: 1, position: nextPos(kho?.id ?? null) })
-    if (error) { setErr(error.message); return }
-    await supabase.from('ai_jobs').insert({ user_id: user.id, kind: 'ingest_to_template', input: { node_id: id, page_type: rawType }, status: 'queued' })
-    setRawOpen(false); setRawText('')
-    await loadTree(orgId); loadGraph(orgId)
-    openNoteEditor({ id, title: firstLine, kind: 'page', parent_id: kho?.id ?? null })
-    setToast('📥 Trang chuẩn đã tạo — job AI đã xếp hàng'); setTimeout(() => setToast(''), 3200)
-  }
   // bật/tắt xem markdown (lấy bản md mới nhất từ DB)
   async function toggleMd() {
     if (!mdView && editing) {
@@ -463,6 +446,11 @@ function Workspace({ user }: { user: User }) {
     const newLayer = newParent ? layerOf(newParent) : drag.layer
     if (newLayer !== drag.layer) patch.layer = newLayer
     await supabase.from('nodes').update(patch).eq('id', dragNodeId)
+    // kéo sang KHO KHÁC: toàn bộ trang con đổi layer theo (audit P1 — trước đây con giữ layer cũ, sai quyền/sai view)
+    if (patch.layer) {
+      const kids2 = descendants(dragNodeId)
+      if (kids2.length) await supabase.from('nodes').update({ layer: patch.layer }).in('id', kids2)
+    }
     if (orgId) { loadTree(orgId); loadGraph(orgId) }
   }
 
@@ -641,6 +629,7 @@ function Workspace({ user }: { user: User }) {
           <button onClick={() => setPage('today')} title="Mở Nhập liệu (trong Hôm nay)" className="flex items-center gap-1.5 text-xs rounded-xl bg-white/5 border border-white/10 px-3 py-2 text-zinc-300 hover:bg-white/10 hover:border-white/20 transition">📥 Raw</button>
         </div>
         <div className="flex items-center gap-3 text-sm text-zinc-400">
+          <button onClick={() => setMobileNav(v => !v)} title="Cây trang" className="md:hidden w-8 h-8 grid place-items-center rounded-lg bg-white/5 border border-white/10">☰</button>
           <button onClick={() => {
             const cur = document.documentElement.getAttribute('data-theme') === 'light' ? '' : 'light'
             if (cur) document.documentElement.setAttribute('data-theme', cur); else document.documentElement.removeAttribute('data-theme')
@@ -652,8 +641,8 @@ function Workspace({ user }: { user: User }) {
         </div>
       </header>
 
-      <main className="flex-1 grid grid-cols-[260px_1fr] min-h-0">
-        <aside className="border-r border-white/10 flex flex-col overflow-hidden bg-[#0a0a12]">
+      <main className="flex-1 grid grid-cols-1 md:grid-cols-[260px_1fr] min-h-0">
+        <aside className={`border-r border-white/10 flex-col overflow-hidden bg-[#0a0a12] ${mobileNav ? 'flex fixed inset-y-0 left-16 right-0 z-40 sm:right-auto sm:w-[280px] shadow-2xl' : 'hidden'} md:static md:flex`}>
           <div className="p-3 pb-2">
             <div className="relative">
               <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-500"><ISearch size={14} /></span>
@@ -799,7 +788,7 @@ function Workspace({ user }: { user: User }) {
                       <>
                         <button onClick={() => setShowRadar(s => !s)} title={`Độ Chuyển hoá ${t8.total} · ${t8.covered}/8 chiều sáng`} className="flex items-center gap-1.5 text-xs rounded-lg bg-violet-500/15 border border-violet-400/30 text-violet-300 px-2.5 py-1 hover:bg-violet-500/25 tabular-nums"><ITarget size={13} /> {t8.total} · {t8.covered}/8</button>
                         <button onClick={() => setShowDigest(true)} className="flex items-center gap-1.5 text-xs rounded-lg bg-white/10 border border-white/10 px-2.5 py-1 hover:bg-white/15"><IRefresh size={13} /> Ôn lại</button>
-                        {nd?.owner_id === user.id && <button onClick={toContent} title="Bài đã chín → tạo content" className="flex items-center gap-1.5 text-xs rounded-lg bg-amber-400 text-black hover:bg-amber-300 px-2.5 py-1 font-semibold"><IMegaphone size={13} /> Content</button>}
+                        {nd?.owner_id === user.id && layerOf(editing.id) === 'personal' && <button onClick={toContent} title="Bài đã chín → tạo content" className="flex items-center gap-1.5 text-xs rounded-lg bg-amber-400 text-black hover:bg-amber-300 px-2.5 py-1 font-semibold"><IMegaphone size={13} /> Content</button>}
                         {showRadar && (
                           <>
                             <div className="fixed inset-0 z-20" onClick={() => setShowRadar(false)} />
@@ -1001,7 +990,16 @@ function Workspace({ user }: { user: User }) {
         </section>
       </main>
         </>
-      ) : page === 'today' ? <div className="flex-1 overflow-auto"><Today
+      ) : page === 'today' ? <div className="flex-1 overflow-auto">
+          {!tree.some(n => n.owner_id === user.id && n.props?.chapter) && (
+            <div className="px-8 pt-6 max-w-4xl mx-auto">
+              <button onClick={() => setLifeWiz(true)} className="w-full text-left rounded-2xl border border-amber-400/25 bg-gradient-to-r from-amber-500/10 to-transparent px-5 py-4 hover:border-amber-400/50 transition">
+                <div className="text-sm font-bold text-amber-200">✨ Viết Mục lục đời của bạn (5 phút)</div>
+                <p className="text-[11px] text-zinc-500 mt-0.5">Đời bạn là cuốn sách — đặt tên 2–7 chương. Đây là nền móng để AI hiểu bạn và mọi trải nghiệm có chỗ cắm rễ.</p>
+              </button>
+            </div>
+          )}
+          <Today
             user={user}
             role={role}
             stats={{ pages: tree.filter(n => n.kind !== 'kho').length, notes: tree.filter(n => n.kind === 'note').length, links: links.length }}
@@ -1063,7 +1061,7 @@ function Workspace({ user }: { user: User }) {
             createPage(studio, 'personal', 'page', { title, md, props: { page_type: 'quy-trinh', via: 'engine' } })
             setPage('know')
           }} /></div>
-        : page === 'kol' ? <div className="flex-1 overflow-auto"><KolFeed user={user} canEdit={!!role?.can_edit} onOpenPage={(id) => { const t = nodeOf(id); if (t) { openNoteEditor(t); setPage('know') } }} onInsight={async (text, srcTitle, srcId) => {
+        : page === 'kol' ? <div className="flex-1 overflow-auto"><KolFeed canEdit={!!role?.can_edit} onOpenPage={(id) => { const t = nodeOf(id); if (t) { openNoteEditor(t); setPage('know') } }} onInsight={async (text, srcTitle, srcId) => {
             // insight từ KOL → 💎 Kim cương bài học (tự tạo cây nếu thiếu) + nối chiều reference về bài gốc
             const lessons = await ensureHub('lessons', 'Kim cương bài học', '💎')
             const id = crypto.randomUUID()
@@ -1075,11 +1073,31 @@ function Workspace({ user }: { user: User }) {
             openNoteEditor(t as Node); setPage('know')
           }} /></div>
         : page === 'board' ? <div className="flex-1 overflow-auto"><Board orgId={orgId} userId={user.id} onOpen={(id) => { const t = nodeOf(id); if (t) { openNoteEditor(t); setPage('know') } }} /></div>
-        : page === 'review' ? <div className="flex-1 overflow-auto"><ReviewHub orgId={orgId} me={user.id} onOpen={(id) => { const t = nodeOf(id); if (t) { openNoteEditor(t); setPage('know') } }} onChanged={() => { if (orgId) { loadTree(orgId); loadGraph(orgId) } }} /></div>
-        : page === 'users' ? <div className="flex-1 overflow-auto"><MembersHub me={user.id} orgId={orgId} canAdmin={role?.level === 5 || !!role?.can_approve} onOpenPage={(id) => { const t = nodeOf(id); if (t) { openNoteEditor(t); setPage('know') } }} /></div>
+        : page === 'review' ? <div className="flex-1 overflow-auto"><ReviewHub me={user.id} onOpen={(id) => { const t = nodeOf(id); if (t) { openNoteEditor(t); setPage('know') } }} onChanged={() => { if (orgId) { loadTree(orgId); loadGraph(orgId) } }} /></div>
+        : page === 'users' ? <div className="flex-1 overflow-auto"><MembersHub me={user.id} orgId={orgId} pages={tree} canAdmin={role?.level === 5 || !!role?.can_approve} onOpenPage={(id) => { const t = nodeOf(id); if (t) { openNoteEditor(t); setPage('know') } }} /></div>
         : <div className="flex-1 overflow-auto"><Profile user={user} /></div>}
       </div>
 
+      {lifeWiz && (
+        <LifeChaptersWizard onClose={() => setLifeWiz(false)} onCreate={async (chapters) => {
+          const journey = await ensureHub('journey', 'Hành trình của tôi', '📓')
+          for (let i = 0; i < chapters.length; i++) {
+            const c = chapters[i]
+            const yr = parseInt(c.year)
+            await supabase.from('nodes').insert({
+              id: crypto.randomUUID(), org_id: orgId, owner_id: user.id, layer: 'personal', kind: 'page', parent_id: journey,
+              title: `Chương ${i + 1} · ${c.title.trim()}`, icon: ['🌱', '✈️', '🌪️', '🔥', '💎', '🌊', '⭐'][i] ?? '📖',
+              status: 'published', min_level: 1, position: i + 1,
+              event_date: yr > 1900 && yr < 2100 ? `${yr}-01-01` : null,
+              props: { page_type: 'su-kien', chapter: i + 1, via: 'life-wizard' },
+              md: `**Loại:** 🌟 Sự kiện / Mốc · **Ngày sự kiện:** ${c.year || '…'} · **Campaign:** —\n\n**Tóm tắt 1 câu:** ${c.summary.trim() || c.title.trim()}\n\n**Nguồn:** tự trải nghiệm\n\n## Chuyện của chương này\n\n(viết tự do — hoặc trả lời dần các cảnh bên dưới)\n\n## 🎬 Cảnh then chốt — trả lời dần, mỗi cảnh một trang con\n- Đỉnh cao nhất của chương này?\n- Vực sâu nhất?\n- Bước ngoặt?\n- Ai xuất hiện quan trọng nhất?\n\n**Chương này nói gì về tôi:** `,
+            })
+          }
+          if (orgId) { await loadTree(orgId); loadGraph(orgId) }
+          setLifeWiz(false)
+          setToast(`📖 Đã tạo ${chapters.length} chương đời trong Hành trình — bắt đầu kể từ chương nào cũng được`); setTimeout(() => setToast(''), 4000)
+        }} />
+      )}
       {showDigest && editing && orgId && (
         <Digest
           folder={{ id: editing.id, title: editTitle, kind: editing.kind, parent_id: editing.parent_id }}
@@ -1142,23 +1160,6 @@ function Workspace({ user }: { user: User }) {
               ))}
             </div>
             <button onClick={() => setPendingLink(null)} className="mt-3 w-full text-xs text-zinc-500 hover:text-zinc-300 py-1">Huỷ</button>
-          </div>
-        </div>
-      )}
-
-      {/* RAW → TRANG CHUẨN */}
-      {rawOpen && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[56] grid place-items-center p-6" onClick={() => setRawOpen(false)}>
-          <div className="w-[560px] max-w-[94vw] rounded-2xl bg-[#15151f] border border-white/10 shadow-2xl p-5" onClick={e => e.stopPropagation()}>
-            <div className="text-sm font-bold mb-1">📥 Dữ liệu thô → Trang chuẩn</div>
-            <p className="text-xs text-zinc-500 mb-3">Dán bất cứ gì (ghi chép, transcript, bài copy…) — chọn loại, máy tạo trang đúng chuẩn. Khi cắm AI, job sẽ tự ép template chuẩn từng loại.</p>
-            <textarea value={rawText} onChange={e => setRawText(e.target.value)} placeholder="Dán nội dung thô vào đây…" className="w-full h-44 rounded-xl bg-white/5 border border-white/10 p-3 text-sm outline-none focus:border-violet-400/50 mb-3" />
-            <div className="flex items-center gap-2">
-              <select value={rawType} onChange={e => setRawType(e.target.value)} className="rounded-lg bg-white/5 border border-white/10 px-2 py-2 text-xs outline-none text-zinc-300">
-                {PAGE_TYPES.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
-              </select>
-              <button onClick={createFromRaw} disabled={!rawText.trim()} className="flex-1 rounded-xl ak-cta px-4 py-2 text-sm font-bold disabled:opacity-40">⚡ Tạo trang chuẩn</button>
-            </div>
           </div>
         </div>
       )}

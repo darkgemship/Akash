@@ -33,8 +33,8 @@ function MiniMd({ md }: { md: string }) {
 }
 
 /* ========================== 🌟 KOL FEED ========================== */
-export function KolFeed({ user, canEdit, onOpenPage, onInsight }: {
-  user: User; canEdit: boolean
+export function KolFeed({ canEdit, onOpenPage, onInsight }: {
+  canEdit: boolean
   onOpenPage: (id: string) => void
   onInsight: (text: string, sourceTitle: string, sourceId: string) => void
 }) {
@@ -424,7 +424,7 @@ ${srcPage ? `\nCHUYỆN THẬT ĐÍNH KÈM (nguồn sự thật — không bịa
 
 /* ========================== ✅ REVIEW HUB ========================== */
 type PendingNode = AnyNode & { org_id?: string }
-export function ReviewHub({ orgId, me, onOpen, onChanged }: { orgId: string | null; me: string; onOpen: (id: string) => void; onChanged: () => void }) {
+export function ReviewHub({ me, onOpen, onChanged }: { me: string; onOpen: (id: string) => void; onChanged: () => void }) {
   const [items, setItems] = useState<PendingNode[]>([])
   const [tree, setTree] = useState<AnyNode[]>([])
   const [fbs, setFbs] = useState<{ id: string; node_id: string; question: string }[]>([])
@@ -454,7 +454,7 @@ export function ReviewHub({ orgId, me, onOpen, onChanged }: { orgId: string | nu
     if (!opened) return
     setBusy(true)
     const np = { ...((opened.props ?? {}) as Record<string, unknown>), last_published_md: draftMd, approved_at: new Date().toISOString(), approved_by: me }
-    const { error } = await supabase.from('nodes').update({ status: 'published', md: draftMd, props: np }).eq('id', opened.id)
+    const { error } = await supabase.from('nodes').update({ status: 'published', md: draftMd, content: null, props: np }).eq('id', opened.id) // content=null: Editor dựng lại từ md đã duyệt — bản sửa của BTV là bản hiển thị
     setBusy(false)
     if (!error) { setOpenId(null); load(); onChanged() }
   }
@@ -462,7 +462,7 @@ export function ReviewHub({ orgId, me, onOpen, onChanged }: { orgId: string | nu
     if (!opened) return
     const note = window.prompt('Lý do trả lại (tác giả sẽ thấy):'); if (note === null) return
     const np = { ...((opened.props ?? {}) as Record<string, unknown>), review_note: note || 'Cần chỉnh sửa thêm' }
-    await supabase.from('nodes').update({ status: 'draft', md: draftMd, props: np }).eq('id', opened.id)
+    await supabase.from('nodes').update({ status: 'draft', md: draftMd, content: null, props: np }).eq('id', opened.id)
     setOpenId(null); load(); onChanged()
   }
   return (
@@ -554,7 +554,7 @@ export function ReviewHub({ orgId, me, onOpen, onChanged }: { orgId: string | nu
 /* ========================== 👥 MEMBERS HUB ========================== */
 type Member = { user_id: string; email: string; full_name: string | null; level: number; can_edit: boolean; can_approve: boolean }
 const LEVEL_NAME: Record<number, string> = { 5: '👑 Admin', 4: '✅ Tổng biên tập', 3: '✏️ Biên tập viên', 2: '🤝 Cộng tác viên', 1: '🌱 Thành viên' }
-export function MembersHub({ me, orgId, canAdmin, onOpenPage }: { me: string; orgId?: string | null; canAdmin: boolean; onOpenPage: (id: string) => void }) {
+export function MembersHub({ me, orgId, canAdmin, pages = [], onOpenPage }: { me: string; orgId?: string | null; canAdmin: boolean; pages?: AnyNode[]; onOpenPage: (id: string) => void }) {
   const [members, setMembers] = useState<Member[]>([])
   const [pagesBy, setPagesBy] = useState<Record<string, AnyNode[]>>({})
   const [statsBy, setStatsBy] = useState<Record<string, { pages: number; links: number }>>({})
@@ -636,10 +636,14 @@ export function MembersHub({ me, orgId, canAdmin, onOpenPage }: { me: string; or
               <div className="flex gap-2 mb-2">
                 <input type="date" value={na.due} onChange={e => setNa({ ...na, due: e.target.value })} className="flex-1 rounded-lg bg-white/5 border border-white/10 px-2 py-2 text-xs outline-none [color-scheme:dark]" />
               </div>
+              <select value={na.node_id} onChange={e => setNa({ ...na, node_id: e.target.value })} title="Gắn việc vào trang cụ thể — người nhận bấm 'Mở việc' là tới đúng chỗ" className="w-full rounded-lg bg-white/5 border border-white/10 px-2 py-2 text-xs outline-none text-zinc-300 mb-2">
+                <option value="">— gắn vào trang (tuỳ chọn) —</option>
+                {pages.filter(pg => pg.layer !== 'personal' && (pg as AnyNode & { kind?: string }).kind !== 'kho').slice(0, 80).map(pg => <option key={pg.id} value={pg.id}>{pg.icon ?? ''} {pg.title}</option>)}
+              </select>
               <button onClick={async () => {
                 const assignee = na.assignee || focus; if (!assignee || !na.title.trim()) return
                 // P0 fix: org_id NOT NULL — thiếu là insert fail im lặng; giờ báo lỗi rõ
-                const { error } = await supabase.from('assignments').insert({ org_id: orgId, assignee, assigner: me, title: na.title.trim(), note: na.note || null, due: na.due || null, status: 'open' })
+                const { error } = await supabase.from('assignments').insert({ org_id: orgId, assignee, assigner: me, title: na.title.trim(), note: na.note || null, due: na.due || null, node_id: na.node_id || null, status: 'open' })
                 if (error) { setMsg('✗ ' + error.message); setTimeout(() => setMsg(''), 4000); return }
                 setMsg('✓ đã giao'); setTimeout(() => setMsg(''), 2000)
                 setNa({ assignee: '', title: '', note: '', due: '', node_id: '' }); load()
@@ -657,7 +661,7 @@ export function MembersHub({ me, orgId, canAdmin, onOpenPage }: { me: string; or
                       <span className="text-xs shrink-0">{a.status === 'done' ? '✅' : a.status === 'submitted' ? '📨' : '⏳'}</span>
                       <span className="flex-1 text-xs truncate text-zinc-300">{a.title}</span>
                       {a.status !== 'done' && a.assignee === me && <button onClick={async () => { await supabase.from('assignments').update({ status: 'submitted' }).eq('id', a.id); load() }} className="text-[10px] rounded bg-cyan-500/15 border border-cyan-400/30 text-cyan-200 px-1.5 py-0.5 shrink-0">Nộp</button>}
-                      {a.status === 'submitted' && canAdmin && <button onClick={async () => { await supabase.from('assignments').update({ status: 'done' }).eq('id', a.id); await supabase.from('events').insert({ user_id: a.assignee, type: 'content' }); load() }} className="text-[10px] rounded bg-emerald-500/15 border border-emerald-400/30 text-emerald-200 px-1.5 py-0.5 shrink-0">Nghiệm thu</button>}
+                      {a.status === 'submitted' && canAdmin && <button onClick={async () => { await supabase.from('assignments').update({ status: 'done' }).eq('id', a.id); await supabase.rpc('award_qi', { p_user: a.assignee, p_type: 'content', p_node: (a as { node_id?: string | null }).node_id ?? null }); load() }} className="text-[10px] rounded bg-emerald-500/15 border border-emerald-400/30 text-emerald-200 px-1.5 py-0.5 shrink-0">Nghiệm thu</button>}
                     </div>
                     <div className="text-[10px] text-zinc-600 pl-5">→ {who?.email.split('@')[0] ?? '?'}{a.due ? ` · hạn ${new Date(a.due).toLocaleDateString('vi')}` : ''}{a.note ? ` · ${a.note}` : ''}</div>
                   </div>

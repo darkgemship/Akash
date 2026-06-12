@@ -71,22 +71,6 @@ const Sect = ({ title, hint, children }: { title: string; hint?: string; childre
   </div>
 )
 
-/* ---------- chip 1 trường: nhãn cố định + ô giá trị ---------- */
-function FieldChip({ id, field, disabled, locked, onChange, onRemove }: {
-  id: string; field: Field; disabled: boolean; locked?: boolean
-  onChange: (v: string) => void; onRemove?: () => void
-}) {
-  return (
-    <label className={`flex items-center gap-1.5 rounded-lg border px-2 py-1 ${locked ? 'bg-violet-500/[0.07] border-violet-400/20' : 'bg-white/5 border-white/10'}`}>
-      <span className="text-zinc-500 shrink-0 max-w-[110px] truncate" title={field.label}>{locked ? '🔖' : '🏷️'} {field.label}</span>
-      <input key={id} defaultValue={field.value} disabled={disabled} placeholder="…"
-        onBlur={e => { if (e.target.value !== field.value) onChange(e.target.value) }}
-        className="bg-transparent outline-none w-24 text-zinc-200 disabled:opacity-60" />
-      {onRemove && <button onClick={onRemove} title="Xoá trường" className="text-zinc-600 hover:text-red-300">✕</button>}
-    </label>
-  )
-}
-
 /* =====================================================================
    ① PROPS PANEL — ngay dưới title
    - 📌 Trường chuẩn: hệ thống + ban biên tập fix cứng lúc tạo (props.fixed_fields)
@@ -107,7 +91,6 @@ export function PropsPanel({ node, canE, isEditor, onSetProp, onSaveDate, childr
   const mine = ((p.custom_fields as Field[]) ?? [])
   // kho cá nhân: chính chủ là "ban biên tập" của trang mình; kho chung: cần quyền biên tập
   const canFix = node.layer === 'personal' ? canE : isEditor
-  const inputCls = 'rounded-lg bg-white/5 border border-white/10 px-2 py-1.5 outline-none text-zinc-300 disabled:opacity-50'
 
   const setField = (key: 'fixed_fields' | 'custom_fields', arr: Field[], i: number, v: string) =>
     onSetProp(key, arr.map((f, j) => j === i ? { ...f, value: v } : f))
@@ -316,8 +299,8 @@ export function PageFooter({ node, pages, outLinks, backLinks, mdText, canE, onO
       {(outLinks.length > 0 || backLinks.length > 0) && (
         <Sect title="🕸️ Liên kết & backlink" hint="→ trang này nhắc tới · ← ai nhắc tới trang này (tự động)">
           <div className="flex flex-wrap gap-1.5">
-            {outLinks.map((l, i) => { const dst = byId.get(l.to_node); return dst ? pageChip(dst, '→', DIMS[l.dimension ?? '']?.color ?? '#888') : null })}
-            {backLinks.map((l, i) => { const src = byId.get(l.from_node); return src ? pageChip(src, '←', DIMS[l.dimension ?? '']?.color ?? '#888') : null })}
+            {outLinks.map((l) => { const dst = byId.get(l.to_node); return dst ? pageChip(dst, '→', DIMS[l.dimension ?? '']?.color ?? '#888') : null })}
+            {backLinks.map((l) => { const src = byId.get(l.from_node); return src ? pageChip(src, '←', DIMS[l.dimension ?? '']?.color ?? '#888') : null })}
           </div>
         </Sect>
       )}

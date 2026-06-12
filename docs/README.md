@@ -1,35 +1,33 @@
-# Akash — Documentation Index
+# Akash — Documentation Index (cập nhật 2026-06-12)
 
-Tài liệu dự án, chia 2 nhóm: **Thiết kế (vision)** và **App đã build**.
+> Phiên mới đọc theo thứ tự: **DECISIONS → KHO-CHUAN → WORKLOG (mục mới nhất) → APP-FLOWS**.
 
-## 📐 Thiết kế / Vision (gốc)
-- [ARCHITECTURE](../ARCHITECTURE.md) — kiến trúc, stack, lộ trình
-- [STORAGE](../STORAGE.md) — lưu trữ (JSON+MD, object storage, Mac Mini)
-- [FLOWS](../FLOWS.md) — 5 flows + permission 3 trục
-- [ECOSYSTEM](../ECOSYSTEM.md) — 2 app + SSO/FDW (quanlysukien)
-- [ENGAGEMENT](../ENGAGEMENT.md) — bộ não, gamification
-- [MVP](../MVP.md) — phạm vi MVP
-- [KNOWLEDGE-GRAPH](../KNOWLEDGE-GRAPH.md) — liên kết đa chiều
-- [COLLECTIVE-KNOWLEDGE](../COLLECTIVE-KNOWLEDGE.md) — 3 tầng, node đối ứng, bắn qua
-- [WISDOM-DEPTH](../WISDOM-DEPTH.md) — Độ Thấm 5 tham số
-- [DATA-MODEL-ANALYSIS](../DATA-MODEL-ANALYSIS.md) — vs Obsidian, AI-ready
-- [LEARNING-FRAMEWORK](../LEARNING-FRAMEWORK.md) — digest 5 bước, data ops
+## 🏛 Hiến pháp & framework
+| File | Là gì |
+|---|---|
+| [DECISIONS.md](DECISIONS.md) | Quyết định cuối + rules mọi phiên phải theo (8 chiều, một chữ "Chuyển hoá", event_date thật…) |
+| [FRAMEWORK.md](FRAMEWORK.md) | Gốc rễ: 8 chiều liên kết, vòng lặp SỐNG→GHI→CHUYỂN HOÁ→CONTENT→KẾT QUẢ |
+| [KHO-CHUAN.md](KHO-CHUAN.md) | Kho tiêu chuẩn: 7 cây cá nhân + 6 nhánh nhân loại + 7 loại trang + gác cổng dữ liệu (§2bis = bản chốt sau deep-research) |
+| [STANDARD-TEMPLATE.md](STANDARD-TEMPLATE.md) | Khung chuẩn mọi trang (trường bắt buộc, cấu trúc md) |
+| [BRANDING.md](BRANDING.md) | Nhận diện "Vũ trụ Kim cương": 1-accent tím, gradient chỉ logo/login/celebration/canvas, ý nghĩa từng tone |
 
-## ⭐ ĐỌC ĐẦU TIÊN MỖI PHIÊN
-- [DECISIONS](DECISIONS.md) — quyết định cuối + rules (file đóng phiên 11/6)
+## 🗺 App đã build
+| File | Là gì |
+|---|---|
+| [APP-FLOWS.md](APP-FLOWS.md) | 12 màn: flow từng bước + TỪNG NÚT → ghi bảng/cột nào trong DB |
+| [USER-STORIES.md](USER-STORIES.md) | 5 persona đầu-cuối + bảng chỗ gập ghềnh |
+| [ROLES.md](ROLES.md) | 5 vai & quyền |
+| [CONTENT-ENGINE.md](CONTENT-ENGINE.md) | Luồng 8 bước content (Hồ sơ Hồn → preset → AI), model map khi cắm key |
+| [AI-FRAMEWORK.md](AI-FRAMEWORK.md) | Thiết kế pipeline AI (retrieval 8 chiều, ai_jobs) |
 
-## 🛠️ App đã build (dùng để chỉnh)
-- [ROLES](ROLES.md) — vai trò & chức năng (đồng bộ schema)
-- [USER-STORIES](USER-STORIES.md) — luồng từng vai (story)
-- [APP-FLOWS](APP-FLOWS.md) — flows + **button map** + data model + cách chạy
-- [AI-FRAMEWORK](AI-FRAMEWORK.md) — pipeline ingestion/retrieval/content, skill AI ⭐
-- [WORKLOG](WORKLOG.md) — nhật ký build + checklist test mỗi đợt ⭐
+## 🔬 Nghiên cứu & vận hành
+| File | Là gì |
+|---|---|
+| [RESEARCH-VIZ-ARCH.md](RESEARCH-VIZ-ARCH.md) | Deep-research 4 mũi có nguồn: graph-viz, kiến trúc điểm 8 chiều, premium UI, wizard UX |
+| [AUDIT-2026-06-12.md](AUDIT-2026-06-12.md) | Audit đa-persona: P0 đã sửa + backlog P1/P2 trước pilot |
+| [ROADMAP.md](ROADMAP.md) | 3 phase tiếp theo (pilot → cắm AI → khép vòng kinh doanh) |
+| [NOTES-FOUNDER.md](NOTES-FOUNDER.md) | Việc chỉ founder làm được + MCP/AI keys + quyết định chờ chốt |
+| [WORKLOG.md](WORKLOG.md) | Nhật ký từng đợt build (mới nhất trên đầu) — kèm bug & bài học |
 
-## 🎨 Prototype
-- `../mockups/index.html` — bản thiết kế hình ảnh (visual spec)
-
-## ▶️ Chạy app
-```
-cd web && npm run dev   →  http://localhost:3000
-```
-Supabase: project **data QI** (`vntndprivvkgjbeutand`).
+## 📐 Vision gốc (tham khảo lịch sử — root folder)
+[ARCHITECTURE](../ARCHITECTURE.md) · [STORAGE](../STORAGE.md) · [FLOWS](../FLOWS.md) · [ECOSYSTEM](../ECOSYSTEM.md) · [ENGAGEMENT](../ENGAGEMENT.md) · [KNOWLEDGE-GRAPH](../KNOWLEDGE-GRAPH.md) · [WISDOM-DEPTH](../WISDOM-DEPTH.md) · [LEARNING-FRAMEWORK](../LEARNING-FRAMEWORK.md) · [COLLECTIVE-KNOWLEDGE](../COLLECTIVE-KNOWLEDGE.md) · [MVP](../MVP.md)

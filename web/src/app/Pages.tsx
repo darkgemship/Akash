@@ -17,7 +17,6 @@ function Lbl({ children }: { children: React.ReactNode }) {
 /* ---------- PROFILE (đổi mật khẩu thật + quản trị thành viên) ---------- */
 const ROLE_NAME: Record<number, string> = { 5: '👑 Admin', 4: '✅ Tổng biên tập', 3: '✏️ Biên tập viên', 2: '🤝 Cộng tác viên', 1: '👤 Thành viên' }
 
-type Member = { user_id: string; email: string; full_name: string | null; level: number; can_edit: boolean; can_approve: boolean }
 
 const VOICE_QS = [
   'Bạn muốn người đọc cảm thấy gì sau mỗi bài của bạn?',
@@ -133,7 +132,8 @@ export function Profile({ user }: { user: User }) {
 }
 
 /* ---------- STUDIO NHẬP LIỆU (dashboard riêng: raw → đề xuất → duyệt + phân việc) ---------- */
-const PT: [string, string][] = [['ghi-chu', '📝 Ghi chú'], ['bai-hoc', '🎓 Bài học'], ['trai-nghiem', '🌱 Trải nghiệm'], ['blog', '📰 Blog'], ['video', '🎬 Video'], ['kich-ban', '🎞️ Kịch bản'], ['khach-hang', '🤝 Khách hàng'], ['sach', '📕 Sách']]
+// taxonomy THỐNG NHẤT 7 loại (KHO-CHUAN §1) — blog/video là OUTPUT format (trục 2), không phải loại tri thức
+const PT: [string, string][] = [['trai-nghiem', '🌱 Trải nghiệm'], ['bai-hoc', '🎓 Bài học'], ['quy-trinh', '📋 Quy trình'], ['ho-so', '👤 Hồ sơ'], ['nguon', '📚 Nguồn'], ['su-kien', '🌟 Sự kiện'], ['ghi-chu', '📝 Ghi chú']]
 type SPage = { id: string; title: string | null; layer: string; kind: string; parent_id?: string | null; icon?: string | null; subtype?: string | null }
 // liên kết bài mới ↔ trang có sẵn: dir 'out' = bài này nối tới trang, 'in' = backlink từ trang về bài này; dim = 1 trong 8 chiều FRAMEWORK
 type Conn = { id: string; dir: 'out' | 'in'; dim: string }
@@ -142,14 +142,13 @@ type Asg = { id: string; title: string; note: string | null; due: string | null;
 const sw = (x: string) => (x ?? '').toLowerCase()
 
 const DEFAULT_TPL: Record<string, string> = {
+  'su-kien': '## 📍 Chuyện gì\n\n## 🌟 Vì sao là mốc\n',
   'ghi-chu': '## 💡 Ý chính\n- \n\n## 📌 Chi tiết\n',
   'bai-hoc': '## ⚡ Nguyên lý cốt lõi\n\n## 📖 Diễn giải\n\n## 🌍 Ví dụ thực tế\n\n## 🎯 Áp dụng\n- [ ] ',
   'trai-nghiem': '## 📍 Bối cảnh\n\n## ⚡ Chuyện gì xảy ra\n\n## ❤️ Cảm xúc\n\n## 🎓 Bài học rút ra\n',
-  'blog': '## Hook mở bài\n\n## Thân bài\n\n## Kết + CTA\n',
-  'video': '## 🎬 Hook 3 giây\n\n## Nội dung chính\n\n## CTA cuối\n',
-  'kich-ban': '## Cảnh 1\n\n## Cảnh 2\n\n## Chốt\n',
-  'khach-hang': '## 👤 Thông tin\n\n## 💬 Lịch sử tương tác\n\n## 🚦 Trạng thái\n\n## ▶️ Bước tiếp\n- [ ] ',
-  'sach': '## 🧭 Một câu tóm tắt\n\n## 💡 3 ý đắt nhất\n1. \n\n## 📌 Quote\n> \n\n## 🎯 Áp dụng\n- [ ] ',
+    'quy-trinh': '## Các bước\n1. [ ] \n2. [ ] \n\n## Lưu ý\n',
+  'ho-so': '## 👤 Thông tin\n\n## 💬 Lịch sử tương tác\n\n## 🚦 Trạng thái\n\n## ▶️ Bước tiếp\n- [ ] ',
+  'nguon': '## 🧭 Một câu tóm tắt\n\n## 💡 3 ý đắt nhất\n1. \n\n## 📌 Quote\n> \n\n## 🎯 Áp dụng\n- [ ] ',
 }
 
 export function Studio({ orgId, user, canEdit, canApprove, pages, onOpen, onReload }: {
@@ -189,7 +188,7 @@ export function Studio({ orgId, user, canEdit, canApprove, pages, onOpen, onRelo
     const t = raw.trim().split('\n')[0].replace(/^#+\s*/, '').slice(0, 80)
     setTitle(t)
     const r = sw(raw)
-    setPtype(r.match(/video|quay|clip|reel/) ? 'video' : r.match(/kịch bản|script|cảnh/) ? 'kich-ban' : r.match(/khách|chị |anh |tư vấn/) ? 'khach-hang' : r.match(/sách|chương|tác giả/) ? 'sach' : r.match(/blog|bài viết/) ? 'blog' : r.match(/bài học|nguyên lý|quy tắc/) ? 'bai-hoc' : r.match(/hôm nay|cảm thấy|mình đã/) ? 'trai-nghiem' : 'ghi-chu')
+    setPtype(r.match(/quy trình|checklist|các bước|kịch bản|script/) ? 'quy-trinh' : r.match(/khách|chị |anh |tư vấn|hồ sơ/) ? 'ho-so' : r.match(/sách|chương|tác giả|podcast/) ? 'nguon' : r.match(/sự kiện|hội thảo|event|buổi lễ/) ? 'su-kien' : r.match(/bài học|nguyên lý|quy tắc/) ? 'bai-hoc' : r.match(/hôm nay|cảm thấy|mình đã/) ? 'trai-nghiem' : 'ghi-chu')
     setConns([]); setConnQ('')
     // máy đề xuất trường chuẩn — user sửa được hết
     const firstSen = raw.trim().split(/[.!?\n]/).map(x => x.trim()).filter(x => x.length > 15)[0] ?? ''
@@ -534,7 +533,7 @@ export function Studio({ orgId, user, canEdit, canApprove, pages, onOpen, onRelo
                   <div className="text-[10px] text-zinc-600">{a.assignee === user.id ? 'giao cho bạn' : 'bạn giao'}{a.due ? ` · hạn ${a.due}` : ''}</div>
                 </div>
                 {a.status !== 'done' && a.assignee === user.id && (
-                  <button onClick={async () => { await supabase.from('assignments').update({ status: 'done' }).eq('id', a.id); loadAsg() }} className="text-[10px] rounded-lg bg-emerald-500/15 border border-emerald-400/30 text-emerald-300 px-2.5 py-1.5 shrink-0">✓ Hoàn thành</button>
+                  <button onClick={async () => { await supabase.from('assignments').update({ status: 'submitted' }).eq('id', a.id); loadAsg() }} className="text-[10px] rounded-lg bg-emerald-500/15 border border-emerald-400/30 text-emerald-300 px-2.5 py-1.5 shrink-0">📨 Nộp</button>
                 )}
               </div>
             ))}
@@ -893,11 +892,11 @@ export function Board({ orgId, userId, onOpen }: { orgId: string | null; userId:
   // thẻ mới: tự sống trong folder "🎬 Xưởng content" của kho cá nhân (tự tạo nếu chưa có)
   async function newCard(col: string) {
     if (!orgId) return
-    let { data: studio } = await supabase.from('nodes').select('id').eq('org_id', orgId).eq('owner_id', userId).eq('title', 'Xưởng content').limit(1).maybeSingle()
+    let { data: studio } = await supabase.from('nodes').select('id').eq('org_id', orgId).eq('owner_id', userId).filter('props->>hub', 'eq', 'studio').limit(1).maybeSingle() // theo props.hub — khớp ensureHub, hết trang Xưởng trùng
     if (!studio) {
       const { data: kho } = await supabase.from('nodes').select('id').eq('org_id', orgId).eq('owner_id', userId).eq('kind', 'kho').limit(1).maybeSingle()
       const sid = crypto.randomUUID()
-      await supabase.from('nodes').insert({ id: sid, org_id: orgId, owner_id: userId, layer: 'personal', kind: 'page', parent_id: kho?.id ?? null, title: 'Xưởng content', icon: '🎬', status: 'published', min_level: 1 })
+      await supabase.from('nodes').insert({ id: sid, org_id: orgId, owner_id: userId, layer: 'personal', kind: 'page', parent_id: kho?.id ?? null, title: 'Xưởng content', icon: '🎬', subtype: 'hub', status: 'published', min_level: 1, props: { hub: 'studio' } })
       studio = { id: sid }
     }
     const id = crypto.randomUUID()
@@ -1010,7 +1009,7 @@ export function Board({ orgId, userId, onOpen }: { orgId: string | null; userId:
             <div className="flex gap-2">
               <button onClick={() => setResultFor(null)} className="flex-1 rounded-xl bg-white/5 border border-white/10 px-3 py-2 text-xs text-zinc-400">Để sau</button>
               <button onClick={async () => {
-                await supabase.from('content_results').insert({ org_id: orgId, user_id: userId, card_node_id: resultFor.id, source_node_id: (resultFor.props?.source_node_id as string) ?? null, channel: res.channel, reach: +res.reach || 0, leads: +res.leads || 0, note: res.note || null })
+                await supabase.from('content_results').insert({ org_id: orgId, user_id: userId, card_node_id: resultFor.id, source_node_id: (resultFor.props?.source_node_id as string) ?? resultFor.id, channel: res.channel, reach: +res.reach || 0, leads: +res.leads || 0, note: res.note || null })
                 await supabase.from('events').insert({ user_id: userId, type: 'content_result', node_id: resultFor.id })
                 setResultFor(null)
               }} className="flex-1 rounded-xl bg-emerald-600 hover:bg-emerald-500 px-3 py-2 text-xs font-bold">✓ Lưu kết quả</button>
@@ -1018,6 +1017,46 @@ export function Board({ orgId, userId, onOpen }: { orgId: string | null; userId:
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+/* ---------- ✨ MỤC LỤC ĐỜI (Phase 1 — Life Story Interview, KHO-CHUAN §2bis) ----------
+   Một màn duy nhất: đời bạn là cuốn sách, viết mục lục 2-7 chương → mỗi chương thành
+   một trang gốc trong 📓 Hành trình, kèm câu hỏi 8 cảnh then chốt gợi sẵn trong thân bài. */
+export function LifeChaptersWizard({ onCreate, onClose }: {
+  onCreate: (chapters: { title: string; year: string; summary: string }[]) => Promise<void>
+  onClose: () => void
+}) {
+  const [rows, setRows] = useState([{ title: '', year: '', summary: '' }, { title: '', year: '', summary: '' }, { title: '', year: '', summary: '' }])
+  const [busy, setBusy] = useState(false)
+  const filled = rows.filter(r => r.title.trim())
+  const set = (i: number, k: 'title' | 'year' | 'summary', v: string) => setRows(rs => rs.map((r, j) => j === i ? { ...r, [k]: v } : r))
+  return (
+    <div className="fixed inset-0 z-[70] bg-black/70 backdrop-blur-md grid place-items-center p-6" onClick={onClose}>
+      <div className="w-[640px] max-w-[94vw] max-h-[88vh] overflow-auto rounded-3xl bg-[#10121d] border border-white/10 shadow-2xl p-7" onClick={e => e.stopPropagation()}>
+        <h2 className="text-2xl font-extrabold mb-1">✨ Nếu đời bạn là một cuốn sách…</h2>
+        <p className="text-sm text-zinc-500 mb-5">…mục lục sẽ có những chương nào? Viết 2–7 chương — mỗi chương một cái tên, năm bắt đầu, một câu tóm tắt. Đây là nền móng để AI hiểu bạn (khung Life Story Interview — 30 năm nghiên cứu tâm lý học).</p>
+        <div className="space-y-2.5 mb-4">
+          {rows.map((r, i) => (
+            <div key={i} className="rounded-2xl bg-white/[0.03] border border-white/10 p-3">
+              <div className="flex gap-2 mb-1.5">
+                <span className="shrink-0 w-7 h-7 rounded-lg bg-white/5 border border-white/10 grid place-items-center text-[11px] text-zinc-500 font-mono">{i + 1}</span>
+                <input value={r.title} onChange={e => set(i, 'title', e.target.value)} placeholder={['Tuổi thơ bên…', 'Những năm vấp ngã…', 'Làm lại từ…'][i] ?? 'Tên chương…'} className="flex-1 bg-transparent outline-none text-sm font-semibold placeholder:text-zinc-700" />
+                <input value={r.year} onChange={e => set(i, 'year', e.target.value)} placeholder="năm" className="w-16 rounded-lg bg-white/5 border border-white/10 px-2 py-1 text-xs outline-none text-center tabular-nums" />
+                {rows.length > 2 && <button onClick={() => setRows(rs => rs.filter((_, j) => j !== i))} className="text-zinc-700 hover:text-red-300 px-1">✕</button>}
+              </div>
+              <input value={r.summary} onChange={e => set(i, 'summary', e.target.value)} placeholder="Một câu tóm tắt chương này…" className="w-full bg-transparent outline-none text-xs text-zinc-400 placeholder:text-zinc-700 pl-9" />
+            </div>
+          ))}
+        </div>
+        {rows.length < 7 && <button onClick={() => setRows(rs => [...rs, { title: '', year: '', summary: '' }])} className="text-xs rounded-lg border border-white/10 px-3 py-1.5 text-zinc-400 hover:text-white mb-4">＋ thêm chương</button>}
+        <div className="flex items-center justify-between">
+          <button onClick={onClose} className="text-xs text-zinc-600 hover:text-zinc-300">Để sau</button>
+          <button disabled={filled.length < 2 || busy} onClick={async () => { setBusy(true); await onCreate(filled); setBusy(false) }}
+            className="rounded-xl ak-cta px-7 py-2.5 text-sm font-bold disabled:opacity-30">{busy ? 'Đang viết mục lục…' : `📖 Tạo ${filled.length} chương đời`}</button>
+        </div>
+      </div>
     </div>
   )
 }

@@ -191,3 +191,12 @@
 - **Dòng đời v3**: CỘT ◆ HÔM NAY thành trục tham chiếu CHUNG — cả 3 dòng thời gian (nhân loại/đời tôi/QNET) neo NOW vào cùng một cột X (78% màn); **pinch = zoom THỜI GIAN** quanh cột (×1→×120, không phải zoom camera): ra xa thấy nghìn năm, vào gần thấy từng tháng; tick năm tự đổi bước nice (1→2000 năm) theo mật độ px; verify: zoom 6 tick → band đời tôi hiện từng năm 2021-2028, 3 band thẳng hàng tại cột.
 - **Chống node đè nhau** (galaxy + mandala): collision relaxation 22 vòng với spatial hash (minD = rA+rB+8) — node tách đều như Obsidian, kho đứng yên.
 - Backlog ghi nhận: trích NGÀY nhắc trong nội dung page → mốc phụ lên trục time (cần select md toàn org — Phase 2, đã ghi AUDIT).
+
+## 2026-06-12 (đợt 6) — 🧹 GỌN + PHASE 1 hoàn tất
+1. **Sạch 8 backlog luồng audit**: xoá dead modal Raw + createFromRaw · giao việc có ô GẮN VÀO TRANG (node_id, KHO-CHUAN §3#9) + 'Mở việc' sống · content_results.source_node_id fallback = card id (vòng đo khép) · Board tìm/tạo Xưởng theo props.hub (hết trang trùng) · nút Content chỉ hiện cho trang kho cá nhân · ReviewHub duyệt set content=null (bản BTV sửa = bản hiển thị) · vòng đời assignment thống nhất open→submitted→done · ô '❓ còn lấn cấn' khôi phục ở màn Hành động.
+2. **Taxonomy THỐNG NHẤT 7 loại khắp nơi**: Studio bỏ blog/video/kich-ban/khach-hang/sach (là output format hoặc đổi tên) → dùng đúng 7 loại chuẩn; migrate DB page_type/tpl_for keys cũ — giờ 100% trang có loại đều thuộc 7 loại.
+3. **award_qi RPC** (security definer, chỉ approver): nghiệm thu việc cộng Qi cho người làm — RLS không còn chặn.
+4. **Kéo trang sang kho khác = đổi layer ĐỆ QUY** toàn bộ trang con.
+5. **Phase 1**: ✨ wizard MỤC LỤC ĐỜI (LSI McAdams — banner Home khi chưa có chương, 1 màn 2-7 chương → trang gốc trong Hành trình kèm gợi ý cảnh then chốt) · mobile drawer (sidebar ẩn <md, nút ☰) · Digest ghi props.refs (tín hiệu reference sống) · font canvas về mono hệ thống · COVERS/COLOR hết pink lạc.
+6. **Docs đủ bộ**: README.md root (chạy + kiến trúc 1 phút + thứ tự đọc) + docs/README.md index 16 file.
+Verify: build xanh từng cụm, tsc sạch, banner wizard ẩn đúng với user đã có chương, taxonomy DB query sạch.
