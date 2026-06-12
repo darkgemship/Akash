@@ -551,6 +551,46 @@ export function ReviewHub({ me, onOpen, onChanged }: { me: string; onOpen: (id: 
   )
 }
 
+/* ── 📈 HÀNH VI PILOT — admin đọc events 14 ngày qua admin_event_stats (record để chỉnh) ── */
+function BehaviorPanel({ members }: { members: { user_id: string; email: string }[] }) {
+  const [rows, setRows] = useState<{ user_id: string; type: string; d: string; n: number }[]>([])
+  useEffect(() => { supabase.rpc('admin_event_stats', { p_days: 14 }).then(({ data }) => setRows((data as typeof rows) ?? [])) }, [])
+  const by = new Map<string, { total: number; tham: number; capture: number; nav: number; last: string }>()
+  for (const r of rows) {
+    const b = by.get(r.user_id) ?? { total: 0, tham: 0, capture: 0, nav: 0, last: '' }
+    b.total += r.n
+    if (r.type === 'tham') b.tham += r.n
+    if (r.type === 'capture') b.capture += r.n
+    if (r.type === 'nav') b.nav += r.n
+    if (r.d > b.last) b.last = r.d
+    by.set(r.user_id, b)
+  }
+  const star = [...by.values()].reduce((s2, b) => s2 + b.tham, 0)
+  return (
+    <Card className="mb-4 border-amber-400/15">
+      <div className="flex items-center justify-between mb-2">
+        <Lbl>📈 Hành vi pilot — 14 ngày</Lbl>
+        <span className="text-[11px] text-amber-300 font-semibold tabular-nums">⭐ North star: {star} bài chuyển hoá trọn</span>
+      </div>
+      {by.size === 0 ? <p className="text-xs text-zinc-600">Chưa có hành vi nào được ghi.</p> : (
+        <div className="space-y-1">
+          {[...by.entries()].sort((a, b) => b[1].total - a[1].total).map(([uid, b]) => (
+            <div key={uid} className="flex items-center gap-3 rounded-lg bg-white/[0.03] border border-white/10 px-3 py-1.5 text-[11px] tabular-nums">
+              <span className="flex-1 truncate text-zinc-300">{members.find(m => m.user_id === uid)?.email.split('@')[0] ?? uid.slice(0, 8)}</span>
+              <span className="text-amber-300" title="bài chuyển hoá trọn">🔥 {b.tham}</span>
+              <span className="text-cyan-300" title="lần ghi nhanh">✍️ {b.capture}</span>
+              <span className="text-zinc-500" title="lượt chuyển màn">🧭 {b.nav}</span>
+              <span className="text-zinc-500" title="tổng events">Σ {b.total}</span>
+              <span className="text-zinc-600 shrink-0" title="hoạt động gần nhất">{b.last.slice(5)}</span>
+            </div>
+          ))}
+        </div>
+      )}
+      <p className="text-[10px] text-zinc-600 mt-2">Đọc số này mỗi tuần: ai 0 🔥 sau 7 ngày = phỏng vấn họ kẹt ở đâu; màn 🧭 cao mà 🔥 thấp = đi lạc, cần dẫn lối lại.</p>
+    </Card>
+  )
+}
+
 /* ========================== 👥 MEMBERS HUB ========================== */
 type Member = { user_id: string; email: string; full_name: string | null; level: number; can_edit: boolean; can_approve: boolean }
 const LEVEL_NAME: Record<number, string> = { 5: '👑 Admin', 4: '✅ Tổng biên tập', 3: '✏️ Biên tập viên', 2: '🤝 Cộng tác viên', 1: '🌱 Thành viên' }
@@ -585,6 +625,7 @@ export function MembersHub({ me, orgId, canAdmin, pages = [], onOpenPage }: { me
     <div className="px-8 py-6 max-w-5xl mx-auto">
       <h2 className="text-xl font-extrabold mb-1">👥 Nhân sự & phân quyền</h2>
       <p className="text-zinc-500 text-sm mb-4">Toàn bộ thành viên theo cấp bậc — bật/tắt quyền, xem trang họ đang build, giao việc gắn vào trang cụ thể. {msg && <b className="text-emerald-300">{msg}</b>}</p>
+      {canAdmin && <BehaviorPanel members={members} />}
       <div className="grid lg:grid-cols-[1fr_360px] gap-4">
         <div className="space-y-2">
           {grouped.map(m => (

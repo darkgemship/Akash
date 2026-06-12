@@ -251,9 +251,15 @@ function Workspace({ user }: { user: User }) {
   const [recent, setRecent] = useState<string[]>([])
 
   // Qi ledger: mỗi hành động giá trị = 1 event (điểm tính từ events, sẵn sàng token hoá)
-  function logEvent(type: string, nodeId?: string) {
-    supabase.from('events').insert({ user_id: user.id, type, node_id: nodeId ?? null }).then(() => {})
+  function logEvent(type: string, nodeId?: string, meta?: Record<string, unknown>) {
+    // PILOT TRACKING: mọi hành vi then chốt đổ về events(meta) — admin đọc qua admin_event_stats
+    const sid = (() => { try { let v = sessionStorage.getItem('ak-sid'); if (!v) { v = crypto.randomUUID().slice(0, 8); sessionStorage.setItem('ak-sid', v) } return v } catch { return 'na' } })()
+    supabase.from('events').insert({ user_id: user.id, type, node_id: nodeId ?? null, meta: { ...(meta ?? {}), sid } }).then(() => {})
   }
+  // hành vi điều hướng: màn nào được dùng, màn nào bị bỏ
+  useEffect(() => { logEvent('nav', undefined, { page }) }, [page]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { logEvent('session_start', undefined, { w: typeof window !== 'undefined' ? window.innerWidth : 0 }) }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (showDigest && editing) logEvent('digest_start', editing.id) }, [showDigest]) // eslint-disable-line react-hooks/exhaustive-deps
   function loadPageLinks(id: string) {
     supabase.from('links').select('from_node,dimension,excerpt').eq('to_node', id).then(({ data }) => setBackRaw(data ?? []))
     supabase.from('links').select('to_node,dimension,excerpt').eq('from_node', id).then(({ data }) => setOutRaw(data ?? []))
@@ -1009,6 +1015,7 @@ function Workspace({ user }: { user: User }) {
             onOpen={(n) => { openNoteEditor(n as Node); setPage('know') }}
             onOpenId={(id) => { const t = nodeOf(id); if (t) { openNoteEditor(t); setPage('know') } }}
             onCapture={async (title, type, source) => {
+              logEvent('capture', undefined, { ctype: type ?? 'exp', len: title.length })
               // ghi nhanh CÓ LOẠI → đổ đúng cây gốc; user mới chưa có cây thì ensureHub TỰ TẠO (P0 fix audit 12/6)
               if (type === 'quote') {
                 // quote đắt → Kim Chỉ Nam (chưa có thì tạo trong 🧭 La bàn) — không mất nguồn
@@ -1094,6 +1101,7 @@ function Workspace({ user }: { user: User }) {
             })
           }
           if (orgId) { await loadTree(orgId); loadGraph(orgId) }
+          logEvent('wizard_life', undefined, { chapters: chapters.length })
           setLifeWiz(false)
           setToast(`📖 Đã tạo ${chapters.length} chương đời trong Hành trình — bắt đầu kể từ chương nào cũng được`); setTimeout(() => setToast(''), 4000)
         }} />

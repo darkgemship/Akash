@@ -200,3 +200,7 @@
 5. **Phase 1**: ✨ wizard MỤC LỤC ĐỜI (LSI McAdams — banner Home khi chưa có chương, 1 màn 2-7 chương → trang gốc trong Hành trình kèm gợi ý cảnh then chốt) · mobile drawer (sidebar ẩn <md, nút ☰) · Digest ghi props.refs (tín hiệu reference sống) · font canvas về mono hệ thống · COVERS/COLOR hết pink lạc.
 6. **Docs đủ bộ**: README.md root (chạy + kiến trúc 1 phút + thứ tự đọc) + docs/README.md index 16 file.
 Verify: build xanh từng cụm, tsc sạch, banner wizard ẩn đúng với user đã có chương, taxonomy DB query sạch.
+
+## 2026-06-12 (đợt 7) — 📈 PILOT TRACKING
+- events.meta jsonb + sid (session per tab); logEvent(type, node, meta) phủ: session_start, nav (từng màn), capture (loại ghi nhanh), digest_start (đối chiếu với 'tham' = funnel bỏ dở), wizard_life (số chương). RPC admin_event_stats (security definer, can_approve) vì events RLS own-only.
+- 📈 Panel 'Hành vi pilot' trong Nhân sự (admin): per-user 🔥 chuyển hoá trọn · ✍️ ghi nhanh · 🧭 lượt màn · Σ events · ngày hoạt động cuối + North star tổng. Kèm cách đọc số (0 🔥 sau 7 ngày = phỏng vấn; 🧭 cao 🔥 thấp = đi lạc). Verify: panel hiện data thật ngay trên preview.
