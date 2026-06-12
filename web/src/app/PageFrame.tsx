@@ -101,19 +101,19 @@ export function PropsPanel({ node, canE, isEditor, onSetProp, onSaveDate, childr
 
   // hàng label–value: label cột trái cố định mờ, control bên phải — đọc như hồ sơ, không phải rừng chip
   const Row = ({ label, hint, children: c }: { label: string; hint?: string; children: React.ReactNode }) => (
-    <div className="flex items-center gap-3 min-h-[30px]">
-      <span className="w-[96px] shrink-0 text-[11px] text-zinc-500" title={hint}>{label}</span>
+    <div className="flex items-center gap-3 min-h-[34px]">
+      <span className="w-[104px] shrink-0 text-[12px] font-medium text-zinc-400" title={hint}>{label}</span>
       <div className="flex-1 min-w-0">{c}</div>
     </div>
   )
-  const flat = 'w-full rounded-lg bg-transparent border border-transparent hover:border-white/10 focus:border-violet-400/40 focus:bg-white/[0.03] px-2 py-1 outline-none text-zinc-200 disabled:opacity-50 transition-colors'
+  const flat = 'w-full rounded-lg bg-transparent border border-transparent hover:border-white/10 focus:border-violet-400/40 focus:bg-white/[0.03] px-2 py-1.5 outline-none text-[13.5px] text-zinc-100 disabled:opacity-50 transition-colors'
   return (
-    <div className="mb-5 rounded-2xl border border-white/[0.07] bg-white/[0.02] overflow-hidden text-xs">
+    <div className="mb-5 rounded-2xl border border-white/[0.07] bg-white/[0.02] overflow-hidden text-[13px]">
       {/* ── TRƯỜNG CHUẨN — khung cố định của org ── */}
       <div className="px-4 pt-3 pb-2.5">
         <div className="flex items-center gap-2 mb-2">
-          <span className="font-mono text-[9.5px] uppercase tracking-[0.18em] text-violet-300/80">Trường chuẩn</span>
-          <span className="text-[10px] text-zinc-600">{canFix ? 'khung chung của org' : 'khung cố định — bạn chỉ điền'}</span>
+          <span className="text-[12px] font-bold text-violet-200">📌 Trường chuẩn</span>
+          <span className="text-[11px] text-zinc-500">{canFix ? 'khung chung của org' : 'khung cố định — bạn chỉ điền'}</span>
           {canFix && <button onClick={() => addField('fixed_fields', fixed)} title="Thêm trường chuẩn — cả org dùng chung" className="ml-auto text-[10px] rounded-md border border-white/10 text-zinc-400 px-2 py-0.5 hover:text-white hover:border-white/25">＋ trường chuẩn</button>}
         </div>
         <div className="grid sm:grid-cols-2 gap-x-8 gap-y-0.5">
@@ -173,8 +173,8 @@ export function PropsPanel({ node, canE, isEditor, onSetProp, onSaveDate, childr
       {/* ── TRƯỜNG CỦA TÔI — riêng trang này ── */}
       <div className="px-4 py-2.5 border-t border-white/[0.06] bg-white/[0.015]">
         <div className="flex items-center gap-2 mb-1">
-          <span className="font-mono text-[9.5px] uppercase tracking-[0.18em] text-cyan-300/70">Trường của tôi</span>
-          <span className="text-[10px] text-zinc-600">riêng cho trang này</span>
+          <span className="text-[12px] font-bold text-cyan-200">✏️ Trường của tôi</span>
+          <span className="text-[11px] text-zinc-500">riêng cho trang này</span>
           {canE && <button onClick={() => addField('custom_fields', mine)} className="ml-auto text-[10px] rounded-md border border-white/10 text-zinc-400 px-2 py-0.5 hover:text-white hover:border-white/25">＋ thêm trường</button>}
         </div>
         {mine.length > 0 ? (
@@ -191,7 +191,29 @@ export function PropsPanel({ node, canE, isEditor, onSetProp, onSaveDate, childr
           </div>
         ) : <p className="text-[10.5px] text-zinc-700">Chưa có — dùng cho thông tin chỉ trang này cần (vd: Độ ưu tiên, Khu vực…).</p>}
       </div>
-      {/* ── dải hành động: trạng thái duyệt / đề xuất / template / đính kèm… ── */}
+      {/* ── ĐÍNH KÈM — tách riêng cho rõ (feedback 12/6) ── */}
+      <div className="px-4 py-2.5 border-t border-white/[0.06]">
+        <div className="flex items-center gap-2 mb-1">
+          <span className="text-[12px] font-bold text-amber-200">📎 Đính kèm</span>
+          <span className="text-[11px] text-zinc-500">tài liệu / link gốc của trang</span>
+          {canE && <button onClick={() => {
+            const url = window.prompt('Link tài liệu (PDF / Drive / web…):'); if (!url?.trim()) return
+            const name = window.prompt('Tên hiển thị:') || url.slice(0, 40)
+            onSetProp('attachments', [...(((p.attachments as { name: string; url: string }[]) ?? [])), { name, url: url.trim() }])
+          }} className="ml-auto text-[10px] rounded-md border border-white/10 text-zinc-400 px-2 py-0.5 hover:text-white hover:border-white/25">＋ thêm</button>}
+        </div>
+        {((p.attachments as { name: string; url: string }[]) ?? []).length === 0
+          ? <p className="text-[11px] text-zinc-700">Chưa có tệp nào.</p>
+          : <div className="flex flex-wrap gap-1.5">
+              {((p.attachments as { name: string; url: string }[]) ?? []).map((a, i) => (
+                <span key={i} className="flex items-center gap-1 rounded-lg bg-amber-500/[0.07] border border-amber-400/20 px-2 py-1 text-[12px]">
+                  <a href={a.url} target="_blank" rel="noreferrer" className="text-amber-200 hover:underline">{a.name}</a>
+                  {canE && <button onClick={() => onSetProp('attachments', ((p.attachments as { name: string; url: string }[]) ?? []).filter((_, j) => j !== i))} className="text-zinc-600 hover:text-red-300">✕</button>}
+                </span>
+              ))}
+            </div>}
+      </div>
+      {/* ── dải hành động: trạng thái duyệt / đề xuất… ── */}
       {children && <div className="px-4 py-2 border-t border-white/[0.06] flex flex-wrap items-center gap-1.5">{children}</div>}
     </div>
   )

@@ -204,3 +204,10 @@ Verify: build xanh từng cụm, tsc sạch, banner wizard ẩn đúng với use
 ## 2026-06-12 (đợt 7) — 📈 PILOT TRACKING
 - events.meta jsonb + sid (session per tab); logEvent(type, node, meta) phủ: session_start, nav (từng màn), capture (loại ghi nhanh), digest_start (đối chiếu với 'tham' = funnel bỏ dở), wizard_life (số chương). RPC admin_event_stats (security definer, can_approve) vì events RLS own-only.
 - 📈 Panel 'Hành vi pilot' trong Nhân sự (admin): per-user 🔥 chuyển hoá trọn · ✍️ ghi nhanh · 🧭 lượt màn · Σ events · ngày hoạt động cuối + North star tổng. Kèm cách đọc số (0 🔥 sau 7 ngày = phỏng vấn; 🧭 cao 🔥 thấp = đi lạc). Verify: panel hiện data thật ngay trên preview.
+
+## 2026-06-12 (đợt 8) — ✍️ TAKE-NOTE & PAGE theo feedback test thật của founder
+1. Title ghi nhanh: trải nghiệm = 'Nhật ký 12/6 · 14h05' (nguyên văn vào thân '⚡ Chuyện gì xảy ra'); insight cắt 60 ký tự.
+2. **Bug quote không hiện trong Kim Chỉ Nam** (Editor ưu tiên content JSON cũ hơn md mới append) → set content:null khi append; format nổi bật: > 💬 “câu” — *nguồn* · ngày. Verify end-to-end: quote Jim Rohn hiện thật.
+3. Sort cây: mặc định 'Thông minh' (hub giữ vị trí, note MỚI NHẤT trên đầu) + menu Mới nhất / A→Z ở sidebar.
+4. Trường chuẩn/của tôi dễ đọc: label 12px đậm màu, value 13.5px, hàng cao hơn, bỏ mono-eyebrow tí hin.
+5. 📎 Đính kèm thành SECTION riêng trong panel (list + thêm/xoá tại chỗ); bỏ nút 'Lưu template' per-page (template org-level qua 📐 Studio — đúng ý setup cấp kho).

@@ -284,7 +284,21 @@ function Workspace({ user }: { user: User }) {
     setExpanded(prev => { const n = new Set(prev); t.filter(x => x.kind === 'kho').forEach(k => n.add(k.id)); return n })
   }, [])
   function khoOf(layer: string) { return tree.find(n => n.layer === layer && n.kind === 'kho') }
-  function childrenOf(id: string) { return tree.filter(n => n.parent_id === id) }
+  const [sortMode, setSortMode] = useState<'smart' | 'newest' | 'az'>('smart')
+  function sortKids(list: TNode[]): TNode[] {
+    const arr = [...list]
+    if (sortMode === 'az') return arr.sort((a, b) => (a.title ?? '').localeCompare(b.title ?? '', 'vi'))
+    if (sortMode === 'newest') return arr.sort((a, b) => (b.created_at ?? '').localeCompare(a.created_at ?? ''))
+    // smart: trang có position (hub/cây sắp tay) giữ thứ tự — phần còn lại MỚI NHẤT trên đầu
+    return arr.sort((a, b) => {
+      const ap = a.position ?? null, bp = b.position ?? null
+      if (ap !== null && bp !== null) return ap - bp
+      if (ap !== null) return -1
+      if (bp !== null) return 1
+      return (b.created_at ?? '').localeCompare(a.created_at ?? '')
+    })
+  }
+  function childrenOf(id: string) { return sortKids(tree.filter(n => n.parent_id === id)) }
   function layerOf(id: string) { return tree.find(n => n.id === id)?.layer ?? 'personal' }
   function nodeOf(id: string | null) { return id ? tree.find(n => n.id === id) ?? null : null }
   // quyền sửa: kho cá nhân luôn được; kho chung cần can_edit (Biên tập viên trở lên)
@@ -370,19 +384,6 @@ function Workspace({ user }: { user: User }) {
     if (orgId) loadTree(orgId)
   }
   // lưu trang hiện tại thành template tái dùng (sửa được trong trang 🧩 Template)
-  async function saveAsTemplate() {
-    if (!editing || !orgId) return
-    const { data } = await supabase.from('nodes').select('md,props').eq('id', editing.id).single()
-    let homeId = tree.find(n => n.subtype === 'template_home' && n.owner_id === user.id)?.id
-    if (!homeId) {
-      const kho = khoOf('personal')
-      homeId = crypto.randomUUID()
-      await supabase.from('nodes').insert({ id: homeId, org_id: orgId, owner_id: user.id, layer: 'personal', kind: 'page', parent_id: kho?.id ?? null, title: 'Template', icon: '🧩', subtype: 'template_home', status: 'published', min_level: 1 })
-    }
-    await supabase.from('nodes').insert({ id: crypto.randomUUID(), org_id: orgId, owner_id: user.id, layer: 'personal', kind: 'page', parent_id: homeId, title: editTitle || 'Template mới', icon: '🧩', subtype: 'template', md: (data?.md as string) ?? '', props: { tpl_type: (data?.props as Record<string, unknown>)?.page_type ?? 'ghi-chu' }, status: 'published', min_level: 1 })
-    if (orgId) loadTree(orgId)
-    setToast('🧩 Đã lưu làm template — chỉnh nó trong trang 🧩 Template'); setTimeout(() => setToast(''), 3200)
-  }
   // bật/tắt xem markdown (lấy bản md mới nhất từ DB)
   async function toggleMd() {
     if (!mdView && editing) {
@@ -655,6 +656,11 @@ function Workspace({ user }: { user: User }) {
               <input value={query} onChange={e => setQuery(e.target.value)} placeholder="Tìm trang…" className="w-full rounded-lg bg-white/5 border border-white/10 pl-8 pr-12 py-1.5 text-sm outline-none focus:border-violet-400/50" />
               <button onClick={() => { setPalette(true); setPalQ(''); setPalIdx(0) }} title="Mở tìm nhanh (⌘K)" className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[10px] text-zinc-500 border border-white/10 rounded px-1.5 py-0.5 hover:text-white hover:border-white/30">⌘K</button>
             </div>
+            <div className="flex gap-1 mt-1.5">
+              {([['smart', 'Thông minh', 'cây giữ thứ tự, note mới nhất trên đầu'], ['newest', 'Mới nhất', 'mọi thứ theo thời gian tạo'], ['az', 'A→Z', 'theo bảng chữ cái']] as const).map(([k, l, hint]) => (
+                <button key={k} onClick={() => setSortMode(k)} title={hint} className={`text-[10px] rounded-md px-2 py-0.5 border transition ${sortMode === k ? 'bg-white/10 border-white/25 text-white' : 'border-transparent text-zinc-600 hover:text-zinc-300'}`}>{l}</button>
+              ))}
+            </div>
           </div>
           <div className="flex-1 overflow-auto px-2 pb-4">
           {query.trim() ? (
@@ -889,13 +895,6 @@ function Workspace({ user }: { user: User }) {
                         }} className="rounded-lg bg-white/5 border border-white/10 text-zinc-400 px-2.5 py-1 hover:text-cyan-200">💬 Góp ý sửa</button>
                       )}
                       {p.principle ? <span className="rounded-lg bg-cyan-500/10 border border-cyan-400/25 text-cyan-200 px-2 py-1 max-w-[260px] truncate" title={p.principle as string}>⚡ {p.principle as string}</span> : null}
-                      {canE && <button onClick={saveAsTemplate} title="Lưu cấu trúc trang này thành template tái dùng" className="rounded-lg bg-white/5 border border-white/10 px-2 py-1.5 text-zinc-400 hover:text-white">🧩 Lưu template</button>}
-                      {canE && <button onClick={async () => {
-                        const url = window.prompt('Link tài liệu (PDF / Drive / web…):'); if (!url?.trim()) return
-                        const name = window.prompt('Tên hiển thị:') || url.slice(0, 40)
-                        const atts = [...(((p.attachments as { name: string; url: string }[]) ?? [])), { name, url: url.trim() }]
-                        setNodeProp('attachments', atts)
-                      }} className="rounded-lg bg-white/5 border border-white/10 px-2 py-1.5 text-zinc-400 hover:text-white">📎 Đính kèm</button>}
 
                       {(p.review_note as string) && node?.status === 'draft' && node?.owner_id === user.id && (
                         <span className="w-full text-[11px] text-amber-200/90 bg-amber-500/10 border border-amber-400/25 rounded-lg px-2.5 py-1.5 mt-1">💬 Góp ý của biên tập: {p.review_note as string}</span>
@@ -1028,7 +1027,9 @@ function Workspace({ user }: { user: User }) {
                 }
                 if (anchor) {
                   const { data } = await supabase.from('nodes').select('md').eq('id', anchor.id).single()
-                  await supabase.from('nodes').update({ md: `${data?.md ?? ''}\n\n> ${title}${source ? `\n> — *${source}*` : ''}` }).eq('id', anchor.id)
+                  // content:null — Kim Chỉ Nam thường có bản JSON cũ, Editor sẽ ưu tiên nó và GIẤU quote mới (bug 12/6)
+                  const when = new Date().toLocaleDateString('vi')
+                  await supabase.from('nodes').update({ content: null, md: `${data?.md ?? ''}\n\n> 💬 “${title}”\n> — ${source?.trim() ? `*${source.trim()}*` : 'sưu tầm'} · ${when}` }).eq('id', anchor.id)
                   logEvent('create', anchor.id); openNoteEditor(anchor); setPage('know')
                   return
                 }
@@ -1039,13 +1040,18 @@ function Workspace({ user }: { user: User }) {
               const isInsight = type === 'insight'
               const parent = isInsight ? await ensureHub('lessons', 'Kim cương bài học', '💎') : await ensureHub('journey', 'Hành trình của tôi', '📓')
               const today = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10) // ngày LOCAL, không lệch UTC
+              const nowD = new Date()
+              // title gọn — KHÔNG lấy nguyên văn dài (feedback 12/6): nhật ký theo ngày-giờ, insight cắt 60 ký tự
+              const niceTitle = isInsight
+                ? (title.length > 60 ? title.slice(0, 57).trimEnd() + '…' : title)
+                : `Nhật ký ${nowD.toLocaleDateString('vi')} · ${nowD.getHours()}h${String(nowD.getMinutes()).padStart(2, '0')}`
               createPage(parent, 'personal', 'note', {
-                title,
+                title: niceTitle,
                 event_date: today, // mắt xích GHI phải đan vào trục thời gian (KHO-CHUAN §2bis)
                 props: { page_type: isInsight ? 'bai-hoc' : 'trai-nghiem', via: 'capture' },
                 md: isInsight
                   ? `**Loại:** 🎓 Bài học · **Ngày sự kiện:** ${new Date().toLocaleDateString('vi')}\n\n**Tóm tắt 1 câu:** ${title}\n\n**Nguồn:** ${source || 'tự đúc rút'}\n\n## ⚡ Nguyên lý cốt lõi\n${title}\n\n## 🌍 Trải nghiệm gốc nào sinh ra insight này?\n- (nối chiều 🌱 trải nghiệm về trang chuyện gốc)\n\n## 🎯 Áp dụng\n- [ ] `
-                  : `**Loại:** 🌱 Trải nghiệm · **Ngày sự kiện:** ${new Date().toLocaleDateString('vi')}\n\n**Tóm tắt 1 câu:** ${title}\n\n**Nguồn:** tự trải nghiệm\n\n## 📍 Bối cảnh\n\n## ⚡ Chuyện gì xảy ra\n\n## ❤️ Cảm xúc\n\n## 🎓 Bài học rút ra\n- \n\n**Cảnh này nói gì về tôi:** `,
+                  : `**Loại:** 🌱 Trải nghiệm · **Ngày sự kiện:** ${new Date().toLocaleDateString('vi')}\n\n**Tóm tắt 1 câu:** ${title}\n\n**Nguồn:** tự trải nghiệm\n\n## 📍 Bối cảnh\n\n## ⚡ Chuyện gì xảy ra\n${title}\n\n## ❤️ Cảm xúc\n\n## 🎓 Bài học rút ra\n- \n\n**Cảnh này nói gì về tôi:** `,
               })
               setPage('know')
             }}
