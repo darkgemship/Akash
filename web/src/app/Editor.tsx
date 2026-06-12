@@ -1,3 +1,5 @@
+// chiều mặc định khi @nối: đoán theo LOẠI trang đích — hồ sơ người→Con người, nguồn→Tham chiếu, trải nghiệm→Trải nghiệm…
+const smartDim = (pt?: string | null) => pt === 'ho-so' ? 'people' : pt === 'trai-nghiem' ? 'experience' : pt === 'su-kien' ? 'time' : pt === 'bai-hoc' || pt === 'quy-trinh' ? 'knowledge' : 'reference'
 'use client'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useCreateBlockNote, createReactInlineContentSpec, createReactBlockSpec, SuggestionMenuController, getDefaultReactSlashMenuItems } from '@blocknote/react'
@@ -169,9 +171,10 @@ export default function Editor({ noteId, orgId, userId = '', layer = 'personal',
                         ' ',
                       ] as never)
                       if (orgId) {
+                        const dim = smartDim((p as { pt?: string | null }).pt)
                         const row = trigger === '('
-                          ? { org_id: orgId, from_node: p.id, to_node: noteId, dimension: 'reference' }
-                          : { org_id: orgId, from_node: noteId, to_node: p.id, dimension: 'reference' }
+                          ? { org_id: orgId, from_node: p.id, to_node: noteId, dimension: dim }
+                          : { org_id: orgId, from_node: noteId, to_node: p.id, dimension: dim }
                         supabase.from('links').insert(row).then(() => { onLinked?.() })
                       }
                     },

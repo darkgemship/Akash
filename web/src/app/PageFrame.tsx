@@ -319,7 +319,7 @@ export function PageFooter({ node, pages, outLinks, backLinks, mdText, canE, onO
 
       {/* 🕸️ MẠNG LIÊN KẾT — đi & về, gọn (chi tiết theo chiều ở khối trên) */}
       {(outLinks.length > 0 || backLinks.length > 0) && (
-        <Sect title="🕸️ Liên kết & backlink" hint="→ trang này nhắc tới · ← ai nhắc tới trang này (tự động)">
+        <Sect title="🕸️ Liên kết & backlink" hint="→ trang này nhắc tới · ← ai nhắc tới trang này · liên kết kèm “câu trích” hiện ở mục Trích dẫn dưới">
           <div className="flex flex-wrap gap-1.5">
             {outLinks.map((l) => { const dst = byId.get(l.to_node); return dst ? pageChip(dst, '→', DIMS[l.dimension ?? '']?.color ?? '#888') : null })}
             {backLinks.map((l) => { const src = byId.get(l.from_node); return src ? pageChip(src, '←', DIMS[l.dimension ?? '']?.color ?? '#888') : null })}
@@ -329,7 +329,7 @@ export function PageFooter({ node, pages, outLinks, backLinks, mdText, canE, onO
 
       {/* 💎 TINH HOA — máy tự gom quote & trích đoạn (AI làm giàu khi cắm API) */}
       {quotes.length > 0 && (
-        <Sect title="💎 Tổng hợp tinh hoa" hint="máy tự gom quote & trích đoạn (AI làm giàu khi cắm API)">
+        <Sect title="❝ Trích dẫn ❞" hint="câu trích MỨC CÂU từ liên kết có excerpt + quote trong bài — khác với Liên kết (chỉ trỏ trang)">
           <div className="space-y-1.5">
             {quotes.map((q, i) => (
               <div key={i} className="rounded-xl bg-amber-500/[0.06] border-l-2 border-amber-400/50 px-3 py-2">
@@ -343,7 +343,7 @@ export function PageFooter({ node, pages, outLinks, backLinks, mdText, canE, onO
 
       {/* 📚 REFERENCES — mọi nguồn trang này dùng */}
       {refs.length > 0 && (
-        <Sect title={`📚 References (${refs.length})`} hint="gom từ liên kết chiều Tham chiếu">
+        <Sect title={`📚 Nguồn tham chiếu (${refs.length})`} hint="trang nguồn được trỏ tới bằng chiều Tham chiếu">
           <ol className="space-y-1 list-decimal list-inside">
             {refs.map((r, i) => (
               <li key={i} className="text-xs text-zinc-400">

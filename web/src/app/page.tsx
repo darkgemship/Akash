@@ -28,6 +28,21 @@ const LAYERS: { key: string; label: string; color: string }[] = [
 ]
 const COVERS = ['linear-gradient(135deg,#8b5cf6,#22d3ee)', 'linear-gradient(135deg,#f5b942,#fbbf24)', 'linear-gradient(135deg,#34d399,#22d3ee)', 'linear-gradient(135deg,#1e1b4b,#0e7490)', 'linear-gradient(135deg,#7c2d12,#b45309)', '']
 const ICONS = ['📄', '📝', '📁', '🗂️', '💡', '🎯', '🔥', '🌱', '⚡', '🧠', '❤️', '📚', '🚀', '✨', '🏆', '📊']
+// search thông minh: bỏ dấu + xếp hạng — prefix mạnh nhất, rồi đầu từ, chứa chuỗi, cuối cùng khớp tóm tắt/từ khoá
+const vnorm = (x: string) => (x ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd')
+function searchRank(q: string, n: { title: string | null; props?: Record<string, unknown> | null }): number {
+  const t = vnorm(n.title ?? ''), qq = vnorm(q)
+  if (!qq) return 0
+  if (t.startsWith(qq)) return 100
+  if (t.split(/\s+/).some(w => w.startsWith(qq))) return 80
+  if (t.includes(qq)) return 60
+  const extra = vnorm(`${(n.props?.summary as string) ?? ''} ${(n.props?.keywords as string) ?? ''}`)
+  if (extra.includes(qq)) return 35
+  // mọi từ của query đều xuất hiện đâu đó (semantic-lite)
+  const words = qq.split(/\s+/).filter(w => w.length >= 2)
+  if (words.length > 1 && words.every(w => t.includes(w) || extra.includes(w))) return 25
+  return 0
+}
 function kindIcon(k: string) { return k === 'kho' ? '📦' : k === 'folder' ? '📁' : k === 'database' ? '🗂️' : '📄' }
 // PAGE_TYPES / OUTPUT_FORMATS / DIMS / khung properties + footer chuẩn → PageFrame.tsx
 
@@ -236,6 +251,8 @@ function Workspace({ user }: { user: User }) {
   const [toast, setToast] = useState('')
   const [tplFor, setTplFor] = useState<{ parentId: string | null; layer: string } | null>(null)
   const [lifeWiz, setLifeWiz] = useState(false)
+  const [capDeep, setCapDeep] = useState<{ text: string; emo: string; who: string; lesson: string } | null>(null)
+  const [galaxyModeReq, setGalaxyModeReq] = useState<{ mode: string; t: number } | null>(null)
   const [mobileNav, setMobileNav] = useState(false)
   const [themeLight, setThemeLight] = useState(false)
   useEffect(() => { setThemeLight(typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'light') }, [])
@@ -331,6 +348,25 @@ function Workspace({ user }: { user: User }) {
     return sibs.reduce((m, s) => Math.max(m, s.position ?? 0), 0) + 10
   }
   // P0 fix (audit 12/6): user mới chưa có cây gốc → tự tạo hub trước khi nạp, KHÔNG rơi về gốc kho
+  // hoàn tất nạp trải nghiệm sau bước đào sâu — emotion vào CỘT, người/bài học vào đúng mục md
+  async function finishCapture(text: string, emo: string, who: string, lesson: string) {
+    setCapDeep(null)
+    const parent = await ensureHub('journey', 'Hành trình của tôi', '📓')
+    const nowD = new Date()
+    const today = new Date(Date.now() - nowD.getTimezoneOffset() * 60000).toISOString().slice(0, 10)
+    const id = crypto.randomUUID()
+    const { error } = await supabase.from('nodes').insert({
+      id, org_id: orgId, owner_id: user.id, layer: 'personal', kind: 'note', parent_id: parent,
+      title: `Nhật ký ${nowD.toLocaleDateString('vi')} · ${nowD.getHours()}h${String(nowD.getMinutes()).padStart(2, '0')}`,
+      event_date: today, emotion: emo || null, status: 'published', min_level: 1,
+      props: { page_type: 'trai-nghiem', via: 'capture', ...(lesson.trim() ? { principle: lesson.trim() } : {}) },
+      md: `**Loại:** 🌱 Trải nghiệm · **Ngày sự kiện:** ${nowD.toLocaleDateString('vi')}\n\n**Tóm tắt 1 câu:** ${lesson.trim() || text.slice(0, 120)}\n\n**Nguồn:** tự trải nghiệm\n\n## ⚡ Chuyện gì xảy ra\n${text}\n\n## ❤️ Cảm xúc\n${emo || '—'}\n\n## 💚 Ai liên quan\n${who.trim() || '—'}\n\n## 🎓 Bài học rút ra\n- ${lesson.trim() || ''}\n\n**Cảnh này nói gì về tôi:** `,
+    })
+    if (error) { setErr(error.message); return }
+    logEvent('capture_deep', id, { emo: !!emo, who: !!who.trim(), lesson: !!lesson.trim() })
+    if (orgId) { await loadTree(orgId); loadGraph(orgId) }
+    openNoteEditor({ id, title: 'Nhật ký', kind: 'note', parent_id: parent }); setPage('know')
+  }
   async function ensureHub(hub: string, title: string, icon: string): Promise<string | null> {
     const ex = tree.find(n => n.owner_id === user.id && (n.props?.hub as string) === hub)
     if (ex) return ex.id
@@ -665,7 +701,8 @@ function Workspace({ user }: { user: User }) {
           <div className="flex-1 overflow-auto px-2 pb-4">
           {query.trim() ? (
             (() => {
-              const hits = tree.filter(n => (n.title || '').toLowerCase().includes(query.toLowerCase()))
+              const hits = tree.map(n => ({ n, r: searchRank(query, n) })).filter(x => x.r > 0)
+                .sort((a, b) => b.r - a.r || (a.n.title ?? '').localeCompare(b.n.title ?? '', 'vi')).slice(0, 30).map(x => x.n)
               return <div className="pt-1">
                 {hits.map(n => (
                   <button key={n.id} onClick={() => openNoteEditor(n)} className={`w-full text-left rounded-md px-2 py-1.5 text-sm flex items-center gap-1.5 ${editing?.id === n.id ? 'bg-white/10' : 'hover:bg-white/[0.06]'}`}>
@@ -702,7 +739,7 @@ function Workspace({ user }: { user: User }) {
         <section className={`relative overflow-hidden bg-[#0b0b14] ${view === 'galaxy' ? 'dq-dark dq-galaxy-shell' : ''}`}>
           {view === 'galaxy' ? (
             <>
-              <Galaxy nodes={allNodes} links={links}
+              <Galaxy nodes={allNodes} links={links} modeReq={galaxyModeReq}
                 onOpen={(n) => openNoteEditor({ id: n.id, title: n.title, kind: n.kind, parent_id: n.parent_id }, true)}
                 onConnect={(a, b) => setPendingLink({ a, b })}
               />
@@ -741,7 +778,7 @@ function Workspace({ user }: { user: User }) {
                         editable={canEditLayer(layerOf(editing.id))}
                         initialJson={editJson}
                         initialMd={mdText}
-                        pages={tree.map(n => ({ id: n.id, title: n.title ?? '', icon: n.icon, kind: n.kind }))}
+                        pages={tree.map(n => ({ id: n.id, title: n.title ?? '', icon: n.icon, kind: n.kind, pt: (n.props?.page_type as string) ?? null }))}
                         onOpenPage={(id) => { const t = nodeOf(id); if (t) openNoteEditor(t, true) }}
                         onSaved={() => setSavedMsg('✓ Đã lưu ' + new Date().toLocaleTimeString())}
                         onLinked={() => { if (editing) loadPageLinks(editing.id); if (orgId) loadGraph(orgId); setToast('🕸️ Đã nối trang — cuộn xuống xem Mạng liên kết'); setTimeout(() => setToast(''), 2800) }}
@@ -895,6 +932,19 @@ function Workspace({ user }: { user: User }) {
                         }} className="rounded-lg bg-white/5 border border-white/10 text-zinc-400 px-2.5 py-1 hover:text-cyan-200">💬 Góp ý sửa</button>
                       )}
                       {p.principle ? <span className="rounded-lg bg-cyan-500/10 border border-cyan-400/25 text-cyan-200 px-2 py-1 max-w-[260px] truncate" title={p.principle as string}>⚡ {p.principle as string}</span> : null}
+                      {/* tính năng trang (đợt 9): tương tác hồ sơ · bản trước · dòng đời · copy */}
+                      {(p.page_type as string) === 'ho-so' && canE && <button onClick={async () => {
+                        const note = window.prompt('Tương tác mới với người này (1 dòng):'); if (!note?.trim()) return
+                        const { data: cur } = await supabase.from('nodes').select('md').eq('id', editing.id).single()
+                        const cm = (cur?.md as string) ?? ''
+                        const line = `- ${new Date().toLocaleDateString('vi')}: ${note.trim()}`
+                        const next = cm.includes('## 💬 Lịch sử tương tác') ? cm.replace('## 💬 Lịch sử tương tác', `## 💬 Lịch sử tương tác\n${line}`) : `${cm}\n\n## 💬 Lịch sử tương tác\n${line}`
+                        await supabase.from('nodes').update({ md: next, content: null }).eq('id', editing.id)
+                        const t2 = nodeOf(editing.id); if (t2) openNoteEditor(t2); setToast('💬 Đã ghi tương tác'); setTimeout(() => setToast(''), 2200)
+                      }} className="rounded-lg bg-emerald-500/10 border border-emerald-400/25 text-emerald-200 px-2.5 py-1 hover:bg-emerald-500/20">➕ Ghi tương tác</button>}
+                      {(p.last_published_md as string) && <button onClick={() => { const w = window.open('', '_blank', 'width=680,height=760'); if (w) { w.document.write(`<pre style="white-space:pre-wrap;font:13px/1.6 monospace;padding:24px;background:#0c0d10;color:#d0d6e0">${String(p.last_published_md).replace(/</g, '&lt;')}</pre>`); w.document.title = 'Bản đã duyệt trước — ' + editTitle } }} title="Xem bản md đã duyệt lần trước" className="rounded-lg bg-white/5 border border-white/10 text-zinc-400 px-2.5 py-1 hover:text-white">🕓 Bản trước</button>}
+                      {node?.event_date && <button onClick={() => { setView('galaxy'); setGalaxyModeReq({ mode: 'timeline', t: Date.now() }); setToast('📜 Đang mở Dòng đời — trang của bạn nằm tại mốc ' + new Date(node.event_date!).toLocaleDateString('vi')); setTimeout(() => setToast(''), 3500) }} className="rounded-lg bg-blue-500/10 border border-blue-400/25 text-blue-200 px-2.5 py-1 hover:bg-blue-500/20">📅 Xem trên Dòng đời</button>}
+                      <button onClick={async () => { const { data: cur } = await supabase.from('nodes').select('md').eq('id', editing.id).single(); navigator.clipboard?.writeText(`# ${editTitle}\n\n${(cur?.md as string) ?? ''}`); setToast('📋 Đã copy nội dung — dán đi đâu cũng được'); setTimeout(() => setToast(''), 2200) }} title="Copy toàn bộ nội dung trang (markdown)" className="rounded-lg bg-white/5 border border-white/10 text-zinc-400 px-2.5 py-1 hover:text-white">📋 Copy</button>
 
                       {(p.review_note as string) && node?.status === 'draft' && node?.owner_id === user.id && (
                         <span className="w-full text-[11px] text-amber-200/90 bg-amber-500/10 border border-amber-400/25 rounded-lg px-2.5 py-1.5 mt-1">💬 Góp ý của biên tập: {p.review_note as string}</span>
@@ -928,7 +978,7 @@ function Workspace({ user }: { user: User }) {
                         editable={canEditLayer(layerOf(editing.id))}
                         initialJson={editJson}
                         initialMd={mdText}
-                        pages={tree.map(n => ({ id: n.id, title: n.title ?? '', icon: n.icon, kind: n.kind }))}
+                        pages={tree.map(n => ({ id: n.id, title: n.title ?? '', icon: n.icon, kind: n.kind, pt: (n.props?.page_type as string) ?? null }))}
                         onOpenPage={(id) => { const t = nodeOf(id); if (t) openNoteEditor(t) }}
                         onSaved={() => setSavedMsg('✓ Đã lưu ' + new Date().toLocaleTimeString())}
                         onLinked={() => { if (editing) loadPageLinks(editing.id); if (orgId) loadGraph(orgId); setToast('🕸️ Đã nối trang — cuộn xuống xem Mạng liên kết'); setTimeout(() => setToast(''), 2800) }}
@@ -1038,7 +1088,8 @@ function Workspace({ user }: { user: User }) {
                 return
               }
               const isInsight = type === 'insight'
-              const parent = isInsight ? await ensureHub('lessons', 'Kim cương bài học', '💎') : await ensureHub('journey', 'Hành trình của tôi', '📓')
+              if (!isInsight) { setCapDeep({ text: title, emo: '', who: '', lesson: '' }); return } // trải nghiệm → hỏi đào sâu trước khi nạp
+              const parent = await ensureHub('lessons', 'Kim cương bài học', '💎')
               const today = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10) // ngày LOCAL, không lệch UTC
               const nowD = new Date()
               // title gọn — KHÔNG lấy nguyên văn dài (feedback 12/6): nhật ký theo ngày-giờ, insight cắt 60 ký tự
@@ -1091,6 +1142,35 @@ function Workspace({ user }: { user: User }) {
         : <div className="flex-1 overflow-auto"><Profile user={user} /></div>}
       </div>
 
+      {/* ✍️ ĐÀO SÂU TRẢI NGHIỆM — 3 câu bắt não làm việc trước khi nạp (skip được) */}
+      {capDeep && (
+        <div className="fixed inset-0 z-[70] bg-black/70 backdrop-blur-md grid place-items-center p-6" onClick={() => setCapDeep(null)}>
+          <div className="w-[560px] max-w-[94vw] rounded-3xl bg-[#10121d] border border-white/10 shadow-2xl p-6" onClick={e => e.stopPropagation()}>
+            <h3 className="text-lg font-extrabold mb-1">Đào sâu 30 giây — cho trải nghiệm này có nghĩa</h3>
+            <p className="text-xs text-zinc-500 mb-4 italic line-clamp-2">“{capDeep.text}”</p>
+            <div className="mb-3">
+              <div className="text-[12px] font-medium text-zinc-400 mb-1.5">🧡 Lúc đó bạn cảm thấy gì?</div>
+              <div className="flex flex-wrap gap-1.5">
+                {[['😮', 'vỡ òa'], ['💗', 'chạm'], ['🔥', 'thôi thúc'], ['😣', 'nhói'], ['😤', 'ức'], ['😌', 'nhẹ nhõm'], ['🌫️', 'hoài nghi']].map(([ic, l]) => (
+                  <button key={l} onClick={() => setCapDeep(c => c && ({ ...c, emo: c.emo === l ? '' : l }))} className={`px-2.5 py-1.5 rounded-lg text-xs border ${capDeep.emo === l ? 'bg-amber-500/20 border-amber-400/50 text-amber-100' : 'bg-white/5 border-white/10 text-zinc-400'}`}>{ic} {l}</button>
+                ))}
+              </div>
+            </div>
+            <div className="mb-3">
+              <div className="text-[12px] font-medium text-zinc-400 mb-1.5">💚 Ai liên quan đến chuyện này?</div>
+              <input value={capDeep.who} onChange={e => setCapDeep(c => c && ({ ...c, who: e.target.value }))} placeholder="tên người — khách, đồng đội, gia đình… (bỏ trống được)" className="w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2 text-sm outline-none focus:border-violet-400/40" />
+            </div>
+            <div className="mb-4">
+              <div className="text-[12px] font-medium text-zinc-400 mb-1.5">💎 Nếu rút thành MỘT câu bài học?</div>
+              <input value={capDeep.lesson} onChange={e => setCapDeep(c => c && ({ ...c, lesson: e.target.value }))} placeholder="một câu của riêng bạn — không chép sách" className="w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2 text-sm outline-none focus:border-violet-400/40" />
+            </div>
+            <div className="flex items-center justify-between">
+              <button onClick={() => finishCapture(capDeep.text, '', '', '')} className="text-xs text-zinc-600 hover:text-zinc-300">Bỏ qua — nạp luôn</button>
+              <button onClick={() => finishCapture(capDeep.text, capDeep.emo, capDeep.who, capDeep.lesson)} className="rounded-xl ak-cta px-6 py-2.5 text-sm font-bold">✓ Nạp vào Hành trình</button>
+            </div>
+          </div>
+        </div>
+      )}
       {lifeWiz && (
         <LifeChaptersWizard onClose={() => setLifeWiz(false)} onCreate={async (chapters) => {
           const journey = await ensureHub('journey', 'Hành trình của tôi', '📓')
@@ -1328,9 +1408,10 @@ function Workspace({ user }: { user: User }) {
       {toast && <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-[65] rounded-xl bg-[#1c1c26] border border-violet-400/30 px-4 py-2.5 text-sm shadow-2xl shadow-violet-500/20">{toast}</div>}
 
       {palette && (() => {
-        const q = palQ.trim().toLowerCase()
+        const q = palQ.trim()
         const results = q
-          ? tree.filter(n => (n.title ?? '').toLowerCase().includes(q)).slice(0, 12)
+          ? tree.map(n => ({ n, r: searchRank(q, n) })).filter(x => x.r > 0)
+              .sort((a, b) => b.r - a.r || (a.n.title ?? '').localeCompare(b.n.title ?? '', 'vi')).slice(0, 12).map(x => x.n)
           : recent.map(id => nodeOf(id)).filter((n): n is TNode => !!n).slice(0, 8)
         const go = (n: TNode) => { openNoteEditor(n); setPage('know') }
         return (

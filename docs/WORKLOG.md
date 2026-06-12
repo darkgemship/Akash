@@ -211,3 +211,10 @@ Verify: build xanh từng cụm, tsc sạch, banner wizard ẩn đúng với use
 3. Sort cây: mặc định 'Thông minh' (hub giữ vị trí, note MỚI NHẤT trên đầu) + menu Mới nhất / A→Z ở sidebar.
 4. Trường chuẩn/của tôi dễ đọc: label 12px đậm màu, value 13.5px, hàng cao hơn, bỏ mono-eyebrow tí hin.
 5. 📎 Đính kèm thành SECTION riêng trong panel (list + thêm/xoá tại chỗ); bỏ nút 'Lưu template' per-page (template org-level qua 📐 Studio — đúng ý setup cấp kho).
+
+## 2026-06-12 (đợt 9) — 🧠 ĐÀO SÂU + SEARCH + 8 CHIỀU DỄ DÙNG
+1. **Capture trải nghiệm → dialog Đào sâu 30 giây** (skip được): cảm xúc (chips) + ai liên quan + bài học 1 câu → emotion vào CỘT, bài học vào props.principle (thắp luôn chiều knowledge), người vào md. Verify DB: emotion='nhẹ nhõm', principle ghi đúng.
+2. **Search thông minh**: bỏ dấu tiếng Việt + xếp hạng (prefix > đầu-từ > chứa > tóm-tắt/từ-khoá > mọi-từ-khớp semantic-lite) — áp cho cả sidebar lẫn ⌘K. Semantic thật (embeddings) = Phase 2.
+3. **8 chiều dễ dùng hơn**: @mention tự đoán chiều theo LOẠI trang đích (hồ-sơ→Con người, trải-nghiệm→Trải nghiệm, sự-kiện→Thời gian, bài-học/quy-trình→Kiến thức, còn lại→Tham chiếu) — hết phải nghĩ 8 lựa chọn mỗi lần nối.
+4. **Thuật ngữ chuẩn**: ❝ Trích dẫn ❞ (mức câu, link có excerpt) ≠ 🕸️ Liên kết (trỏ trang) ≠ 📚 Nguồn tham chiếu (chiều reference) — đổi label PageFooter.
+5. **4 tính năng trang**: ➕ Ghi tương tác (hồ sơ người, append lịch sử theo ngày) · 🕓 Bản trước (xem md đã duyệt) · 📅 Xem trên Dòng đời (nhảy thẳng Galaxy timeline qua modeReq) · 📋 Copy nội dung. Share-link public cần RLS policy + route riêng → backlog Phase 2.
