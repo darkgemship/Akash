@@ -109,6 +109,10 @@ export function PropsPanel({ node, canE, isEditor, onSetProp, onSaveDate, childr
   const flat = 'w-full rounded-lg bg-transparent border border-transparent hover:border-white/10 focus:border-violet-400/40 focus:bg-white/[0.03] px-2 py-1.5 outline-none text-[13.5px] text-zinc-100 disabled:opacity-50 transition-colors'
   return (
     <div className="mb-5 rounded-2xl border border-white/[0.07] bg-white/[0.02] overflow-hidden text-[13px]">
+      <div className="px-4 pt-2.5 -mb-1 flex items-center gap-2">
+        <span className="font-mono text-[9px] uppercase tracking-[0.22em] text-zinc-600">Properties</span>
+        <span className="text-[10px] text-zinc-700">— hồ sơ của trang, AI đọc từ đây</span>
+      </div>
       {/* ── TRƯỜNG CHUẨN — khung cố định của org ── */}
       <div className="px-4 pt-3 pb-2.5">
         <div className="flex items-center gap-2 mb-2">
@@ -224,13 +228,14 @@ export function PropsPanel({ node, canE, isEditor, onSetProp, onSaveDate, childr
    🗂 trang con → ❤️ liên kết 8 chiều (nối ngay tại chỗ) → 🕸️ đi/về →
    💎 tinh hoa → 📚 references → 📎 đính kèm
 ===================================================================== */
-export function PageFooter({ node, pages, outLinks, backLinks, mdText, canE, onOpen, onAddChild, onLink, onSetProp }: {
+export function PageFooter({ node, pages, outLinks, backLinks, mdText, canE, lite, onOpen, onAddChild, onLink, onSetProp }: {
   node: FrameNode
   pages: FrameNode[]            // toàn bộ tree — để tra tên trang & picker nối
   outLinks: LinkOut[]
   backLinks: LinkBack[]
   mdText: string
   canE: boolean
+  lite?: boolean   // trang tổng (kho/hub): chỉ hiện danh sách trang con, không 8 chiều/trích dẫn
   onOpen: (id: string) => void
   onAddChild: () => void
   onLink: (toId: string, dimension: string) => void
@@ -266,6 +271,11 @@ export function PageFooter({ node, pages, outLinks, backLinks, mdText, canE, onO
 
   return (
     <>
+      <div className="mt-2 mb-1 flex items-center gap-2">
+        <span className="font-mono text-[9px] uppercase tracking-[0.22em] text-zinc-600">Footer</span>
+        <span className="text-[10px] text-zinc-700">— chân trang: trang con · 8 chiều · liên kết · trích dẫn · nguồn</span>
+        <span className="flex-1 h-px bg-white/[0.06]" />
+      </div>
       {/* 🗂 TRANG CON */}
       <Sect title="🗂 Trang con">
         <div className="space-y-0.5">
@@ -278,6 +288,7 @@ export function PageFooter({ node, pages, outLinks, backLinks, mdText, canE, onO
         </div>
       </Sect>
 
+      {lite ? null : <>
       {/* ❤️ LIÊN KẾT 8 CHIỀU — gốc rễ framework: trang chưa nối = chưa thuộc về cuộc đời bạn */}
       <Sect title={`❤️ Liên kết 8 chiều (${litDims}/8 chiều sáng)`} hint="trang càng nối nhiều chiều càng chuyển hoá sâu — bấm ＋ để nối ngay">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -369,6 +380,7 @@ export function PageFooter({ node, pages, outLinks, backLinks, mdText, canE, onO
           </div>
         </Sect>
       )}
+      </>}
     </>
   )
 }

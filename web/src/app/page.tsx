@@ -318,6 +318,8 @@ function Workspace({ user }: { user: User }) {
   function childrenOf(id: string) { return sortKids(tree.filter(n => n.parent_id === id)) }
   function layerOf(id: string) { return tree.find(n => n.id === id)?.layer ?? 'personal' }
   function nodeOf(id: string | null) { return id ? tree.find(n => n.id === id) ?? null : null }
+  // trang TỔNG (kho/cây/hub hệ thống) = mục lục, không phải tri thức → không Properties/Footer đầy đủ/Chuyển hoá
+  function isContainer(n?: TNode | null) { return !!n && (n.kind === 'kho' || n.kind === 'folder' || ['hub', 'kol_home', 'viral_home', 'content_matrix'].includes(n.subtype ?? '')) }
   // quyền sửa: kho cá nhân luôn được; kho chung cần can_edit (Biên tập viên trở lên)
   function canEditLayer(layer: string) { return layer === 'personal' || !!role?.can_edit }
   function ancestors(id: string): TNode[] {
@@ -756,7 +758,7 @@ function Workspace({ user }: { user: User }) {
                       <button onClick={() => setEditing(null)} title="Đóng" className="w-7 h-7 grid place-items-center rounded-lg text-zinc-400 hover:bg-white/10 hover:text-white"><IX size={14} /></button>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 px-4 py-2 border-b border-white/5 shrink-0">
+                  {!isContainer(nodeOf(editing.id)) && <div className="flex items-center gap-2 px-4 py-2 border-b border-white/5 shrink-0">
                     {depth?.learned
                       ? <>
                           <span className="flex items-center gap-1.5 text-xs rounded-lg bg-violet-500/15 border border-violet-400/30 text-violet-300 px-2 py-1 tabular-nums"><ITarget size={13} /> {(() => { const nd2 = nodeOf(editing.id); const t = transformScore(dimSignals({ out: outRaw, back: backRaw, event_date: nd2?.event_date, emotion: nd2?.emotion, props: nd2?.props })); return `${t.total} · ${t.covered}/8` })()}</span>
@@ -764,7 +766,7 @@ function Workspace({ user }: { user: User }) {
                         </>
                       : <button onClick={() => setShowDigest(true)} className="flex items-center gap-1.5 text-xs rounded-lg ak-cta px-3 py-1 font-semibold"><IGrad size={13} /> Chuyển hoá bài này</button>}
                     <span className="text-[10px] text-zinc-600 ml-auto">{backRaw.length} liên kết tới đây</span>
-                  </div>
+                  </div>}
                   <div className="flex-1 overflow-auto px-4 py-3">
                     {editing.kind === 'database' ? (
                       <Database key={editing.id} node={{ id: editing.id, kind: editing.kind }} orgId={orgId} userId={user.id} layer={layerOf(editing.id)} onOpenPage={(id) => { const t = nodeOf(id); if (t) openNoteEditor(t, true) }} />
@@ -830,6 +832,7 @@ function Workspace({ user }: { user: User }) {
                   {(() => {
                     // ĐỘ CHUYỂN HOÁ 8 CHIỀU — derive từ links thật của trang (RESEARCH-VIZ-ARCH mũi 2), khớp framework
                     const nd = nodeOf(editing.id)
+                    if (isContainer(nd)) return null // trang tổng = mục lục, không có "học thẩm thấu"
                     const x8 = dimSignals({ out: outRaw, back: backRaw, event_date: nd?.event_date, emotion: nd?.emotion, props: nd?.props })
                     const t8 = transformScore(x8)
                     const weakest = Object.entries(DIMS).filter(([k]) => (x8[k as keyof typeof x8] ?? 0) === 0)[0]
@@ -882,10 +885,10 @@ function Workspace({ user }: { user: User }) {
                   </div>
                 </div>
                 <input value={editTitle} readOnly={!canEditLayer(layerOf(editing.id))} onChange={e => setEditTitle(e.target.value)} onBlur={saveTitle} onKeyDown={e => e.key === 'Enter' && (e.target as HTMLInputElement).blur()} className="w-full text-4xl font-extrabold bg-transparent outline-none placeholder:text-zinc-700 mb-2" placeholder="Trang chưa có tiêu đề" />
-                {/* ① PROPS PANEL — 📌 trường chuẩn ban biên tập (fix cứng) + ✏️ trường riêng user (PageFrame.tsx) */}
-                {editing.kind !== 'kho' && (() => {
+                {/* ① PROPERTIES — 📌 trường chuẩn ban biên tập (fix cứng) + ✏️ trường riêng user (PageFrame.tsx). Trang tổng (kho/hub) không có */}
+                {(() => {
                   const node = nodeOf(editing.id)
-                  if (!node) return null
+                  if (!node || isContainer(node)) return null
                   const p = (node.props ?? {}) as Record<string, unknown>
                   const canE = canEditLayer(layerOf(editing.id))
                   return (
@@ -984,13 +987,14 @@ function Workspace({ user }: { user: User }) {
                         onLinked={() => { if (editing) loadPageLinks(editing.id); if (orgId) loadGraph(orgId); setToast('🕸️ Đã nối trang — cuộn xuống xem Mạng liên kết'); setTimeout(() => setToast(''), 2800) }}
                       /> : <p className="text-zinc-600 text-sm py-3 px-1">Đang tải nội dung…</p>}
                     </div>
-                    {/* ② PAGE FOOTER — 🗂 trang con · ❤️ liên kết 8 chiều · 🕸️ đi/về · 💎 tinh hoa · 📚 references · 📎 đính kèm (PageFrame.tsx) */}
+                    {/* ② FOOTER — 🗂 trang con · ❤️ liên kết 8 chiều · 🕸️ đi/về · ❝ trích dẫn ❞ · 📚 nguồn · 📎 đính kèm (PageFrame.tsx). Trang tổng: lite = chỉ trang con */}
                     {(() => {
                       const node = nodeOf(editing.id)
                       if (!node) return null
                       return (
                         <PageFooter
                           node={node}
+                          lite={isContainer(node)}
                           pages={tree}
                           outLinks={outRaw}
                           backLinks={backRaw}
