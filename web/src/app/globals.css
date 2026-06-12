@@ -4,10 +4,10 @@
   --background: #ffffff;
   --foreground: #171717;
   /* ===== AKASH TOKENS (docs/BRANDING.md) — vũ trụ kim cương ===== */
-  --ak-void: #05060c;      /* hư không — body, galaxy */
-  --ak-deep: #0a0b14;      /* tầng khí quyển 1 — panel nền */
-  --ak-surface: #10121d;   /* bề mặt trạm — card */
-  --ak-raise: #171a28;     /* tầng nổi — modal/popover */
+  --ak-void: #1b1a18;      /* hư không — body (graphite ấm, triết lý Claude) */
+  --ak-deep: #21201e;      /* tầng khí quyển 1 — panel nền */
+  --ak-surface: #262523;   /* bề mặt trạm — card */
+  --ak-raise: #2e2d2a;     /* tầng nổi — modal/popover */
   --ak-violet: #8b5cf6;    /* tím akasha — tri thức */
   --ak-blue: #3b82f6;      /* xanh plasma — dữ liệu chảy */
   --ak-cyan: #22d3ee;      /* cyan tinh thể — sự sống/kết nối */
@@ -25,8 +25,8 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #05060c;
-    --foreground: #ededed;
+    --background: #1b1a18;
+    --foreground: #ece9e2;
   }
 }
 
@@ -40,7 +40,7 @@ body {
    Gradient CHỈ còn sống ở: logo, celebration, canvas Galaxy. Chrome = 1 accent tím + neutral. */
 .ak-grad { background: var(--ak-violet); }                /* avatar/ring/progress — solid accent */
 .ak-grad-text { color: #f7f8f8; -webkit-background-clip: unset; background-clip: unset; background-image: none; }
-.ak-logo-grad { background-image: linear-gradient(95deg, #a78bfa, #60a5fa 45%, #67e8f9); -webkit-background-clip: text; background-clip: text; color: transparent; } /* CHỈ cho wordmark */
+.ak-logo-grad { font-family: var(--font-display), Georgia, serif; letter-spacing: -0.01em; background-image: linear-gradient(95deg, #a78bfa, #60a5fa 45%, #67e8f9); -webkit-background-clip: text; background-clip: text; color: transparent; } /* CHỈ cho wordmark */
 .ak-gold-text { color: var(--ak-gold); }
 .ak-diamond-glow { box-shadow: 0 0 18px rgba(246,248,255,.35), 0 0 56px rgba(139,92,246,.25); }
 /* CTA chính: accent đặc + viền sáng mép trên — không glow màu */
@@ -187,29 +187,29 @@ aside ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radi
 
 /* ============ LIGHT THEME (paper sang trọng, giữ identity tím/cyan) ============ */
 /* vùng .dq-dark (galaxy, login) giữ vĩnh viễn dark — "cửa sổ nhìn vào vũ trụ" */
-:root[data-theme='light'] { --background: #faf9fc; --foreground: #211d35; }
-[data-theme='light'] .bg-\[\#07070d\]:not(.dq-dark):not(.dq-dark *) { background: #faf9fc !important; }
-[data-theme='light'] .bg-\[\#0b0b14\]:not(.dq-dark):not(.dq-dark *) { background: #f4f2fa !important; }
-[data-theme='light'] .bg-\[\#0a0a12\]:not(.dq-dark):not(.dq-dark *) { background: #f4f2fa !important; }
+:root[data-theme='light'] { --background: #faf9f5; --foreground: #1f1e1d; }
+[data-theme='light'] .bg-\[\#07070d\]:not(.dq-dark):not(.dq-dark *) { background: #faf9f5 !important; }
+[data-theme='light'] .bg-\[\#0b0b14\]:not(.dq-dark):not(.dq-dark *) { background: #f0eee6 !important; }
+[data-theme='light'] .bg-\[\#0a0a12\]:not(.dq-dark):not(.dq-dark *) { background: #f0eee6 !important; }
 [data-theme='light'] .bg-\[\#0d0d18\]:not(.dq-dark):not(.dq-dark *) { background: #ffffff !important; }
 [data-theme='light'] .bg-\[\#13131d\]:not(.dq-dark):not(.dq-dark *),
 [data-theme='light'] .bg-\[\#15151f\]:not(.dq-dark):not(.dq-dark *),
-[data-theme='light'] .bg-\[\#1c1c26\]:not(.dq-dark):not(.dq-dark *) { background: #ffffff !important; box-shadow: 0 6px 24px rgba(33,29,53,.10); }
+[data-theme='light'] .bg-\[\#1c1c26\]:not(.dq-dark):not(.dq-dark *) { background: #ffffff !important; box-shadow: 0 6px 24px rgba(31,30,29,.10); }
 [data-theme='light'] .bg-\[\#10101c\]:not(.dq-dark):not(.dq-dark *) { background: #ffffff !important; }
 [data-theme='light'] .bg-white\/5:not(.dq-dark):not(.dq-dark *),
 [data-theme='light'] .bg-white\/\[0\.03\]:not(.dq-dark):not(.dq-dark *),
-[data-theme='light'] .bg-white\/\[0\.04\]:not(.dq-dark):not(.dq-dark *) { background: rgba(33,29,53,.045) !important; }
-[data-theme='light'] .bg-white\/10:not(.dq-dark):not(.dq-dark *) { background: rgba(33,29,53,.07) !important; }
+[data-theme='light'] .bg-white\/\[0\.04\]:not(.dq-dark):not(.dq-dark *) { background: rgba(31,30,29,.045) !important; }
+[data-theme='light'] .bg-white\/10:not(.dq-dark):not(.dq-dark *) { background: rgba(31,30,29,.07) !important; }
 [data-theme='light'] .border-white\/10:not(.dq-dark):not(.dq-dark *),
-[data-theme='light'] .border-white\/5:not(.dq-dark):not(.dq-dark *) { border-color: rgba(33,29,53,.10) !important; }
-[data-theme='light'] .border-white\/15:not(.dq-dark):not(.dq-dark *) { border-color: rgba(33,29,53,.14) !important; }
-[data-theme='light'] .text-white:not(.dq-dark):not(.dq-dark *) { color: #211d35 !important; }
+[data-theme='light'] .border-white\/5:not(.dq-dark):not(.dq-dark *) { border-color: rgba(31,30,29,.10) !important; }
+[data-theme='light'] .border-white\/15:not(.dq-dark):not(.dq-dark *) { border-color: rgba(31,30,29,.14) !important; }
+[data-theme='light'] .text-white:not(.dq-dark):not(.dq-dark *) { color: #1f1e1d !important; }
 [data-theme='light'] .text-zinc-100:not(.dq-dark):not(.dq-dark *),
 [data-theme='light'] .text-zinc-200:not(.dq-dark):not(.dq-dark *),
-[data-theme='light'] .text-zinc-300:not(.dq-dark):not(.dq-dark *) { color: #3d3955 !important; }
-[data-theme='light'] .text-zinc-400:not(.dq-dark):not(.dq-dark *) { color: #5b5772 !important; }
+[data-theme='light'] .text-zinc-300:not(.dq-dark):not(.dq-dark *) { color: #4a4742 !important; }
+[data-theme='light'] .text-zinc-400:not(.dq-dark):not(.dq-dark *) { color: #6b675f !important; }
 [data-theme='light'] .text-zinc-500:not(.dq-dark):not(.dq-dark *),
-[data-theme='light'] .text-zinc-600:not(.dq-dark):not(.dq-dark *) { color: #8d89a3 !important; }
+[data-theme='light'] .text-zinc-600:not(.dq-dark):not(.dq-dark *) { color: #8f8a80 !important; }
 [data-theme='light'] .text-violet-300:not(.dq-dark):not(.dq-dark *) { color: #6d28d9 !important; }
 [data-theme='light'] .text-cyan-300:not(.dq-dark):not(.dq-dark *),
 [data-theme='light'] .text-cyan-200:not(.dq-dark):not(.dq-dark *) { color: #0e7490 !important; }
@@ -224,13 +224,13 @@ aside ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radi
 [data-theme='light'] .dq-editor .mantine-Menu-dropdown,
 [data-theme='light'] .dq-editor .bn-suggestion-menu,
 [data-theme='light'] .dq-editor [class*="Popover"],
-[data-theme='light'] .dq-editor [class*="bn-toolbar"] { background: #ffffff !important; border-color: rgba(33,29,53,.12) !important; color: #211d35 !important; }
-[data-theme='light'] .dq-editor .bn-inline-content[data-placeholder]::before { color: #a39fb6 !important; }
+[data-theme='light'] .dq-editor [class*="bn-toolbar"] { background: #ffffff !important; border-color: rgba(31,30,29,.12) !important; color: #1f1e1d !important; }
+[data-theme='light'] .dq-editor .bn-inline-content[data-placeholder]::before { color: #a8a39a !important; }
 [data-theme='light'] ::selection { background: rgba(124,58,237,.22); }
-[data-theme='light'] aside ::-webkit-scrollbar-thumb { background: rgba(33,29,53,.18); }
+[data-theme='light'] aside ::-webkit-scrollbar-thumb { background: rgba(31,30,29,.18); }
 /* galaxy = cửa sổ vũ trụ đặt trên giấy */
-[data-theme='light'] .dq-galaxy-shell { border-radius: 16px; border: 1px solid rgba(33,29,53,.12); box-shadow: 0 8px 32px rgba(33,29,53,.12); overflow: hidden; }
-[data-theme='light'] .bg-\[\#0b0b14\]\/90:not(.dq-dark):not(.dq-dark *) { background: rgba(250,249,252,.92) !important; }
+[data-theme='light'] .dq-galaxy-shell { border-radius: 16px; border: 1px solid rgba(31,30,29,.12); box-shadow: 0 8px 32px rgba(31,30,29,.12); overflow: hidden; }
+[data-theme='light'] .bg-\[\#0b0b14\]\/90:not(.dq-dark):not(.dq-dark *) { background: rgba(250,249,245,.92) !important; }
 [data-theme='light'] .bg-\[\#0d0d18\]\/95:not(.dq-dark):not(.dq-dark *),
 [data-theme='light'] .bg-\[\#0d0d18\]\/97:not(.dq-dark):not(.dq-dark *) { background: rgba(255,255,255,.96) !important; }
 
@@ -243,9 +243,9 @@ aside ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radi
 [data-theme='light'] .from-amber-400:not(.dq-dark *) { --tw-gradient-from: #b45309 var(--tw-gradient-from-position); }
 [data-theme='light'] .to-yellow-300:not(.dq-dark *) { --tw-gradient-to: #a16207 var(--tw-gradient-to-position); }
 /* card/panel = trắng nổi khối mềm, không xám bệt */
-[data-theme='light'] .bg-white\/5:not(.dq-dark):not(.dq-dark *) { background: #ffffff !important; box-shadow: 0 1px 3px rgba(33,29,53,.06), 0 4px 16px rgba(33,29,53,.05); }
+[data-theme='light'] .bg-white\/5:not(.dq-dark):not(.dq-dark *) { background: #ffffff !important; box-shadow: 0 1px 3px rgba(31,30,29,.06), 0 4px 16px rgba(31,30,29,.05); }
 [data-theme='light'] .bg-white\/\[0\.03\]:not(.dq-dark):not(.dq-dark *),
-[data-theme='light'] .bg-white\/\[0\.04\]:not(.dq-dark):not(.dq-dark *) { background: #ffffff !important; box-shadow: 0 1px 2px rgba(33,29,53,.05); }
+[data-theme='light'] .bg-white\/\[0\.04\]:not(.dq-dark):not(.dq-dark *) { background: #ffffff !important; box-shadow: 0 1px 2px rgba(31,30,29,.05); }
 [data-theme='light'] .hover\:bg-white\/\[0\.06\]:hover:not(.dq-dark):not(.dq-dark *) { background: rgba(124,58,237,.05) !important; }
 [data-theme='light'] .hover\:border-violet-400\/40:hover:not(.dq-dark):not(.dq-dark *),
 [data-theme='light'] .hover\:border-violet-400\/50:hover:not(.dq-dark):not(.dq-dark *) { border-color: rgba(109,40,217,.45) !important; }
@@ -264,36 +264,64 @@ html:not([data-theme='light']) .rounded-2xl.bg-white\/5 {
   box-shadow: inset 0 1px 0 rgba(255,255,255,.07), 0 10px 30px rgba(0,0,0,.45);
 }
 /* phân tầng nền: SURFACE LADDER theo research Linear/Raycast (mỗi bậc sáng dần ~3-5 lightness, viền 1px thay shadow màu) */
-html:not([data-theme='light']) .bg-\[\#0a0a12\] { background: #101113 !important; }
-html:not([data-theme='light']) .bg-\[\#0b0b14\] { background: #0c0d10 !important; }
+html:not([data-theme='light']) .bg-\[\#0a0a12\] { background: #21201e !important; }
+html:not([data-theme='light']) .bg-\[\#0b0b14\] { background: #1b1a18 !important; }
+html:not([data-theme='light']) .bg-\[\#06060c\],
+html:not([data-theme='light']) .bg-\[\#07070d\] { background: #1b1a18 !important; }
+html:not([data-theme='light']) .bg-\[\#0d0d18\],
+html:not([data-theme='light']) .bg-\[\#10101a\],
+html:not([data-theme='light']) .bg-\[\#10101c\],
+html:not([data-theme='light']) .bg-\[\#10121d\] { background: #21201e !important; }
 html:not([data-theme='light']) .bg-\[\#15151f\],
 html:not([data-theme='light']) .bg-\[\#1c1c26\] {
-  background: #1c1d21 !important;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.07), 0 16px 48px rgba(0,0,0,.5);
+  background: #2e2d2a !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.06), 0 16px 48px rgba(0,0,0,.4);
 }
+html:not([data-theme='light']) .bg-\[\#06060c\]\/92 { background: rgba(27,26,24,.93) !important; }
+html:not([data-theme='light']) .bg-\[\#0b0b14\]\/90 { background: rgba(27,26,24,.92) !important; }
+html:not([data-theme='light']) .bg-\[\#0d0d18\]\/95,
+html:not([data-theme='light']) .bg-\[\#0d0d18\]\/97 { background: rgba(33,32,30,.96) !important; }
+html:not([data-theme='light']) .bg-\[\#10101a\]\/85 { background: rgba(33,32,30,.86) !important; }
+html:not([data-theme='light']) .bg-\[\#10101a\]\/88 { background: rgba(33,32,30,.89) !important; }
+html:not([data-theme='light']) .bg-\[\#10101a\]\/92 { background: rgba(33,32,30,.93) !important; }
+html:not([data-theme='light']) .bg-\[\#1c1c26\]\/95 { background: rgba(46,45,42,.96) !important; }
+/* chữ: zinc xanh-lạnh → stone ấm (mực trên giấy than) */
+html:not([data-theme='light']) .text-white { color: #faf9f5 !important; }
+html:not([data-theme='light']) .text-zinc-100 { color: #ece9e2 !important; }
+html:not([data-theme='light']) .text-zinc-200 { color: #ddd9d0 !important; }
+html:not([data-theme='light']) .text-zinc-300 { color: #c9c5bb !important; }
+html:not([data-theme='light']) .text-zinc-400 { color: #a09c92 !important; }
+html:not([data-theme='light']) .text-zinc-500 { color: #807c73 !important; }
+html:not([data-theme='light']) .text-zinc-600 { color: #605d56 !important; }
+html:not([data-theme='light']) .text-zinc-700 { color: #4a4843 !important; }
+
+/* ===== CLAUDE PHILOSOPHY (13/6): giấy ấm + serif tiêu đề + heading trung tính + viền mảnh ===== */
+.ak-display { font-family: var(--font-display), Georgia, serif; letter-spacing: -0.015em; }
 
 /* ===== EDITOR TYPOGRAPHY — soạn thảo đẹp như đọc sách ===== */
-.dq-editor [data-content-type] { font-size: 16.5px; line-height: 1.78; color: #d6d6e0; }
+.dq-editor [data-content-type] { font-size: 16.5px; line-height: 1.78; color: #d6d3ca; }
 /* TẦNG CHỮ THÂN TRANG (BRANDING §2): BlockNote set 3em ở cấp BLOCK heading (→74px, to hơn title 36px!)
    → ghìm block về 16.5px rồi mới scale h1/h2/h3 — heading thân LUÔN < title trang */
 .dq-editor [data-content-type='heading'] { font-size: 16.5px !important; }
-.dq-editor h1 { font-size: 1.5em !important; font-weight: 800 !important; letter-spacing: -0.4px; margin-top: .4em; color: #fff !important; }
+.dq-editor h1 { font-family: var(--font-display), Georgia, serif; font-size: 1.5em !important; font-weight: 600 !important; letter-spacing: -0.3px; margin-top: .4em; color: #faf9f5 !important; }
 .dq-editor h2 {
-  font-size: 1.4em !important; font-weight: 700 !important; margin-top: .9em;
-  color: #c4b5fd !important;
-  border-bottom: 1px solid rgba(167,139,250,.18); padding-bottom: .15em;
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 1.35em !important; font-weight: 600 !important; margin-top: .9em;
+  color: #ece9e2 !important;
+  border-bottom: 1px solid rgba(250,249,245,.12); padding-bottom: .15em;
 }
-.dq-editor h3 { font-size: 1.15em !important; font-weight: 700 !important; color: #a5f3fc !important; margin-top: .7em; }
+.dq-editor h3 { font-family: var(--font-display), Georgia, serif; font-size: 1.12em !important; font-weight: 600 !important; color: #c9c5bb !important; margin-top: .7em; }
 .dq-editor blockquote, .dq-editor [data-content-type='quote'] {
-  border-left: 3px solid rgba(251,191,36,.65) !important;
-  background: rgba(251,191,36,.06);
-  border-radius: 0 10px 10px 0;
-  padding: 6px 14px !important;
-  font-style: italic; color: #fde68a !important;
+  border-left: 3px solid rgba(139,92,246,.45) !important;
+  background: transparent;
+  border-radius: 0;
+  padding: 4px 16px !important;
+  font-style: italic; font-family: var(--font-display), Georgia, serif;
+  color: inherit !important; font-size: 1.05em;
 }
 .dq-editor a { color: #a78bfa !important; text-decoration-color: rgba(167,139,250,.4); }
-.dq-editor code { background: rgba(34,211,238,.1) !important; color: #67e8f9 !important; border-radius: 5px; padding: 1px 6px; font-size: .9em; }
-.dq-editor [data-content-type='codeBlock'] { background: #0a0a14 !important; border: 1px solid rgba(255,255,255,.09); border-radius: 12px; }
+.dq-editor code { background: rgba(250,249,245,.08) !important; color: #ece9e2 !important; border-radius: 5px; padding: 1px 6px; font-size: .9em; }
+.dq-editor [data-content-type='codeBlock'] { background: #1b1a18 !important; border: 1px solid rgba(255,255,255,.09); border-radius: 12px; }
 .dq-editor ul li::marker, .dq-editor ol li::marker { color: #8b5cf6; }
 .dq-editor [data-content-type='checkListItem'] input { accent-color: #8b5cf6; }
 .dq-editor hr { border-color: rgba(255,255,255,.12); }
@@ -301,11 +329,11 @@ html:not([data-theme='light']) .bg-\[\#1c1c26\] {
 /* dòng đang gõ sáng nhẹ — biết mình ở đâu */
 .dq-editor .ProseMirror-focused [data-content-type]:has(.ProseMirror-trailingBreak):hover { background: rgba(139,92,246,.04); }
 /* light theme: chữ editor tối lại */
-[data-theme='light'] .dq-editor [data-content-type] { color: #2d2a40; }
-[data-theme='light'] .dq-editor h1 { color: #211d35 !important; }
-[data-theme='light'] .dq-editor h2 { color: #6d28d9 !important; }
-[data-theme='light'] .dq-editor h3 { color: #0e7490 !important; }
-[data-theme='light'] .dq-editor blockquote { color: #92400e !important; background: rgba(251,191,36,.09); }
+[data-theme='light'] .dq-editor [data-content-type] { color: #3a3833; }
+[data-theme='light'] .dq-editor h1 { color: #1f1e1d !important; }
+[data-theme='light'] .dq-editor h2 { color: #1f1e1d !important; border-bottom-color: rgba(31,30,29,.12); }
+[data-theme='light'] .dq-editor h3 { color: #4a4742 !important; }
+[data-theme='light'] .dq-editor blockquote { color: #52504a !important; background: transparent; }
 
 /* ===== nút HUD có demo sống — thấy ngay chức năng ===== */
 .dq-prev { display:inline-block; width:8px; height:8px; border-radius:9999px; background:#a78bfa; box-shadow:0 0 6px #a78bfa; }

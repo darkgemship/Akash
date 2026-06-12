@@ -73,3 +73,16 @@ Tầng chữ: Page title `text-4xl/800` là LỚN NHẤT trang — không nội 
 | fuchsia đơn lẻ (text/bg/border/shadow) | violet tương ứng |
 | pink đơn lẻ trong chrome | amber tương ứng |
 | Geist Sans / Arial | Be Vietnam Pro |
+
+## §6 — TRIẾT LÝ CLAUDE (founder yêu cầu 13/6: "thực sự clean như Claude")
+
+Giữ tím Akash làm accent duy nhất (§1-accent không đổi), nhưng toàn bộ NỀN + CHỮ + NHỊP chuyển sang triết lý Anthropic/Claude:
+
+1. **Giấy ấm thay đen lạnh.** Light (MẶC ĐỊNH mới): nền kem `#faf9f5` (pampas), panel `#f0eee6` (oat), card trắng viền mảnh; mực ấm `#1f1e1d / #4a4742 / #6b675f / #8f8a80`, viền `rgba(31,30,29,.09–.14)`. Dark: graphite ẤM `#1b1a18 → #21201e → #262523 → #2e2d2a` (hết tông xanh-đen #05060c cũ), chữ stone ấm `#faf9f5/#ece9e2/#c9c5bb/#a09c92` (remap text-zinc-* trong layer dark).
+2. **Serif có hồn cho display** — Lora (subset vietnamese), vai trò như Copernicus của Claude: wordmark Akash, title trang, chào Home, h1/h2/h3 trong editor. UI vẫn Be Vietnam Pro, số liệu JetBrains Mono. Class: `.ak-display`.
+3. **Heading trung tính** — bỏ h2 tím / h3 cyan trong editor; heading giờ là mực đậm serif + border mảnh. Màu chỉ còn ở LINK (tím), marker list (tím), CTA.
+4. **Trích dẫn thanh lịch** — blockquote hết nền vàng: serif nghiêng, border trái tím nhạt, không nền.
+5. **Viền mảnh thay glow** — code block mộc, shadow nhẹ hơn ở dark.
+6. Theme mặc định cho user mới = LIGHT kem (chữ ký Claude); toggle 🌙/☀️ giữ nguyên; Galaxy vẫn là "cửa sổ vũ trụ" nền tối trên giấy.
+
+> Đổi sang terracotta (#d97757 — màu Claude chính hiệu) nếu founder muốn full-Claude: chỉ cần đổi `--ak-violet`. Hiện giữ tím để Akash vẫn là Akash.

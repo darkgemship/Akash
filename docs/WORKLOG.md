@@ -2,6 +2,14 @@
 
 > Ghi lại mỗi đợt build để lần sau làm tốt hơn. Quy trình chuẩn: **đọc docs → sửa code → `npm run build` → test thật trên preview (đăng nhập, bấm từng nút) → cập nhật docs**.
 
+## 2026-06-13 (đợt 12) — 🪶 TRIẾT LÝ CLAUDE: giấy ấm + serif Lora + heading trung tính
+**Founder**: "dùng triết lý design của claude bỏ vào Akash — thực sự clean như claude". Giữ 1-accent tím; đổi nền/chữ/nhịp (BRANDING §6 mới).
+1. **globals.css**: light = giấy kem Claude (#faf9f5/#f0eee6/mực ấm 1f1e1d, viền rgba(31,30,29)); dark = graphite ấm (remap toàn bộ thang hex cũ #06060c…#1c1c26 → #1b1a18…#2e2d2a, kèm các biến thể /85–/97) + remap text-zinc-* lạnh → stone ấm; editor: h1/h2/h3 serif trung tính (bỏ tím/cyan), blockquote serif nghiêng border tím (bỏ nền vàng), code mộc.
+2. **layout.tsx**: + font Lora (--font-display, subset vietnamese); mặc định theme = light cho user mới (localStorage null → 'light'); suppressHydrationWarning trên <html> (script theme chạy trước hydrate).
+3. **`.ak-display`** áp cho: wordmark Akash, title trang (page.tsx), chào Home (Pages.tsx).
+**Verify**: đo computed style (body #faf9f5, title/h2 Lora, h2 mực #1f1e1d), screenshot cả 2 theme. Build xanh.
+**Bug & bài học**: (1) chạy `npm run build` khi dev server đang giữ `.next` → Turbopack cache persistent serve CSS CŨ kể cả sau restart server — phải `rm -rf .next`; từ nay build xong là xoá .next rồi mới start dev lại. (2) theme script + SSR → hydration warning hàng loạt: fix chuẩn suppressHydrationWarning.
+
 ## 2026-06-13 (đợt 11) — 🪞 Ánh xạ kho chung → kho tôi + Cây gốc thành property + 100% trang có loại
 **Yêu cầu founder**: đổi "Hành trình" → "Hành trình anh hùng của tôi"; kho cá nhân có phần ánh xạ từ nhân loại/QNET vào (đi qua ánh xạ rồi mới link vào page cụ thể); phân đủ loại trang cho mọi page + "rơi vào cây nào" thành trường Properties cố định.
 1. **Đổi tên cây 1**: DB (props->>hub='journey') + 2 chỗ ensureHub trong page.tsx + caption capture ở Pages.tsx.

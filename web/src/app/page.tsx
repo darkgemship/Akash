@@ -906,7 +906,7 @@ function Workspace({ user }: { user: User }) {
                     )}
                   </div>
                 </div>
-                <input value={editTitle} readOnly={!canEditLayer(layerOf(editing.id))} onChange={e => setEditTitle(e.target.value)} onBlur={saveTitle} onKeyDown={e => e.key === 'Enter' && (e.target as HTMLInputElement).blur()} className="w-full text-4xl font-extrabold bg-transparent outline-none placeholder:text-zinc-700 mb-2" placeholder="Trang chưa có tiêu đề" />
+                <input value={editTitle} readOnly={!canEditLayer(layerOf(editing.id))} onChange={e => setEditTitle(e.target.value)} onBlur={saveTitle} onKeyDown={e => e.key === 'Enter' && (e.target as HTMLInputElement).blur()} className="ak-display w-full text-4xl font-bold bg-transparent outline-none placeholder:text-zinc-700 mb-2" placeholder="Trang chưa có tiêu đề" />
                 {/* ① PROPERTIES — 📌 trường chuẩn ban biên tập (fix cứng) + ✏️ trường riêng user (PageFrame.tsx). Trang tổng (kho/hub) không có */}
                 {(() => {
                   const node = nodeOf(editing.id)
