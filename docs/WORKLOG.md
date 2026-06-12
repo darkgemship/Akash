@@ -186,3 +186,8 @@
 - **Dòng đời 3 THANG THỜI GIAN RIÊNG**: mỗi kho một trục min/max độc lập (nhân loại trải thế kỷ với tick bước 50-200 năm, QNET thập kỷ, đời tôi + 6 tháng tương lai); ◆ HÔM NAY trên từng band; band nhân loại vẽ **đoạn vàng "◆ đời bạn — một chấm của vô tận"** = đời user chiếu lên thang nhân loại; chân mốc rơi đúng spine kho mình, vạch QUÁ KHỨ/TƯƠNG LAI chỉ ở band ĐỜI TÔI.
 - **Trackpad macbook chuẩn Figma**: native wheel listener passive:false (hết zoom cả trang) — pinch = zoom tại con trỏ (clamp 0.8-1.25/tick, verify 100→125%), 2 ngón = pan (neuro: 2 ngón = xoay não); **semantic node size** k^0.55 — zoom sâu node không choán màn.
 - Verify: build xanh, tsc sạch, timeline 3 band render đúng trên preview, zoom đo bằng dispatch WheelEvent.
+
+## 2026-06-12 (đợt 5) — ⏳ TIME-ZOOM quanh cột HÔM NAY + chống node đè
+- **Dòng đời v3**: CỘT ◆ HÔM NAY thành trục tham chiếu CHUNG — cả 3 dòng thời gian (nhân loại/đời tôi/QNET) neo NOW vào cùng một cột X (78% màn); **pinch = zoom THỜI GIAN** quanh cột (×1→×120, không phải zoom camera): ra xa thấy nghìn năm, vào gần thấy từng tháng; tick năm tự đổi bước nice (1→2000 năm) theo mật độ px; verify: zoom 6 tick → band đời tôi hiện từng năm 2021-2028, 3 band thẳng hàng tại cột.
+- **Chống node đè nhau** (galaxy + mandala): collision relaxation 22 vòng với spatial hash (minD = rA+rB+8) — node tách đều như Obsidian, kho đứng yên.
+- Backlog ghi nhận: trích NGÀY nhắc trong nội dung page → mốc phụ lên trục time (cần select md toàn org — Phase 2, đã ghi AUDIT).

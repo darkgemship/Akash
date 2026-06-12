@@ -70,7 +70,9 @@ export default function Galaxy({ nodes, links, onOpen, onConnect }: {
   const dimCountRef = useRef<Map<string, Record<string, number>>>(new Map())  // node → đếm link theo chiều
   const primaryDimRef = useRef<Map<string, string>>(new Map())                // node → trục chính (radar)
   const unplacedRef = useRef<GNode[]>([])                                     // radar: chưa có link chiều / timeline: chưa có date
-  const tlMetaRef = useRef<Record<string, { min: number; max: number; y: number }> | null>(null)
+  const tlMetaRef = useRef<Record<string, { pxPerMs: number; y: number; min: number }> | null>(null)
+  const tlZoomRef = useRef(1)                       // zoom THỜI GIAN quanh cột HÔM NAY (1 = thấy trọn quá khứ)
+  const relayoutRef = useRef<() => void>(() => {})  // wheel gọi lại layout khi đổi time-zoom
   // 🧠 NEURO 3D: vị trí 3D + góc xoay (kéo nền để xoay, tự quay chậm)
   const p3dRef = useRef<Map<string, { x: number; y: number; z: number; r: number; hue: number; c: number }>>(new Map())
   const neuroClustersRef = useRef(0)
@@ -220,16 +222,18 @@ export default function Galaxy({ nodes, links, onOpen, onConnect }: {
         const dated = nodes.filter(n => n.event_date && n.kind !== 'kho')
         unplacedRef.current = nodes.filter(n => !n.event_date && n.kind !== 'kho' && n.kind !== 'folder')
         if (dated.length) {
+          // CỘT HÔM NAY = trục tham chiếu chung: cả 3 dòng thời gian neo NOW vào CÙNG MỘT CỘT X (founder 12/6).
+          // Pinch = zoom THỜI GIAN quanh cột: ra xa thấy nghìn năm, vào gần thấy từng tháng.
           const bandY: Record<string, number> = { humanity: H * 0.2, personal: H * 0.52, corporate: H * 0.82 }
-          const meta: Record<string, { min: number; max: number; y: number }> = {}
+          const nowTm = Date.now()
+          const X_NOW = 60 + (W - 120) * 0.78
+          const meta: Record<string, { pxPerMs: number; y: number; min: number }> = {}
           for (const layer of ['humanity', 'personal', 'corporate'] as const) {
             const ts = dated.filter(n => (n.layer ?? 'personal') === layer).map(n => new Date(n.event_date!).getTime())
             if (!ts.length) continue
-            let mn = Math.min(...ts)
-            let mx = Math.max(...ts, layer === 'personal' ? Date.now() + 180 * 86400000 : Date.now())
-            const pad = Math.max((mx - mn) * 0.05, 86400000 * 30)
-            mn -= pad; mx += pad
-            meta[layer] = { min: mn, max: mx, y: bandY[layer] }
+            const mn = Math.min(...ts)
+            const base = (X_NOW - 60) / Math.max(86400000, nowTm - mn) // zoom=1: mốc cổ nhất của band chạm mép trái
+            meta[layer] = { pxPerMs: base * tlZoomRef.current, y: bandY[layer], min: mn }
           }
           tlMetaRef.current = Object.keys(meta).length ? meta : null
           const lanes: Record<string, number[]> = { personal: [], corporate: [], humanity: [] }
@@ -237,7 +241,7 @@ export default function Galaxy({ nodes, links, onOpen, onConnect }: {
           for (const n of sorted) {
             const layer = (n.layer ?? 'personal') as 'personal' | 'corporate' | 'humanity'
             const mm = meta[layer]; if (!mm) continue
-            const x = 60 + ((new Date(n.event_date!).getTime() - mm.min) / (mm.max - mm.min)) * (W - 120)
+            const x = X_NOW + (new Date(n.event_date!).getTime() - nowTm) * mm.pxPerMs
             const ls = lanes[layer]
             let lane = 0
             while (lane < 3 && ls[lane] !== undefined && x - ls[lane] < 56) lane++
@@ -320,12 +324,42 @@ export default function Galaxy({ nodes, links, onOpen, onConnect }: {
         let cur = -Math.PI / 2
         for (const r of roots) { const w = ((cnt.get(r.id) ?? 1) / Math.max(1, totalAll)) * Math.PI * 2; place(r, cur, cur + w, 0); cur += w }
       }
+      // CHỐNG NODE ĐÈ NHAU (Obsidian-style collision): vài vòng đẩy tách bằng spatial hash — gọn gàng, chỉnh chu
+      if (mode === 'galaxy' || mode === 'mandala') {
+        const arr = [...m.values()].filter(p => p.node.kind !== 'kho')
+        for (let it = 0; it < 22; it++) {
+          let moved = false
+          const cell = 64
+          const grid = new Map<string, P[]>()
+          for (const p of arr) { const k2 = `${Math.floor(p.x / cell)},${Math.floor(p.y / cell)}`; const b = grid.get(k2); if (b) b.push(p); else grid.set(k2, [p]) }
+          for (const p of arr) {
+            const cgx = Math.floor(p.x / cell), cgy = Math.floor(p.y / cell)
+            for (let gx = cgx - 1; gx <= cgx + 1; gx++) for (let gy = cgy - 1; gy <= cgy + 1; gy++) {
+              const bucket = grid.get(`${gx},${gy}`); if (!bucket) continue
+              for (const q of bucket) {
+                if (q === p) continue
+                const dx = p.x - q.x, dy = p.y - q.y
+                const d2 = Math.hypot(dx, dy) || 0.01
+                const minD = p.r + q.r + 8
+                if (d2 < minD) {
+                  const push = (minD - d2) / 2
+                  p.x += dx / d2 * push; p.y += dy / d2 * push
+                  q.x -= dx / d2 * push; q.y -= dy / d2 * push
+                  moved = true
+                }
+              }
+            }
+          }
+          if (!moved) break
+        }
+      }
       // vị trí user đã kéo tay (Obsidian-style) sống sót qua re-layout
       manualPos.current.forEach((pos, id) => { const p = m.get(id); if (p) { p.x = pos.x; p.y = pos.y } })
       pts.current = m
       setUnplacedCount(unplacedRef.current.length)
     }
     layout()
+    relayoutRef.current = layout
 
     function wpos(p: P): { x: number; y: number; r: number } {
       const mo = motionRef.current
@@ -528,7 +562,7 @@ export default function Galaxy({ nodes, links, onOpen, onConnect }: {
         ctx.fillStyle = '#71717a'; ctx.font = `${8.5 * dpr}px Inter, sans-serif`
         ctx.fillText('liên kết', SX(cx), SY(cy) + 17 * dpr)
       }
-      // 📜 DÒNG ĐỜI — 3 dòng thời gian ĐỘC LẬP, mỗi dòng thang đo riêng
+      // 📜 DÒNG ĐỜI — CỘT HÔM NAY là trục tham chiếu chung, 3 dòng thời gian neo vào cùng một cột
       if (mode === 'timeline' && tlMetaRef.current) {
         const metas = tlMetaRef.current
         const BAND_STYLE: Record<string, { label: string; color: string; sub: string }> = {
@@ -537,67 +571,65 @@ export default function Galaxy({ nodes, links, onOpen, onConnect }: {
           corporate: { label: '🌐 QNET', color: '#67e8f9', sub: 'dòng tổ chức' },
         }
         const nowTm = Date.now()
+        const X_NOW = 60 + (W - 120) * 0.78
+        // ===== CỘT HÔM NAY xuyên suốt cả 3 dòng — trục tham chiếu của mọi thời gian =====
+        const fg = ctx.createLinearGradient(SX(X_NOW), 0, SX(W - 40), 0)
+        fg.addColorStop(0, 'rgba(245,185,66,.06)'); fg.addColorStop(1, 'rgba(245,185,66,.01)')
+        ctx.fillStyle = fg; ctx.fillRect(SX(X_NOW), SY(H * 0.06), SX(W - 40) - SX(X_NOW), SY(H * 0.92) - SY(H * 0.06))
+        ctx.strokeStyle = 'rgba(245,185,66,.16)'; ctx.lineWidth = 5 * dpr
+        ctx.beginPath(); ctx.moveTo(SX(X_NOW), SY(H * 0.07)); ctx.lineTo(SX(X_NOW), SY(H * 0.92)); ctx.stroke()
+        ctx.strokeStyle = 'rgba(245,185,66,.6)'; ctx.lineWidth = 1.5 * dpr
+        ctx.setLineDash([7 * dpr, 5 * dpr])
+        ctx.beginPath(); ctx.moveTo(SX(X_NOW), SY(H * 0.07)); ctx.lineTo(SX(X_NOW), SY(H * 0.92)); ctx.stroke()
+        ctx.setLineDash([])
+        ctx.fillStyle = '#f5b942'; ctx.font = `bold ${10 * dpr}px monospace`; ctx.textAlign = 'center'
+        ctx.fillText('◆ HÔM NAY', SX(X_NOW), SY(H * 0.05))
+        ctx.font = `${8.5 * dpr}px monospace`
+        ctx.fillStyle = 'rgba(148,163,184,.55)'; ctx.textAlign = 'right'
+        ctx.fillText('◂ QUÁ KHỨ — chuyển hoá bài học', SX(X_NOW) - 10 * dpr, SY(H * 0.05))
+        ctx.fillStyle = 'rgba(245,185,66,.7)'; ctx.textAlign = 'left'
+        ctx.fillText('TƯƠNG LAI ▸', SX(X_NOW) + 10 * dpr, SY(H * 0.05))
+        ctx.fillStyle = 'rgba(100,116,139,.5)'; ctx.textAlign = 'center'
+        ctx.fillText(`⌥ pinch để phóng thời gian · ×${tlZoomRef.current < 10 ? tlZoomRef.current.toFixed(1) : Math.round(tlZoomRef.current)}`, SX(X_NOW), SY(H * 0.945))
         for (const [layer, mm] of Object.entries(metas)) {
           const st = BAND_STYLE[layer]
-          const X = (tm: number) => 60 + ((tm - mm.min) / (mm.max - mm.min)) * (W - 120)
+          const X = (tm: number) => X_NOW + (tm - nowTm) * mm.pxPerMs
           // spine
           ctx.strokeStyle = withAlpha(st.color, 0.12); ctx.lineWidth = 7 * dpr
-          ctx.beginPath(); ctx.moveTo(SX(60), SY(mm.y)); ctx.lineTo(SX(W - 60), SY(mm.y)); ctx.stroke()
+          ctx.beginPath(); ctx.moveTo(SX(40), SY(mm.y)); ctx.lineTo(SX(W - 40), SY(mm.y)); ctx.stroke()
           ctx.strokeStyle = withAlpha(st.color, 0.55); ctx.lineWidth = 1.6 * dpr
-          ctx.beginPath(); ctx.moveTo(SX(60), SY(mm.y)); ctx.lineTo(SX(W - 60), SY(mm.y)); ctx.stroke()
+          ctx.beginPath(); ctx.moveTo(SX(40), SY(mm.y)); ctx.lineTo(SX(W - 40), SY(mm.y)); ctx.stroke()
           // nhãn band
           ctx.textAlign = 'left'; ctx.font = `bold ${9 * dpr}px monospace`
-          ctx.fillStyle = withAlpha(st.color, 0.9); ctx.fillText(st.label, SX(62), SY(mm.y - 44))
+          ctx.fillStyle = withAlpha(st.color, 0.9); ctx.fillText(st.label, SX(44), SY(mm.y - 44))
           ctx.font = `${7.5 * dpr}px monospace`; ctx.fillStyle = withAlpha(st.color, 0.45)
-          ctx.fillText(st.sub, SX(62), SY(mm.y - 34))
-          // tick năm — bước "đẹp" theo độ dài thang riêng của band
-          const spanYears = (mm.max - mm.min) / (365.25 * 86400000)
-          const step = spanYears > 600 ? 200 : spanYears > 250 ? 100 : spanYears > 120 ? 50 : spanYears > 60 ? 20 : spanYears > 25 ? 10 : spanYears > 12 ? 4 : 1
-          const y0 = Math.ceil(new Date(mm.min).getFullYear() / step) * step
-          const y1 = new Date(mm.max).getFullYear()
+          ctx.fillText(st.sub, SX(44), SY(mm.y - 34))
+          // tick năm theo mật độ px thật của band (zoom đổi → bước đổi)
+          const pxPerYear = mm.pxPerMs * 31557600000 * cam.current.k
+          const NICE = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000]
+          const step = NICE.find(s => s * pxPerYear >= 72) ?? 2000
+          const tMin = nowTm - (X_NOW - 40) / mm.pxPerMs, tMax = nowTm + (W - 40 - X_NOW) / mm.pxPerMs
+          const yA = Math.ceil(new Date(tMin).getFullYear() / step) * step
+          const yB = new Date(tMax).getFullYear()
           ctx.font = `${9 * dpr}px monospace`; ctx.textAlign = 'center'
-          for (let y = y0; y <= y1; y += step) {
+          for (let y = yA; y <= yB; y += step) {
             const x = X(new Date(y, 0, 1).getTime())
             ctx.strokeStyle = 'rgba(100,116,139,.35)'; ctx.lineWidth = 1 * dpr
             ctx.beginPath(); ctx.moveTo(SX(x), SY(mm.y - 4)); ctx.lineTo(SX(x), SY(mm.y + 4)); ctx.stroke()
             ctx.fillStyle = '#64748b'; ctx.fillText(String(y), SX(x), SY(mm.y + 16))
           }
-          // ◆ HÔM NAY trên từng band (thang riêng → vị trí riêng)
-          if (nowTm > mm.min && nowTm < mm.max) {
-            const xN = X(nowTm)
-            ctx.drawImage(glowSprite('#f5b942'), SX(xN) - 9 * dpr, SY(mm.y) - 9 * dpr, 18 * dpr, 18 * dpr)
-            ctx.fillStyle = '#f5b942'
-            ctx.beginPath(); ctx.arc(SX(xN), SY(mm.y), 2.4 * dpr, 0, 6.28); ctx.fill()
-          }
-          // "đời bạn = MỘT CHẤM của vô tận": đoạn đời user chiếu lên band nhân loại
+          // chấm vàng nơi cột HÔM NAY cắt spine
+          ctx.drawImage(glowSprite('#f5b942'), SX(X_NOW) - 9 * dpr, SY(mm.y) - 9 * dpr, 18 * dpr, 18 * dpr)
+          ctx.fillStyle = '#f5b942'; ctx.beginPath(); ctx.arc(SX(X_NOW), SY(mm.y), 2.4 * dpr, 0, 6.28); ctx.fill()
+          // "đời bạn = MỘT CHẤM của vô tận" trên band nhân loại
           if (layer === 'humanity' && metas.personal) {
-            const a2 = Math.max(mm.min, metas.personal.min), b2 = Math.min(mm.max, nowTm)
-            if (b2 > a2) {
-              const xa = SX(X(a2)), xb = Math.max(SX(X(b2)), SX(X(a2)) + 3 * dpr)
-              ctx.strokeStyle = 'rgba(245,185,66,.9)'; ctx.lineWidth = 3.5 * dpr; ctx.lineCap = 'round'
-              ctx.beginPath(); ctx.moveTo(xa, SY(mm.y)); ctx.lineTo(xb, SY(mm.y)); ctx.stroke()
-              ctx.fillStyle = 'rgba(245,185,66,.85)'; ctx.font = `${8 * dpr}px monospace`; ctx.textAlign = 'left'
-              ctx.fillText('◆ đời bạn — một chấm của vô tận', xb + 6 * dpr, SY(mm.y - 8))
-            }
+            const xa = Math.max(SX(40), SX(X(metas.personal.min)))
+            const xb = Math.max(SX(X_NOW), xa + 3 * dpr)
+            ctx.strokeStyle = 'rgba(245,185,66,.9)'; ctx.lineWidth = 3.5 * dpr; ctx.lineCap = 'round'
+            ctx.beginPath(); ctx.moveTo(xa, SY(mm.y)); ctx.lineTo(xb, SY(mm.y)); ctx.stroke()
+            ctx.fillStyle = 'rgba(245,185,66,.85)'; ctx.font = `${8 * dpr}px monospace`; ctx.textAlign = 'right'
+            ctx.fillText('◆ đời bạn — một chấm của vô tận', SX(X_NOW) - 8 * dpr, SY(mm.y - 8))
           }
-        }
-        // vạch HÔM NAY lớn + QUÁ KHỨ/TƯƠNG LAI chỉ trên band ĐỜI TÔI
-        const pm = metas.personal
-        if (pm && nowTm > pm.min && nowTm < pm.max) {
-          const xNow = 60 + ((nowTm - pm.min) / (pm.max - pm.min)) * (W - 120)
-          const fg = ctx.createLinearGradient(SX(xNow), 0, SX(W - 60), 0)
-          fg.addColorStop(0, 'rgba(245,185,66,.06)'); fg.addColorStop(1, 'rgba(245,185,66,.01)')
-          ctx.fillStyle = fg; ctx.fillRect(SX(xNow), SY(pm.y - 110), SX(W - 60) - SX(xNow), SY(pm.y + 40) - SY(pm.y - 110))
-          ctx.strokeStyle = 'rgba(245,185,66,.5)'; ctx.lineWidth = 1.5 * dpr
-          ctx.setLineDash([6 * dpr, 5 * dpr])
-          ctx.beginPath(); ctx.moveTo(SX(xNow), SY(pm.y - 110)); ctx.lineTo(SX(xNow), SY(pm.y + 36)); ctx.stroke()
-          ctx.setLineDash([])
-          ctx.fillStyle = '#f5b942'; ctx.font = `bold ${9.5 * dpr}px monospace`; ctx.textAlign = 'center'
-          ctx.fillText('◆ HÔM NAY', SX(xNow), SY(pm.y - 118))
-          ctx.fillStyle = 'rgba(148,163,184,.55)'; ctx.font = `${8.5 * dpr}px monospace`
-          ctx.textAlign = 'right'; ctx.fillText('◂ QUÁ KHỨ — chuyển hoá bài học', SX(xNow) - 10 * dpr, SY(pm.y - 106))
-          ctx.textAlign = 'left'; ctx.fillStyle = 'rgba(245,185,66,.7)'
-          ctx.fillText('TƯƠNG LAI — mốc cần lấp ▸', SX(xNow) + 10 * dpr, SY(pm.y - 106))
         }
         // chân mốc rơi xuống ĐÚNG spine của kho mình
         pts.current.forEach(pp => {
@@ -961,8 +993,15 @@ export default function Galaxy({ nodes, links, onOpen, onConnect }: {
     const onW = (e: WheelEvent) => {
       e.preventDefault()
       if (e.ctrlKey || e.metaKey) {
+        const f = Math.min(1.25, Math.max(0.8, Math.exp(-e.deltaY * 0.012)))
+        if (mode === 'timeline') {
+          // dòng đời: pinch = ZOOM THỜI GIAN quanh cột HÔM NAY (không phải zoom camera)
+          tlZoomRef.current = Math.min(120, Math.max(1, tlZoomRef.current * f))
+          relayoutRef.current()
+          return
+        }
         const r = cv.getBoundingClientRect()
-        zoomAt(e.clientX - r.left, e.clientY - r.top, Math.min(1.25, Math.max(0.8, Math.exp(-e.deltaY * 0.012))))
+        zoomAt(e.clientX - r.left, e.clientY - r.top, f)
       } else if (mode === 'neuro') {
         rotRef.current.a += e.deltaX * 0.002
         rotRef.current.b = Math.max(-1.2, Math.min(1.2, rotRef.current.b + e.deltaY * 0.002))
