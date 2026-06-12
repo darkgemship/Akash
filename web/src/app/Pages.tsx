@@ -46,7 +46,7 @@ function VoiceCard({ me }: { me: string }) {
         <Lbl>🎙️ Giọng của tôi — AI viết content ĐÚNG GIỌNG BẠN từ đây ({filled}/8)</Lbl>
         <button onClick={() => setOpen(o => !o)} className="text-xs rounded-lg bg-white/10 border border-white/10 px-3 py-1.5">{open ? 'Thu gọn' : filled ? 'Sửa' : '✍️ Bắt đầu'}</button>
       </div>
-      <div className="h-1.5 rounded-full bg-white/5 overflow-hidden"><div className="h-full bg-gradient-to-r from-amber-500 to-yellow-400 transition-all" style={{ width: `${filled / 8 * 100}%` }} /></div>
+      <div className="h-1.5 rounded-full bg-white/5 overflow-hidden"><div className="h-full bg-amber-400 text-black hover:bg-amber-300 transition-all" style={{ width: `${filled / 8 * 100}%` }} /></div>
       {open && (
         <div className="mt-3 space-y-2.5">
           {VOICE_QS.map((q2, i) => (
@@ -59,7 +59,7 @@ function VoiceCard({ me }: { me: string }) {
             const { error } = await supabase.from('profiles').upsert({ id: me, voice: { answers: ans, updated_at: new Date().toISOString() } })
             setSaved(error ? '⚠️ ' + error.message : '✅ Đã lưu giọng của bạn')
             setTimeout(() => setSaved(''), 2500)
-          }} className="w-full rounded-xl bg-gradient-to-r from-amber-500 to-yellow-400 py-2.5 text-sm font-bold">💾 Lưu giọng</button>
+          }} className="w-full rounded-xl bg-amber-400 text-black hover:bg-amber-300 py-2.5 text-sm font-bold">💾 Lưu giọng</button>
           {saved && <p className="text-xs text-zinc-300">{saved}</p>}
         </div>
       )}
@@ -110,9 +110,9 @@ export function Profile({ user }: { user: User }) {
         </div>
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-        <Card><Lbl>⚡ Qi điểm</Lbl><div className="text-3xl font-black bg-gradient-to-r from-amber-300 to-yellow-500 bg-clip-text text-transparent">{qi}</div><p className="text-[10px] text-zinc-600 mt-1">thấm 10 · content 5 · nối 3 · trang 1</p></Card>
+        <Card><Lbl>⚡ Qi điểm</Lbl><div className="text-3xl font-black text-amber-300">{qi}</div><p className="text-[10px] text-zinc-600 mt-1">thấm 10 · content 5 · nối 3 · trang 1</p></Card>
         <Card><Lbl>🔥 Streak</Lbl><div className="text-3xl font-black">{streak}<span className="text-sm text-zinc-500"> ngày</span></div></Card>
-        <Card><Lbl>🏆 Tổng Độ Chuyển hoá</Lbl><div className="text-3xl font-black bg-gradient-to-r from-violet-400 to-cyan-300 bg-clip-text text-transparent">{total}</div></Card>
+        <Card><Lbl>🏆 Tổng Độ Chuyển hoá</Lbl><div className="text-3xl font-black text-zinc-50">{total}</div></Card>
         <Card><Lbl>🎓 Bài đã chuyển hoá</Lbl><div className="text-3xl font-black">{learned}</div></Card>
       </div>
       <VoiceCard me={user.id} />
@@ -120,7 +120,7 @@ export function Profile({ user }: { user: User }) {
         <Lbl>🔒 Đổi mật khẩu</Lbl>
         <div className="flex gap-2">
           <input type="password" value={pw} onChange={e => setPw(e.target.value)} placeholder="Mật khẩu mới (≥ 6 ký tự)" className="flex-1 rounded-xl bg-white/5 border border-white/10 px-3 py-2.5 text-sm outline-none" />
-          <button onClick={changePw} className="rounded-xl bg-gradient-to-r from-violet-500 to-cyan-500 px-4 text-sm font-semibold">Đổi</button>
+          <button onClick={changePw} className="rounded-xl ak-cta px-4 text-sm font-semibold">Đổi</button>
         </div>
         {msg && <p className="text-xs mt-2 text-zinc-300">{msg}</p>}
       </Card>
@@ -220,7 +220,7 @@ export function Studio({ orgId, user, canEdit, canApprove, pages, onOpen, onRelo
     return (
       <div key={pg.id}>
         <button onClick={() => setDestId(sel ? null : pg.id)} style={{ paddingLeft: 8 + depth * 18 }}
-          className={`w-full flex items-center gap-1.5 rounded-lg py-1.5 pr-2 text-left text-xs border transition ${sel ? 'bg-gradient-to-r from-violet-500/30 to-blue-500/15 border-violet-400/50 text-white font-semibold' : 'border-transparent text-zinc-300 hover:bg-white/5'}`}>
+          className={`w-full flex items-center gap-1.5 rounded-lg py-1.5 pr-2 text-left text-xs border transition ${sel ? 'bg-violet-500/15 border-violet-400/50 text-white font-semibold' : 'border-transparent text-zinc-300 hover:bg-white/5'}`}>
           <span onClick={e => { e.stopPropagation(); setDestOpen(s => { const n = new Set(s); if (n.has(pg.id)) n.delete(pg.id); else n.add(pg.id); return n }) }}
             className={`w-4 shrink-0 text-center text-[10px] ${kids.length ? 'text-zinc-500 hover:text-white cursor-pointer' : 'text-transparent'}`}>{open ? '▾' : '▸'}</span>
           <span className="shrink-0">{pg.icon || '📄'}</span>
@@ -296,7 +296,7 @@ export function Studio({ orgId, user, canEdit, canApprove, pages, onOpen, onRelo
     setTimeout(() => { onOpen(id) }, 900)
   }
 
-  const stepCls = (n: number) => `flex-1 text-center text-[11px] py-2 rounded-xl border transition ${step === n ? 'bg-gradient-to-r from-violet-500/30 to-blue-500/25 border-violet-400/40 text-white font-bold' : step > n ? 'bg-white/5 border-white/10 text-zinc-400' : 'bg-white/[0.02] border-white/5 text-zinc-600'}`
+  const stepCls = (n: number) => `flex-1 text-center text-[11px] py-2 rounded-xl border transition ${step === n ? 'bg-violet-500/15 border-violet-400/40 text-white font-bold' : step > n ? 'bg-white/5 border-white/10 text-zinc-400' : 'bg-white/[0.02] border-white/5 text-zinc-600'}`
   return (
     <div className="px-8 pb-8 max-w-4xl mx-auto">
       <div className="flex items-center justify-between mb-1">
@@ -314,7 +314,7 @@ export function Studio({ orgId, user, canEdit, canApprove, pages, onOpen, onRelo
       {step === 1 && (
         <Card>
           <textarea value={raw} onChange={e => setRaw(e.target.value)} placeholder="Dán bất cứ gì: ghi chép buổi event, transcript video, bài copy từ nhóm, chương sách…" className="w-full h-64 rounded-xl bg-white/5 border border-white/10 p-4 text-sm outline-none focus:border-violet-400/50 mb-3" />
-          <button onClick={analyze} disabled={!raw.trim()} className="w-full rounded-xl bg-gradient-to-r from-violet-600 via-blue-600 to-cyan-500 py-3 text-sm font-bold disabled:opacity-40 shadow-lg shadow-violet-500/25">⚡ Phân tích & đề xuất →</button>
+          <button onClick={analyze} disabled={!raw.trim()} className="w-full rounded-xl ak-cta py-3 text-sm font-bold disabled:opacity-40">⚡ Phân tích & đề xuất →</button>
         </Card>
       )}
 
@@ -340,7 +340,7 @@ export function Studio({ orgId, user, canEdit, canApprove, pages, onOpen, onRelo
               {/* 📂 cây folder của kho đang chọn — bấm chọn nơi nạp, ▸ mở cấp con */}
               <div className="max-h-44 overflow-auto rounded-lg bg-black/20 border border-white/5 p-1.5 space-y-0.5">
                 <button onClick={() => setDestId(null)}
-                  className={`w-full flex items-center gap-1.5 rounded-lg py-1.5 px-2 text-left text-xs border transition ${destId === null ? 'bg-gradient-to-r from-violet-500/30 to-blue-500/15 border-violet-400/50 text-white font-semibold' : 'border-transparent text-zinc-300 hover:bg-white/5'}`}>
+                  className={`w-full flex items-center gap-1.5 rounded-lg py-1.5 px-2 text-left text-xs border transition ${destId === null ? 'bg-violet-500/15 border-violet-400/50 text-white font-semibold' : 'border-transparent text-zinc-300 hover:bg-white/5'}`}>
                   <span className="w-4 shrink-0" /><span className="shrink-0">🏠</span><span className="truncate">{TARGET_LBL[target]} — ngoài cùng</span>
                   {destId === null && <span className="ml-auto shrink-0 text-[10px] text-violet-200">✓ nạp vào đây</span>}
                 </button>
@@ -419,7 +419,7 @@ export function Studio({ orgId, user, canEdit, canApprove, pages, onOpen, onRelo
             </div>
             <div className="flex gap-2">
               <button onClick={() => setStep(1)} className="rounded-xl bg-white/5 border border-white/10 px-4 py-2.5 text-sm text-zinc-400">← Sửa raw</button>
-              <button onClick={generate} disabled={!title.trim() || !summary.trim()} title={!summary.trim() ? 'Cần Tóm tắt 1 câu — trường bắt buộc theo chuẩn' : ''} className="flex-1 rounded-xl bg-gradient-to-r from-violet-600 via-blue-600 to-cyan-500 py-2.5 text-sm font-bold disabled:opacity-40">🤖 AI tạo lại bản chuẩn →</button>
+              <button onClick={generate} disabled={!title.trim() || !summary.trim()} title={!summary.trim() ? 'Cần Tóm tắt 1 câu — trường bắt buộc theo chuẩn' : ''} className="flex-1 rounded-xl ak-cta py-2.5 text-sm font-bold disabled:opacity-40">🤖 AI tạo lại bản chuẩn →</button>
             </div>
           </div>
         </Card>
@@ -474,7 +474,7 @@ export function Studio({ orgId, user, canEdit, canApprove, pages, onOpen, onRelo
           </div>
           <div className="flex gap-2">
             <button onClick={() => setStep(2)} className="rounded-xl bg-white/5 border border-white/10 px-4 py-2.5 text-sm text-zinc-400">← Chọn lại</button>
-            <button onClick={publish} disabled={busy} className="flex-1 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 py-2.5 text-sm font-bold disabled:opacity-40">{busy ? 'Đang nộp…' : target === 'personal' ? `✓ OK — nạp vào ${destLbl}` : `📨 OK — nộp vào ${destLbl} & chờ duyệt`}</button>
+            <button onClick={publish} disabled={busy} className="flex-1 rounded-xl bg-emerald-600 hover:bg-emerald-500 py-2.5 text-sm font-bold disabled:opacity-40">{busy ? 'Đang nộp…' : target === 'personal' ? `✓ OK — nạp vào ${destLbl}` : `📨 OK — nộp vào ${destLbl} & chờ duyệt`}</button>
           </div>
         </Card>
       )}
@@ -522,7 +522,7 @@ export function Studio({ orgId, user, canEdit, canApprove, pages, onOpen, onRelo
                 if (!na.assignee || !na.title.trim() || !orgId) return
                 await supabase.from('assignments').insert({ org_id: orgId, assigner: user.id, assignee: na.assignee, title: na.title.trim(), note: na.note || null, due: na.due || null })
                 setNa({ assignee: '', title: '', note: '', due: '' }); loadAsg()
-              }} className="rounded-lg bg-gradient-to-r from-violet-500 to-cyan-500 px-4 py-2 text-xs font-bold">Giao việc</button>
+              }} className="rounded-lg ak-cta px-4 py-2 text-xs font-bold">Giao việc</button>
             </div>
           )}
           <div className="space-y-1.5">
@@ -630,7 +630,7 @@ export function Today({ user, role, stats, recent, pages, editorial = [], counts
     <div className="p-8 max-w-4xl mx-auto">
       {/* ===== ACCOUNT ngay đầu Home ===== */}
       <div className="flex items-center gap-4 mb-6">
-        <div className="w-12 h-12 rounded-2xl ak-grad grid place-items-center text-lg font-black text-white shadow-lg shadow-violet-500/30 shrink-0">{(user.email ?? 'A')[0].toUpperCase()}</div>
+        <div className="w-12 h-12 rounded-2xl ak-grad grid place-items-center text-lg font-black text-white shrink-0">{(user.email ?? 'A')[0].toUpperCase()}</div>
         <div className="min-w-0 flex-1">
           <h1 className="text-2xl font-extrabold truncate">{greet}, {user.email?.split('@')[0]} 👋</h1>
           <div className="flex items-center gap-2 text-[11px] text-zinc-500 flex-wrap">
@@ -642,7 +642,7 @@ export function Today({ user, role, stats, recent, pages, editorial = [], counts
       </div>
 
       {/* ===== GHI NHANH có loại + nguồn (không sơ sài) ===== */}
-      <div className="rounded-2xl p-[1.5px] bg-gradient-to-r from-violet-500/60 via-blue-600/40 to-cyan-500/60 mb-3 shadow-lg shadow-violet-500/10">
+      <div className="rounded-2xl p-[1.5px] bg-white/15 mb-3 shadow-lg shadow-violet-500/10">
         <div className="rounded-2xl bg-[#0d0d18] px-4 py-3">
           <div className="flex gap-1.5 mb-2">
             {CAP_TYPES.map(([k, l, hint]) => <button key={k} onClick={() => setCapType(k)} title={hint} className={`text-[10px] rounded-lg px-2.5 py-1 border transition ${capType === k ? 'bg-violet-500/25 border-violet-400/50 text-white font-bold' : 'bg-white/5 border-white/10 text-zinc-500'}`}>{l}</button>)}
@@ -720,7 +720,7 @@ export function Today({ user, role, stats, recent, pages, editorial = [], counts
                   <div className="text-sm truncate text-zinc-200">{t.label}</div>
                   {t.sub && <div className="text-[10px] text-zinc-500 truncate">{t.sub}</div>}
                 </div>
-                <button onClick={t.act} className="text-[10px] rounded-lg bg-gradient-to-r from-amber-500 to-yellow-400 text-black px-2.5 py-1 font-bold shrink-0">{t.cta}</button>
+                <button onClick={t.act} className="text-[10px] rounded-lg bg-amber-400 text-black hover:bg-amber-300 px-2.5 py-1 font-bold shrink-0">{t.cta}</button>
               </div>
             ))}
           </div>
@@ -736,14 +736,14 @@ export function Today({ user, role, stats, recent, pages, editorial = [], counts
             <Lbl>🔥 Cần chuyển hoá</Lbl>
             <span className="text-[10px] text-zinc-600">{pct}% kho đã chuyển hoá</span>
           </div>
-          <div className="h-1.5 rounded-full bg-white/5 mb-3 overflow-hidden"><div className="h-full bg-gradient-to-r from-amber-500 to-yellow-400 transition-all" style={{ width: `${pct}%` }} /></div>
+          <div className="h-1.5 rounded-full bg-white/5 mb-3 overflow-hidden"><div className="h-full bg-amber-400 text-black hover:bg-amber-300 transition-all" style={{ width: `${pct}%` }} /></div>
           <div className="space-y-1.5">
             {sugDigest.map(({ n, why }) => (
               <div key={n.id} className="rounded-xl bg-white/[0.03] border border-white/10 px-3 py-2 hover:border-amber-400/40 transition group">
                 <div className="flex items-center gap-2">
                   <span className="text-lg shrink-0">{n.icon || '📄'}</span>
                   <button onClick={() => onOpen(n)} className="flex-1 text-left text-sm truncate text-zinc-300 hover:text-white">{n.title || 'Trang'}</button>
-                  <button onClick={() => onDigest(n)} className="text-[10px] rounded-lg bg-gradient-to-r from-amber-500 to-yellow-400 text-black px-2.5 py-1 font-bold shrink-0">Chuyển hoá</button>
+                  <button onClick={() => onDigest(n)} className="text-[10px] rounded-lg bg-amber-400 text-black hover:bg-amber-300 px-2.5 py-1 font-bold shrink-0">Chuyển hoá</button>
                 </div>
                 <p className="text-[10px] text-zinc-600 pl-7">vì: {why}</p>
               </div>
@@ -844,7 +844,7 @@ export function Today({ user, role, stats, recent, pages, editorial = [], counts
                 await supabase.from('nodes').update({ md: `${me.md ?? ''}\n\n## ${today}\n\n${filled.join('\n\n')}` }).eq('id', me.id)
                 await supabase.from('events').insert({ user_id: user.id, type: 'ai_qa', node_id: me.id })
                 setQaAns(['', '', '']); setQaOpen(false)
-              }} className="w-full rounded-xl bg-gradient-to-r from-violet-500 to-cyan-500 py-2.5 text-sm font-bold">✓ Lưu vào "Tôi là ai"</button>
+              }} className="w-full rounded-xl ak-cta py-2.5 text-sm font-bold">✓ Lưu vào "Tôi là ai"</button>
             </div>
           </div>
         )
@@ -910,8 +910,8 @@ export function Board({ orgId, userId, onOpen }: { orgId: string | null; userId:
       <div className="flex items-center justify-between mb-1">
         <h1 className="text-3xl font-extrabold">📋 Board content</h1>
         <div className="flex gap-1 bg-white/5 border border-white/10 rounded-xl p-1 text-xs">
-          <button onClick={() => setBview('kanban')} className={`px-3 py-1.5 rounded-lg ${bview === 'kanban' ? 'bg-gradient-to-r from-violet-500 to-cyan-500 text-white' : 'text-zinc-400'}`}>▦ Kanban</button>
-          <button onClick={() => setBview('time')} className={`px-3 py-1.5 rounded-lg ${bview === 'time' ? 'bg-gradient-to-r from-violet-500 to-cyan-500 text-white' : 'text-zinc-400'}`}>📅 Campaign timeline</button>
+          <button onClick={() => setBview('kanban')} className={`px-3 py-1.5 rounded-lg ${bview === 'kanban' ? 'ak-cta text-white' : 'text-zinc-400'}`}>▦ Kanban</button>
+          <button onClick={() => setBview('time')} className={`px-3 py-1.5 rounded-lg ${bview === 'time' ? 'ak-cta text-white' : 'text-zinc-400'}`}>📅 Campaign timeline</button>
         </div>
       </div>
       <p className="text-zinc-500 text-sm mb-6">Kéo-thả qua giai đoạn · gắn 🚩 campaign + 📅 ngày ngay trong trang thẻ → xem timeline chiến dịch.</p>
@@ -1013,7 +1013,7 @@ export function Board({ orgId, userId, onOpen }: { orgId: string | null; userId:
                 await supabase.from('content_results').insert({ org_id: orgId, user_id: userId, card_node_id: resultFor.id, source_node_id: (resultFor.props?.source_node_id as string) ?? null, channel: res.channel, reach: +res.reach || 0, leads: +res.leads || 0, note: res.note || null })
                 await supabase.from('events').insert({ user_id: userId, type: 'content_result', node_id: resultFor.id })
                 setResultFor(null)
-              }} className="flex-1 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 px-3 py-2 text-xs font-bold">✓ Lưu kết quả</button>
+              }} className="flex-1 rounded-xl bg-emerald-600 hover:bg-emerald-500 px-3 py-2 text-xs font-bold">✓ Lưu kết quả</button>
             </div>
           </div>
         </div>

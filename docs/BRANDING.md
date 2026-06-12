@@ -22,7 +22,7 @@ Nguyên tắc: 4 tầng nền chênh nhau rất nhẹ + viền sáng mép trên 
 | `--ak-blue` | `#3b82f6` | cầu nối gradient, dữ liệu chảy | XANH PLASMA — dòng dữ liệu đang di chuyển giữa tâm trí (tím) và sự sống (cyan) |
 | `--ak-cyan` | `#22d3ee` | kết nối, hiện tại, live | CYAN TINH THỂ — sự sống, liên kết thật, "đang xảy ra" |
 | `--ak-diamond` | `#f6f8ff` | đỉnh hội tụ, khoảnh khắc chuyển hoá | KIM CƯƠNG — nơi dòng chảy hội tụ thành ánh sáng trắng: trang Thấm trọn, celebration, điểm đến |
-**Gradient chữ ký** (CTA chính, logo): `violet → blue → cyan` — đúng dải quang phổ của reference Data Flow. KHÔNG bao giờ chen fuchsia/hồng vào dải này nữa (đã loại — nguồn cảm giác "quê" cũ).
+**[CHỐT 12/6 — 1-ACCENT, founder duyệt]** Theo research Linear/Raycast/Geist (RESEARCH-VIZ-ARCH §3): chrome dùng **đúng 1 accent** `--ak-violet #8b5cf6` (`.ak-cta` solid, hover #9b75ff) + neutral; **gradient violet→blue→cyan CHỈ còn sống ở**: logo/wordmark (`.ak-logo-grad`), màn login + onboarding ("cửa sổ nhìn vào vũ trụ"), celebration, và canvas Galaxy (màu DATA). Surface ladder: #0c0d10 → #101113 → #1c1d21, viền 1px thay glow. Màu vàng = semantic riêng của luồng Chuyển hoá (nút `bg-amber-400 text-black`), emerald = duyệt/thành công. KHÔNG fuchsia/hồng trên chrome.
 
 ### Vàng Hoàng Đạo — trục thời gian & giá trị (theo reference vòng xoáy vàng)
 | Token | Hex | Dùng cho | Ý nghĩa |

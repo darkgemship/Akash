@@ -1008,9 +1008,9 @@ export default function Galaxy({ nodes, links, onOpen, onConnect }: {
       {/* HUD phải: mode + zoom + motion + flow + connect */}
       <div className="absolute top-3 right-3 flex flex-col items-end gap-2 z-10">
         <div className="flex items-center gap-1 rounded-xl bg-[#10101a]/85 backdrop-blur border border-white/10 p-1 text-[11px]">
-          <button onClick={() => setMode('galaxy')} title="Cấu trúc kho — cái gì nằm trong cái gì" className={`px-2 py-1.5 rounded-lg ${mode === 'galaxy' ? 'bg-violet-500/40 text-white shadow-lg shadow-violet-500/30' : 'text-zinc-400 hover:bg-white/10'}`}>🌌 Galaxy</button>
+          <button onClick={() => setMode('galaxy')} title="Cấu trúc kho — cái gì nằm trong cái gì" className={`px-2 py-1.5 rounded-lg ${mode === 'galaxy' ? 'bg-violet-500/40 text-white' : 'text-zinc-400 hover:bg-white/10'}`}>🌌 Galaxy</button>
           <button onClick={() => { setMode('mandala'); setFlow(true) }} title="Cây Sự Sống — tri thức nở trên đỉnh đầu" className={`px-2 py-1.5 rounded-lg ${mode === 'mandala' ? 'bg-amber-500/35 text-amber-100 shadow-lg shadow-amber-500/30' : 'text-zinc-400 hover:bg-white/10'}`}>🧘 Mandala</button>
-          <button onClick={() => { setMode('radar'); setMotion('still'); setFlow(false); setDimOff(new Set()) }} title="8 chiều liên kết cân hay lệch — bấm trục để soi riêng" className={`px-2 py-1.5 rounded-lg ${mode === 'radar' ? 'bg-violet-500/35 text-violet-100 shadow-lg shadow-violet-500/30' : 'text-zinc-400 hover:bg-white/10'}`}>🎯 Radar</button>
+          <button onClick={() => { setMode('radar'); setMotion('still'); setFlow(false); setDimOff(new Set()) }} title="8 chiều liên kết cân hay lệch — bấm trục để soi riêng" className={`px-2 py-1.5 rounded-lg ${mode === 'radar' ? 'bg-violet-500/35 text-violet-100' : 'text-zinc-400 hover:bg-white/10'}`}>🎯 Radar</button>
           <button onClick={() => { setMode('timeline'); setMotion('still') }} title="Dòng đời — tri thức đan vào mốc thời gian thực" className={`px-2 py-1.5 rounded-lg ${mode === 'timeline' ? 'bg-blue-500/35 text-blue-100 shadow-lg shadow-blue-500/30' : 'text-zinc-400 hover:bg-white/10'}`}>📜 Dòng đời</button>
           <button onClick={() => { setMode('neuro'); setMotion('still'); setFlow(true) }} title="Bộ não 3D tự xoay — kéo nền để xoay, mỗi nhánh một vùng não" className={`px-2 py-1.5 rounded-lg ${mode === 'neuro' ? 'bg-emerald-500/35 text-emerald-100 shadow-lg shadow-emerald-500/30' : 'text-zinc-400 hover:bg-white/10'}`}>🧠 Neuro</button>
         </div>
@@ -1057,7 +1057,7 @@ export default function Galaxy({ nodes, links, onOpen, onConnect }: {
                   <div className="text-[11px] text-zinc-300 leading-snug">“{(s.a.title ?? '').slice(0, 26)}” <span className="text-zinc-600">↔</span> “{(s.b.title ?? '').slice(0, 26)}”</div>
                   <div className="flex items-center justify-between mt-1.5">
                     <span className="text-[10px] text-zinc-600">chung: “{s.w}”</span>
-                    {onConnect && <button onClick={() => onConnect(s.a.id, s.b.id)} className="text-[10px] rounded-lg bg-gradient-to-r from-violet-500 to-cyan-500 px-2.5 py-1 font-bold">⚡ Nối ngay</button>}
+                    {onConnect && <button onClick={() => onConnect(s.a.id, s.b.id)} className="text-[10px] rounded-lg ak-cta px-2.5 py-1 font-bold">⚡ Nối ngay</button>}
                   </div>
                 </div>
               ))}

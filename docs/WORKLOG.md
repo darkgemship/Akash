@@ -177,3 +177,6 @@
 - Sửa nốt 3 chỗ `linkSel/backSel` sót lại trong Pages.tsx (Studio đã refactor sang `conns` kèm chiều ở phiên song song) — build đỏ → xanh.
 - **Đã test thật trên preview** (acc admin, trang 🎬 Xưởng content): thêm trường riêng "Độ ưu tiên" lưu DB OK; ＋ Nối chiều Cảm xúc → "Ý tưởng mới" ghi bảng links + card sáng 1/8 + toast. ⚠️ Dữ liệu test này còn trên trang Xưởng content (1 trường "Độ ưu tiên", 1 link emotion) — giữ làm demo hoặc xoá tay.
 - Việc tiếp: nút gỡ liên kết ngay trong card 8 chiều; trường riêng per-user trên trang kho chung (cần overlay riêng vì RLS không cho member ghi node chung).
+
+## 2026-06-12 (đợt 3) — 🎯 1-ACCENT chốt (founder: 'ok luôn')
+- Sweep toàn app theo research Linear/Raycast: chrome = 1 accent tím solid (.ak-cta), gradient CHỈ còn logo/login/onboarding/celebration/canvas; surface ladder #0c0d10→#101113→#1c1d21; bỏ shadow màu trên nút; sửa 2 chuỗi marketing lỗi thời 'radar 5 cạnh' → 8 chiều. BRANDING.md cập nhật mapping. Build xanh, console sạch, verify login + Home trên preview 1440px.

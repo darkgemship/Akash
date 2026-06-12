@@ -36,17 +36,19 @@ body {
   font-family: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
 }
 
-/* ===== AKASH utility — gradient chữ ký & kim cương ===== */
-.ak-grad { background-image: linear-gradient(95deg, #7c3aed, #3b82f6 48%, #22d3ee); }
-.ak-grad-text { background-image: linear-gradient(95deg, #a78bfa, #60a5fa 45%, #67e8f9); -webkit-background-clip: text; background-clip: text; color: transparent; }
+/* ===== AKASH utility — 1-ACCENT (founder chốt 12/6, theo research Linear/Raycast/Geist) =====
+   Gradient CHỈ còn sống ở: logo, celebration, canvas Galaxy. Chrome = 1 accent tím + neutral. */
+.ak-grad { background: var(--ak-violet); }                /* avatar/ring/progress — solid accent */
+.ak-grad-text { color: #f7f8f8; -webkit-background-clip: unset; background-clip: unset; background-image: none; }
+.ak-logo-grad { background-image: linear-gradient(95deg, #a78bfa, #60a5fa 45%, #67e8f9); -webkit-background-clip: text; background-clip: text; color: transparent; } /* CHỈ cho wordmark */
 .ak-gold-text { color: var(--ak-gold); }
 .ak-diamond-glow { box-shadow: 0 0 18px rgba(246,248,255,.35), 0 0 56px rgba(139,92,246,.25); }
-/* CTA chính: dòng chảy tri thức + viền sáng mép trên */
+/* CTA chính: accent đặc + viền sáng mép trên — không glow màu */
 .ak-cta {
-  background-image: linear-gradient(95deg, #6d28d9, #2563eb 50%, #0891b2);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.22), 0 8px 28px rgba(59,130,246,.3);
+  background: var(--ak-violet);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.18);
 }
-.ak-cta:hover { filter: brightness(1.12); }
+.ak-cta:hover { background: #9b75ff; }
 /* hạt kim cương nhỏ (bullet sống) */
 .ak-spark { display:inline-block; width:7px; height:7px; border-radius:9999px; background: var(--ak-diamond); box-shadow: 0 0 8px rgba(246,248,255,.9), 0 0 18px rgba(34,211,238,.5); }
 @media (prefers-reduced-motion: reduce) {
@@ -261,13 +263,13 @@ html:not([data-theme='light']) .bg-white\/\[0\.03\] {
 html:not([data-theme='light']) .rounded-2xl.bg-white\/5 {
   box-shadow: inset 0 1px 0 rgba(255,255,255,.07), 0 10px 30px rgba(0,0,0,.45);
 }
-/* phân tầng nền: body tối nhất → panel sáng dần */
-html:not([data-theme='light']) .bg-\[\#0a0a12\] { background: #0d0d17 !important; }
-html:not([data-theme='light']) .bg-\[\#0b0b14\] { background: #0e0e18 !important; }
+/* phân tầng nền: SURFACE LADDER theo research Linear/Raycast (mỗi bậc sáng dần ~3-5 lightness, viền 1px thay shadow màu) */
+html:not([data-theme='light']) .bg-\[\#0a0a12\] { background: #101113 !important; }
+html:not([data-theme='light']) .bg-\[\#0b0b14\] { background: #0c0d10 !important; }
 html:not([data-theme='light']) .bg-\[\#15151f\],
 html:not([data-theme='light']) .bg-\[\#1c1c26\] {
-  background: linear-gradient(180deg, #1d1d29, #15151f) !important;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 16px 48px rgba(0,0,0,.55);
+  background: #1c1d21 !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.07), 0 16px 48px rgba(0,0,0,.5);
 }
 
 /* ===== EDITOR TYPOGRAPHY — soạn thảo đẹp như đọc sách ===== */

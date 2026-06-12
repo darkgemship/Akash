@@ -114,7 +114,7 @@ export function KolFeed({ user, canEdit, onOpenPage, onInsight }: {
                 <div className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1.5">✍️ Insight CỦA BẠN từ bài này (1 câu) — sẽ thành trang trong 💎 Kim cương bài học, tự nối nguồn</div>
                 <div className="flex gap-2">
                   <input value={insightDraft} onChange={e => setInsightDraft(e.target.value)} placeholder="vd: Mình cũng đang có một 'lớp thư pháp' chưa biết dùng vào đâu — cứ học đã…" className="flex-1 rounded-xl bg-white/5 border border-white/10 px-3 py-2 text-xs outline-none focus:border-amber-400/50" />
-                  <button onClick={() => { if (insightDraft.trim()) { onInsight(insightDraft.trim(), open.title ?? '', open.id); setOpen(null) } }} disabled={!insightDraft.trim()} className="rounded-xl bg-gradient-to-r from-amber-500 to-yellow-400 text-black px-4 py-2 text-xs font-bold disabled:opacity-40 shrink-0">💎 Nạp vào kho</button>
+                  <button onClick={() => { if (insightDraft.trim()) { onInsight(insightDraft.trim(), open.title ?? '', open.id); setOpen(null) } }} disabled={!insightDraft.trim()} className="rounded-xl bg-amber-400 text-black hover:bg-amber-300 px-4 py-2 text-xs font-bold disabled:opacity-40 shrink-0">💎 Nạp vào kho</button>
                 </div>
               </div>
               <div className="flex items-center justify-between mt-4">
@@ -485,7 +485,7 @@ export function ReviewHub({ orgId, me, onOpen, onChanged }: { orgId: string | nu
                     </div>
                     <div className="flex items-center gap-1.5 shrink-0">
                       {(fb.length + cm.length) > 0 && <span className="text-[10px] rounded-lg bg-cyan-500/15 border border-cyan-400/30 text-cyan-200 px-2 py-1">💬 {fb.length + cm.length} góp ý</span>}
-                      <button onClick={() => { setOpenId(n.id); setDraftMd(n.md ?? '') }} className="text-xs rounded-lg bg-gradient-to-r from-amber-500 to-yellow-400 text-black px-3 py-1.5 font-bold">👁 Xem & duyệt</button>
+                      <button onClick={() => { setOpenId(n.id); setDraftMd(n.md ?? '') }} className="text-xs rounded-lg bg-amber-400 text-black hover:bg-amber-300 px-3 py-1.5 font-bold">👁 Xem & duyệt</button>
                     </div>
                   </div>
                 </div>
@@ -541,7 +541,7 @@ export function ReviewHub({ orgId, me, onOpen, onChanged }: { orgId: string | nu
               {[...fbs.filter(f => f.node_id === opened.id).map(f => f.question), ...cmts.filter(c => c.node_id === opened.id).map(c => c.body)].map((q, i) => <p key={i} className="text-xs text-zinc-300 mb-1.5">• {q}</p>)}
               {fbs.filter(f => f.node_id === opened.id).length + cmts.filter(c => c.node_id === opened.id).length === 0 && <p className="text-xs text-zinc-600">Không có.</p>}
             </Card>
-            <button onClick={approve} disabled={busy} className="w-full rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 py-3 text-sm font-bold disabled:opacity-50">✅ Đã đọc lại — Duyệt & xuất bản</button>
+            <button onClick={approve} disabled={busy} className="w-full rounded-xl bg-emerald-600 hover:bg-emerald-500 py-3 text-sm font-bold disabled:opacity-50">✅ Đã đọc lại — Duyệt & xuất bản</button>
             <button onClick={reject} className="w-full rounded-xl bg-white/5 border border-white/10 py-2.5 text-sm text-zinc-400 hover:text-red-300 hover:border-red-400/40">↩ Trả lại kèm lý do</button>
             <button onClick={() => { onOpen(opened.id) }} className="w-full text-[11px] text-zinc-500 hover:text-white py-1">mở bằng editor đầy đủ →</button>
           </div>

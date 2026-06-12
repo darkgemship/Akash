@@ -139,19 +139,19 @@ function Login() {
             <div className="flex items-center gap-4 mb-6">
               <AkashMark size={64} />
               <div>
-                <div className="text-5xl font-black tracking-tight bg-gradient-to-r from-violet-300 via-blue-400 to-cyan-300 bg-clip-text text-transparent">Akash</div>
+                <div className="text-5xl font-black tracking-tight ak-logo-grad">Akash</div>
                 <div className="text-[11px] uppercase tracking-[0.3em] text-zinc-500 mt-1">Akashic knowledge engine</div>
               </div>
             </div>
-            <h1 className="text-2xl font-bold leading-snug mb-6 text-zinc-100">Biến trải nghiệm thành <span className="bg-gradient-to-r from-violet-400 to-cyan-300 bg-clip-text text-transparent">trí tuệ</span>,<br />biến trí tuệ thành <span className="bg-gradient-to-r from-amber-400 to-yellow-300 bg-clip-text text-transparent">content</span>.</h1>
+            <h1 className="text-2xl font-bold leading-snug mb-6 text-zinc-100">Biến trải nghiệm thành <span className="text-zinc-50">trí tuệ</span>,<br />biến trí tuệ thành <span className="bg-gradient-to-r from-amber-400 to-yellow-300 bg-clip-text text-transparent">content</span>.</h1>
             <div className="space-y-3">
               {([
                 [<IOrbit key="o" size={20} />, 'Galaxy tri thức đa chiều', '3 kho · liên kết 8 chiều · zoom như bản đồ sao'],
-                [<ITarget key="t" size={20} />, 'Độ Chuyển hoá 5 cạnh', 'Nối · Nghĩa · Chứng · Trải · Hành — học thật mới tính'],
+                [<ITarget key="t" size={20} />, 'Độ Chuyển hoá 8 chiều', 'mỗi liên kết thật thắp sáng một chiều — không học vẹt được'],
                 [<IMegaphone key="m" size={20} />, 'Học thật → dạy được', 'Bài chín tự động thành nguyên liệu content của bạn'],
               ] as [React.ReactNode, string, string][]).map(([ic, t, d]) => (
                 <div key={t} className="flex items-center gap-3.5 rounded-2xl bg-white/[0.04] border border-white/10 px-4 py-3 backdrop-blur-md">
-                  <span className="w-9 h-9 grid place-items-center rounded-xl bg-gradient-to-br from-violet-500/25 to-cyan-500/25 border border-white/15 text-cyan-200 shrink-0">{ic}</span>
+                  <span className="w-9 h-9 grid place-items-center rounded-xl bg-white/10 border border-white/15 text-cyan-200 shrink-0">{ic}</span>
                   <div>
                     <div className="text-sm font-semibold text-zinc-100">{t}</div>
                     <div className="text-xs text-zinc-500">{d}</div>
@@ -168,12 +168,12 @@ function Login() {
               <div className="rounded-3xl bg-[#0b0b14]/90 backdrop-blur-xl p-8">
                 <div className="lg:hidden flex items-center gap-3 mb-5">
                   <AkashMark size={44} />
-                  <div className="text-2xl font-black bg-gradient-to-r from-violet-300 to-cyan-300 bg-clip-text text-transparent">Akash</div>
+                  <div className="text-2xl font-black ak-logo-grad">Akash</div>
                 </div>
                 {/* tab chuyển chế độ */}
                 <div className="grid grid-cols-2 gap-1 rounded-2xl bg-white/5 border border-white/10 p-1 mb-6 text-sm">
-                  <button onClick={() => { setMode('in'); setMsg('') }} className={`rounded-xl py-2 font-semibold transition ${mode === 'in' ? 'bg-gradient-to-r from-violet-500 to-cyan-500 text-white shadow-lg shadow-violet-500/30' : 'text-zinc-400 hover:text-zinc-200'}`}>Đăng nhập</button>
-                  <button onClick={() => { setMode('up'); setMsg('') }} className={`rounded-xl py-2 font-semibold transition ${mode === 'up' ? 'bg-gradient-to-r from-violet-500 to-cyan-500 text-white shadow-lg shadow-violet-500/30' : 'text-zinc-400 hover:text-zinc-200'}`}>Tạo tài khoản</button>
+                  <button onClick={() => { setMode('in'); setMsg('') }} className={`rounded-xl py-2 font-semibold transition ${mode === 'in' ? 'ak-cta text-white' : 'text-zinc-400 hover:text-zinc-200'}`}>Đăng nhập</button>
+                  <button onClick={() => { setMode('up'); setMsg('') }} className={`rounded-xl py-2 font-semibold transition ${mode === 'up' ? 'ak-cta text-white' : 'text-zinc-400 hover:text-zinc-200'}`}>Tạo tài khoản</button>
                 </div>
                 <h2 className="text-lg font-bold mb-1">{mode === 'in' ? 'Sẵn sàng cất cánh' : 'Bắt đầu hành trình'}</h2>
                 <p className="text-xs text-zinc-500 mb-5">{mode === 'in' ? 'Đăng nhập để bay vào vũ trụ tri thức của bạn.' : 'Tạo tài khoản — vào org chung với vai Thành viên, có ngay kho cá nhân riêng tư.'}</p>
@@ -185,7 +185,7 @@ function Login() {
                   <input className="w-full rounded-xl bg-white/5 border border-white/10 px-3.5 py-3 pr-11 text-sm outline-none focus:border-violet-400/70 focus:bg-white/[0.07] transition" placeholder="Tối thiểu 6 ký tự" type={showPw ? 'text' : 'password'} autoComplete={mode === 'in' ? 'current-password' : 'new-password'} value={pw} onChange={e => setPw(e.target.value)} onKeyDown={e => e.key === 'Enter' && go()} />
                   <button onClick={() => setShowPw(s => !s)} title={showPw ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'} className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 grid place-items-center rounded-lg text-zinc-500 hover:text-white hover:bg-white/10">{showPw ? <IEyeOff size={16} /> : <IEye size={16} />}</button>
                 </div>
-                <button disabled={busy} onClick={go} className="w-full rounded-xl py-3 text-sm font-bold bg-gradient-to-r from-violet-500 via-blue-600 to-cyan-500 disabled:opacity-70 shadow-lg shadow-violet-500/30 hover:opacity-95 transition flex items-center justify-center gap-2">
+                <button disabled={busy} onClick={go} className="w-full rounded-xl py-3 text-sm font-bold ak-cta disabled:opacity-70 hover:opacity-95 transition flex items-center justify-center gap-2">
                   {busy ? <><span className="w-4 h-4 rounded-full border-2 border-white/40 border-t-white animate-spin" /> Đang nhảy hyperspace…</> : mode === 'in' ? '⌁ Khởi động warp drive' : '⌁ Tạo tài khoản & cất cánh'}
                 </button>
                 {msg && <p className={`text-xs mt-3 leading-relaxed ${ok ? 'text-emerald-400' : 'text-amber-300'}`}>{msg}</p>}
@@ -616,9 +616,9 @@ function Workspace({ user }: { user: User }) {
           const active = page === p
           return (
             <button key={p} onClick={() => setPage(p)} title={label}
-              className={`group relative w-11 h-11 rounded-xl grid place-items-center transition ${active ? 'text-white bg-gradient-to-br from-violet-500/25 to-cyan-500/25 border border-white/15 shadow-lg shadow-violet-500/20' : 'text-zinc-500 hover:text-zinc-200 hover:bg-white/5 border border-transparent'}`}>
+              className={`group relative w-11 h-11 rounded-xl grid place-items-center transition ${active ? 'text-white bg-white/10 border border-white/15' : 'text-zinc-500 hover:text-zinc-200 hover:bg-white/5 border border-transparent'}`}>
               {ic}
-              <span className={`absolute left-[-13px] w-[3px] rounded-full bg-gradient-to-b from-violet-400 to-cyan-400 transition-all ${active ? 'h-6 opacity-100' : 'h-0 opacity-0'}`} />
+              <span className={`absolute left-[-13px] w-[3px] rounded-full bg-[#8b5cf6] transition-all ${active ? 'h-6 opacity-100' : 'h-0 opacity-0'}`} />
               {p === 'review' && (() => { const c = tree.filter(n => n.status === 'pending').length; return c > 0 ? <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 grid place-items-center rounded-full bg-amber-500 text-[9px] font-bold text-black">{c}</span> : null })()}
             </button>
           )
@@ -628,11 +628,11 @@ function Workspace({ user }: { user: User }) {
       {page === 'know' ? (
         <>
       <header className="flex items-center justify-between px-6 py-4 border-b border-white/10">
-        <span className="text-xl font-black tracking-tight bg-gradient-to-r from-violet-300 via-blue-400 to-cyan-300 bg-clip-text text-transparent">Akash</span>
+        <span className="text-xl font-black tracking-tight ak-logo-grad">Akash</span>
         <div className="flex items-center gap-2">
           <div className="flex gap-1 bg-white/5 border border-white/10 rounded-xl p-1 text-sm">
-            <button onClick={() => setView('folder')} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition ${view === 'folder' ? 'bg-gradient-to-r from-violet-500 to-cyan-500 text-white shadow-lg shadow-violet-500/25' : 'text-zinc-400 hover:text-zinc-200'}`}><IDoc size={15} /> Trang</button>
-            <button onClick={() => setView('galaxy')} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition ${view === 'galaxy' ? 'bg-gradient-to-r from-violet-500 to-cyan-500 text-white shadow-lg shadow-violet-500/25' : 'text-zinc-400 hover:text-zinc-200'}`}><IOrbit size={15} /> Galaxy</button>
+            <button onClick={() => setView('folder')} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition ${view === 'folder' ? 'ak-cta text-white' : 'text-zinc-400 hover:text-zinc-200'}`}><IDoc size={15} /> Trang</button>
+            <button onClick={() => setView('galaxy')} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition ${view === 'galaxy' ? 'ak-cta text-white' : 'text-zinc-400 hover:text-zinc-200'}`}><IOrbit size={15} /> Galaxy</button>
           </div>
           <label title="Nhập file .md → trang đẹp trong kho cá nhân" className="cursor-pointer flex items-center gap-1.5 text-xs rounded-xl bg-white/5 border border-white/10 px-3 py-2 text-zinc-300 hover:bg-white/10 hover:border-white/20 transition">
             <IUpload size={14} /> .md
@@ -724,7 +724,7 @@ function Workspace({ user }: { user: User }) {
                           <span className="flex items-center gap-1.5 text-xs rounded-lg bg-violet-500/15 border border-violet-400/30 text-violet-300 px-2 py-1 tabular-nums"><ITarget size={13} /> {(() => { const nd2 = nodeOf(editing.id); const t = transformScore(dimSignals({ out: outRaw, back: backRaw, event_date: nd2?.event_date, emotion: nd2?.emotion, props: nd2?.props })); return `${t.total} · ${t.covered}/8` })()}</span>
                           <button onClick={() => setShowDigest(true)} className="flex items-center gap-1.5 text-xs rounded-lg bg-white/10 border border-white/10 px-2.5 py-1 hover:bg-white/15"><IRefresh size={13} /> Ôn lại</button>
                         </>
-                      : <button onClick={() => setShowDigest(true)} className="flex items-center gap-1.5 text-xs rounded-lg bg-gradient-to-r from-violet-500 to-cyan-500 px-3 py-1 font-semibold"><IGrad size={13} /> Chuyển hoá bài này</button>}
+                      : <button onClick={() => setShowDigest(true)} className="flex items-center gap-1.5 text-xs rounded-lg ak-cta px-3 py-1 font-semibold"><IGrad size={13} /> Chuyển hoá bài này</button>}
                     <span className="text-[10px] text-zinc-600 ml-auto">{backRaw.length} liên kết tới đây</span>
                   </div>
                   <div className="flex-1 overflow-auto px-4 py-3">
@@ -770,7 +770,7 @@ function Workspace({ user }: { user: User }) {
             <div className="p-10 overflow-auto h-full grid place-items-center text-center">
               <div className="max-w-md">
                 <div className="text-6xl mb-4">📄</div>
-                <h1 className="text-2xl font-bold mb-2">Mọi thứ là một <span className="bg-gradient-to-r from-violet-400 to-cyan-300 bg-clip-text text-transparent">trang</span></h1>
+                <h1 className="text-2xl font-bold mb-2">Mọi thứ là một <span className="text-zinc-50">trang</span></h1>
                 <p className="text-zinc-400 text-sm leading-relaxed">Chọn một trang bên trái để mở &amp; viết, hoặc bấm <b>＋</b> để tạo trang mới. Trong trang, gõ <b>“/”</b> để chèn heading, list, bảng, code… và mở <b>trang con</b> bên trong.</p>
               </div>
             </div>
@@ -799,7 +799,7 @@ function Workspace({ user }: { user: User }) {
                       <>
                         <button onClick={() => setShowRadar(s => !s)} title={`Độ Chuyển hoá ${t8.total} · ${t8.covered}/8 chiều sáng`} className="flex items-center gap-1.5 text-xs rounded-lg bg-violet-500/15 border border-violet-400/30 text-violet-300 px-2.5 py-1 hover:bg-violet-500/25 tabular-nums"><ITarget size={13} /> {t8.total} · {t8.covered}/8</button>
                         <button onClick={() => setShowDigest(true)} className="flex items-center gap-1.5 text-xs rounded-lg bg-white/10 border border-white/10 px-2.5 py-1 hover:bg-white/15"><IRefresh size={13} /> Ôn lại</button>
-                        {nd?.owner_id === user.id && <button onClick={toContent} title="Bài đã chín → tạo content" className="flex items-center gap-1.5 text-xs rounded-lg bg-gradient-to-r from-amber-500 to-yellow-400 px-2.5 py-1 font-semibold"><IMegaphone size={13} /> Content</button>}
+                        {nd?.owner_id === user.id && <button onClick={toContent} title="Bài đã chín → tạo content" className="flex items-center gap-1.5 text-xs rounded-lg bg-amber-400 text-black hover:bg-amber-300 px-2.5 py-1 font-semibold"><IMegaphone size={13} /> Content</button>}
                         {showRadar && (
                           <>
                             <div className="fixed inset-0 z-20" onClick={() => setShowRadar(false)} />
@@ -817,7 +817,7 @@ function Workspace({ user }: { user: User }) {
                         )}
                       </>
                     ) : (
-                      <button onClick={() => setShowDigest(true)} className="flex items-center gap-1.5 text-xs rounded-lg bg-gradient-to-r from-violet-500 to-cyan-500 px-3 py-1 font-semibold shadow-lg shadow-violet-500/25"><IGrad size={13} /> Chuyển hoá{t8.covered > 0 ? ` · ${t8.covered}/8` : ''}</button>
+                      <button onClick={() => setShowDigest(true)} className="flex items-center gap-1.5 text-xs rounded-lg ak-cta px-3 py-1 font-semibold"><IGrad size={13} /> Chuyển hoá{t8.covered > 0 ? ` · ${t8.covered}/8` : ''}</button>
                     )
                   })()}
                   <button onClick={() => setEditing(null)} title="Đóng trang" className="w-7 h-7 grid place-items-center rounded-lg text-zinc-400 hover:bg-white/10 hover:text-white"><IX size={14} /></button>
@@ -861,7 +861,7 @@ function Workspace({ user }: { user: User }) {
                             const np = { ...((cur?.props as Record<string, unknown>) ?? {}), last_published_md: cur?.md ?? '', approved_at: new Date().toISOString() }
                             await supabase.from('nodes').update({ status: 'published', props: np }).eq('id', editing.id)
                             if (orgId) loadTree(orgId); setToast('✅ Đã duyệt & xuất bản'); setTimeout(() => setToast(''), 2500)
-                          }} className="rounded-lg bg-gradient-to-r from-emerald-500 to-cyan-500 px-2.5 py-1 font-semibold">✅ Duyệt</button>
+                          }} className="rounded-lg bg-emerald-600 hover:bg-emerald-500 px-2.5 py-1 font-semibold">✅ Duyệt</button>
                           <button onClick={async () => {
                             const note = window.prompt('Lý do trả lại (tác giả sẽ thấy):')
                             if (note === null) return
@@ -1113,7 +1113,7 @@ function Workspace({ user }: { user: User }) {
               setProposeFor(null); setProp3({ reason: '', goal: '', note: '' })
               if (orgId) loadTree(orgId)
               setToast('♾️ Đã đề xuất kèm lý do — chờ ban biên tập'); setTimeout(() => setToast(''), 3000)
-            }} disabled={!prop3.reason.trim()} className="w-full rounded-xl bg-gradient-to-r from-violet-600 via-blue-600 to-cyan-500 py-2.5 text-sm font-bold disabled:opacity-40">📨 Gửi đề xuất</button>
+            }} disabled={!prop3.reason.trim()} className="w-full rounded-xl ak-cta py-2.5 text-sm font-bold disabled:opacity-40">📨 Gửi đề xuất</button>
           </div>
         </div>
       )}
@@ -1157,7 +1157,7 @@ function Workspace({ user }: { user: User }) {
               <select value={rawType} onChange={e => setRawType(e.target.value)} className="rounded-lg bg-white/5 border border-white/10 px-2 py-2 text-xs outline-none text-zinc-300">
                 {PAGE_TYPES.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
               </select>
-              <button onClick={createFromRaw} disabled={!rawText.trim()} className="flex-1 rounded-xl bg-gradient-to-r from-violet-500 to-cyan-500 px-4 py-2 text-sm font-bold disabled:opacity-40">⚡ Tạo trang chuẩn</button>
+              <button onClick={createFromRaw} disabled={!rawText.trim()} className="flex-1 rounded-xl ak-cta px-4 py-2 text-sm font-bold disabled:opacity-40">⚡ Tạo trang chuẩn</button>
             </div>
           </div>
         </div>
@@ -1219,7 +1219,7 @@ function Workspace({ user }: { user: User }) {
                   <div className="flex items-center justify-between mb-6">
                     <div className="flex items-center gap-2.5">
                       <AkashMark size={34} />
-                      <span className="text-sm font-black tracking-[0.25em] uppercase bg-gradient-to-r from-violet-300 to-cyan-300 bg-clip-text text-transparent">Akash</span>
+                      <span className="text-sm font-black tracking-[0.25em] uppercase ak-logo-grad">Akash</span>
                     </div>
                     <div className="flex items-center gap-1.5">
                       {[0, 1, 2].map(i => <button key={i} onClick={() => setObStep(i)} className={`h-1.5 rounded-full transition-all ${i === obStep ? 'w-6 bg-gradient-to-r from-violet-400 to-cyan-400' : 'w-1.5 bg-white/20 hover:bg-white/40'}`} />)}
@@ -1230,7 +1230,7 @@ function Workspace({ user }: { user: User }) {
                   <div key={obStep} className="dq-step-in min-h-[280px]">
                     {obStep === 0 && (
                       <>
-                        <h2 className="text-2xl font-black mb-1">Chào mừng đến <span className="bg-gradient-to-r from-violet-300 via-blue-400 to-cyan-300 bg-clip-text text-transparent">Akash</span></h2>
+                        <h2 className="text-2xl font-black mb-1">Chào mừng đến <span className="ak-logo-grad">Akash</span></h2>
                         <p className="text-sm text-zinc-500 mb-5">Akasha — "hư không lưu giữ mọi tri thức". Bạn có 3 tầng kho:</p>
                         <div className="grid gap-2.5">
                           {[
@@ -1248,7 +1248,7 @@ function Workspace({ user }: { user: User }) {
                     )}
                     {obStep === 1 && (
                       <>
-                        <h2 className="text-2xl font-black mb-1">Mọi thứ là một <span className="bg-gradient-to-r from-violet-300 to-cyan-300 bg-clip-text text-transparent">trang</span></h2>
+                        <h2 className="text-2xl font-black mb-1">Mọi thứ là một <span className="ak-logo-grad">trang</span></h2>
                         <p className="text-sm text-zinc-500 mb-5">4 thao tác quyền năng nhất — nhớ là dùng được 90% app:</p>
                         <div className="grid grid-cols-2 gap-2.5">
                           {[
@@ -1268,10 +1268,10 @@ function Workspace({ user }: { user: User }) {
                     )}
                     {obStep === 2 && (
                       <>
-                        <h2 className="text-2xl font-black mb-1">Học thật → <span className="bg-gradient-to-r from-amber-200 to-yellow-400 bg-clip-text text-transparent">Content thật</span></h2>
+                        <h2 className="text-2xl font-black mb-1">Học thật → <span className="text-amber-300">Content thật</span></h2>
                         <p className="text-sm text-zinc-500 mb-5">Vòng lặp giá trị của Akash — mỗi bài học là một tài sản:</p>
                         <div className="flex items-center justify-between gap-2 mb-5">
-                          {[['🔥', 'Chuyển hoá', 'đi qua 8 chiều'], ['🎯', 'Độ Chuyển hoá', 'radar 5 cạnh'], ['📣', '→ Content', 'lên Board'], ['💰', 'Giá trị', 'dạy & thu nhập']].map(([ic, t, d], i) => (
+                          {[['🔥', 'Chuyển hoá', 'đi qua 8 chiều'], ['🎯', 'Độ Chuyển hoá', '8 thanh chiều sáng'], ['📣', '→ Content', 'lên Board'], ['💰', 'Giá trị', 'dạy & thu nhập']].map(([ic, t, d], i) => (
                             <div key={t} className="flex items-center gap-2 flex-1">
                               <div className="flex-1 rounded-2xl bg-white/[0.04] border border-white/10 px-2 py-3 text-center">
                                 <div className="text-2xl mb-1">{ic}</div>
@@ -1298,8 +1298,8 @@ function Workspace({ user }: { user: User }) {
                     <div className="flex gap-2">
                       {obStep > 0 && <button onClick={() => setObStep(s => s - 1)} className="rounded-xl bg-white/10 border border-white/10 px-4 py-2.5 text-sm hover:bg-white/15">← Trước</button>}
                       {obStep < 2
-                        ? <button onClick={() => setObStep(s => s + 1)} className="rounded-xl bg-gradient-to-r from-violet-500 via-blue-600 to-cyan-500 px-6 py-2.5 text-sm font-bold shadow-lg shadow-violet-500/30">Tiếp →</button>
-                        : <button onClick={finish} className="rounded-xl bg-gradient-to-r from-violet-500 via-blue-600 to-cyan-500 px-6 py-2.5 text-sm font-bold shadow-lg shadow-violet-500/30">✍️ Viết dòng đầu tiên</button>}
+                        ? <button onClick={() => setObStep(s => s + 1)} className="rounded-xl ak-cta px-6 py-2.5 text-sm font-bold">Tiếp →</button>
+                        : <button onClick={finish} className="rounded-xl ak-cta px-6 py-2.5 text-sm font-bold">✍️ Viết dòng đầu tiên</button>}
                     </div>
                   </div>
                 </div>
