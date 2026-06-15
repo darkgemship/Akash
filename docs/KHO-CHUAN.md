@@ -152,3 +152,20 @@ McAdams, Life Story Interview II (2007, Foley Center/Northwestern — PDF gốc)
 - **P0 (dọn + gom)**: Home gộp khối "Cần làm" + bỏ 2 khối dư + account lên Home · gác cổng publish · map 6 hub vào 7 cây + xoá 5 trang rác + dọn "Xưởng content" lạc kho nhân loại · chốt lại `cau-hoi-mo` vs `ghi-chu` (sửa DECISIONS hoặc PageFrame).
 - **P1**: đề xuất Thấm heuristic + resume Thấm dở · Tiếp tục viết theo Xưởng · 📐 trang admin · pill màu lịch sử · giao việc gắn node.
 - **P2**: job dọn kho tuần · migration phân loại 85 trang cũ (AI khi cắm API) · "Thấm cùng AI".
+
+
+## 5. PROPERTIES — THUỘC TÍNH vs LIÊN KẾT (chốt 2026-06-16, chống cognitive load)
+
+> Nguyên tắc: **Thuộc tính = điền 1 lần trên trang (Properties). Liên kết = quan hệ trang↔trang (footer ＋Nối).** Không bắt user "nối trang" cho thứ vốn là thuộc tính (cảm xúc, thời gian) — đó là nguồn rối chính.
+
+### Trường tối thiểu (mọi trang)
+`Loại trang` · `Cây gốc` (read-only) · `Tóm tắt 1 câu` (AI dùng nhiều nhất) · `Từ khoá`.
+
+### Cá nhân — thêm
+`Ngày sự kiện` · `Cảm xúc` (1 chip, cột emotion) + **Trường của tôi** (user tự thêm). Quan hệ đi qua footer: Trải nghiệm/Kiến thức/Con người/Giá trị/Tham chiếu/Neo.
+
+### QNET & Nhân loại (ban biên tập khoá) — tài liệu tham chiếu cho AI
+Thêm 2 trường VÀNG để model rẻ viết content đúng ngữ cảnh: **🎯 Dùng khi nào** (`when_to_use` — bối cảnh nên trích) · **❝ Câu trích đắt** (`key_quote` — câu quotable sẵn). Không mang cảm xúc cá nhân — user ánh xạ (🪞) về Tủ nguồn cá nhân rồi ghi cảm nhận ở đó.
+
+### Vì sao tốt cho AI model thấp
+AI chỉ cần đọc: Tóm tắt 1 câu (cái gì) + Câu trích đắt (dùng ngay) + Dùng khi nào (đặt đúng chỗ) + Nguồn (uy tín) + Cảm xúc/Người/Giá trị (giọng) → ráp content không cần đọc lại toàn bài, ít token, đúng ý.

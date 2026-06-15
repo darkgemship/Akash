@@ -633,12 +633,11 @@ export function Today({ user, role, stats, recent, pages, editorial = [], counts
   if (role?.can_approve && (counts?.pendingAll ?? 0) > 0) todos.push({ icon: '📨', label: `${counts!.pendingAll} bài chờ bạn duyệt`, sub: 'thành viên đang đợi', act: () => onRaw?.(), cta: 'Vào duyệt' })
   return (
     <div className="p-8 max-w-5xl mx-auto">
-      {/* ===== COMMAND BAR — đầu não Akash (wordmark · status · clock) ===== */}
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-3 min-w-0">
-          <Wordmark size="lg" dotted />
-          <span className="hidden md:block"><StatusLine items={['CORE', 'MEMORY', 'LINK', 'ONLINE', 'ALIVE']} /></span>
-        </div>
+      {/* ===== COMMAND BAR — đầu não Akash (wordmark · status · clock). Spacer flex-1 + clip để KHÔNG đè chữ ===== */}
+      <div className="flex items-center gap-3 mb-3">
+        <Wordmark size="lg" dotted />
+        <span className="hidden xl:block min-w-0 overflow-hidden whitespace-nowrap"><StatusLine items={['CORE', 'MEMORY', 'LINK', 'ONLINE']} /></span>
+        <div className="flex-1 min-w-[12px]" />
         <div className="flex items-center gap-4 shrink-0">
           <div className="hud-num text-right" style={{ fontSize: '1.5rem' }}>
             {now ? now.toLocaleTimeString('vi', { hour: '2-digit', minute: '2-digit' }) : '--:--'}

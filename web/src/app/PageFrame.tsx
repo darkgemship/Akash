@@ -17,7 +17,7 @@ import { useMemo, useState } from 'react'
 export type FrameNode = {
   id: string; title: string | null; kind: string; parent_id: string | null
   icon?: string | null; layer?: string; subtype?: string | null
-  event_date?: string | null; status?: string
+  event_date?: string | null; status?: string; emotion?: string | null
   props?: Record<string, unknown> | null
 }
 type Field = { label: string; value: string }
@@ -78,13 +78,14 @@ const Sect = ({ title, hint, children }: { title: string; hint?: string; childre
    - ✏️ Trường của tôi: user thường tự thêm trường riêng (props.custom_fields)
    - children = dải nút hành động (duyệt / đề xuất / template / đính kèm…) từ page.tsx
 ===================================================================== */
-export function PropsPanel({ node, canE, isEditor, hubLabel, onSetProp, onSaveDate, children }: {
+export function PropsPanel({ node, canE, isEditor, hubLabel, onSetProp, onSaveDate, onSetEmotion, children }: {
   node: FrameNode
   canE: boolean        // được sửa trang này (kho cá nhân: luôn; kho chung: biên tập viên+)
   isEditor: boolean    // thuộc ban biên tập (sửa kho chung) — được sửa ĐỊNH NGHĨA trường chuẩn
   hubLabel?: string | null  // cây gốc đang chứa trang — hiển thị read-only (trang chỉ có MỘT nhà)
   onSetProp: (key: string, val: unknown) => void
   onSaveDate: (d: string) => void
+  onSetEmotion?: (e: string) => void   // ghi cột nodes.emotion (thuộc tính, không phải link)
   children?: React.ReactNode
 }) {
   const p = (node.props ?? {}) as Record<string, unknown>
@@ -92,6 +93,8 @@ export function PropsPanel({ node, canE, isEditor, hubLabel, onSetProp, onSaveDa
   const mine = ((p.custom_fields as Field[]) ?? [])
   // kho cá nhân: chính chủ là "ban biên tập" của trang mình; kho chung: cần quyền biên tập
   const canFix = node.layer === 'personal' ? canE : isEditor
+  const isShared = node.layer === 'corporate' || node.layer === 'humanity'  // QNET / Nhân loại = tài liệu tham chiếu cho AI
+  const EMOS = ['😮 vỡ òa', '💗 chạm', '🔥 thôi thúc', '😣 nhói', '😤 ức', '😌 nhẹ nhõm', '🌫️ hoài nghi']
 
   const setField = (key: 'fixed_fields' | 'custom_fields', arr: Field[], i: number, v: string) =>
     onSetProp(key, arr.map((f, j) => j === i ? { ...f, value: v } : f))
@@ -134,6 +137,15 @@ export function PropsPanel({ node, canE, isEditor, hubLabel, onSetProp, onSaveDa
           <Row label="Ngày sự kiện" hint="Thời gian THỰC TẾ xảy ra (viết về quá khứ → ngày quá khứ)">
             <input disabled={!canE} type="date" value={node.event_date ?? ''} onChange={e => onSaveDate(e.target.value)} className={`${flat} [color-scheme:dark]`} />
           </Row>
+          {!isShared && onSetEmotion && (
+            <Row label="Cảm xúc" hint="cảm xúc THẬT của bạn — HOOK của content, AI đọc để bắt đúng giọng">
+              <div className="flex flex-wrap gap-1 py-0.5">
+                {EMOS.map(e => { const on = (node.emotion ?? '') === e; return (
+                  <button key={e} disabled={!canE} onClick={() => onSetEmotion(on ? '' : e)} className={`text-[11px] rounded-md px-1.5 py-0.5 border transition ${on ? 'bg-amber-500/20 border-amber-400/50 text-amber-100' : 'bg-white/5 border-[var(--hud-line)] text-zinc-500 hover:text-zinc-300'}`}>{e}</button>
+                )})}
+              </div>
+            </Row>
+          )}
           <Row label="Tóm tắt 1 câu" hint="AI dùng làm snippet khi trích dẫn">
             <input disabled={!canE} key={node.id + '-sum'} defaultValue={(p.summary as string) ?? ''} onBlur={e => { if (e.target.value !== ((p.summary as string) ?? '')) onSetProp('summary', e.target.value) }} placeholder="cốt lõi của trang trong một câu…" className={flat} />
           </Row>
@@ -143,6 +155,17 @@ export function PropsPanel({ node, canE, isEditor, hubLabel, onSetProp, onSaveDa
           <Row label="Từ khoá" hint="cách nhau dấu phẩy — phục vụ tìm kiếm & AI">
             <input disabled={!canE} key={node.id + '-kw'} defaultValue={(p.keywords as string) ?? ''} onBlur={e => { if (e.target.value !== ((p.keywords as string) ?? '')) onSetProp('keywords', e.target.value) }} placeholder="—" className={flat} />
           </Row>
+          {/* Kho chung (QNET/Nhân loại) = tài liệu tham chiếu → 2 trường vàng cho AI viết content rẻ mà hay */}
+          {isShared && (
+            <>
+              <Row label="Dùng khi nào" hint="bối cảnh nên trích bài này — AI biết LÚC NÀO đưa vào content">
+                <input disabled={!canE} key={node.id + '-when'} defaultValue={(p.when_to_use as string) ?? ''} onBlur={e => { if (e.target.value !== ((p.when_to_use as string) ?? '')) onSetProp('when_to_use', e.target.value) }} placeholder="vd: khi khách chần chừ vì sợ rủi ro…" className={flat} />
+              </Row>
+              <Row label="Câu trích đắt" hint="một câu quotable sẵn để AI dùng ngay trong content">
+                <input disabled={!canE} key={node.id + '-kq'} defaultValue={(p.key_quote as string) ?? ''} onBlur={e => { if (e.target.value !== ((p.key_quote as string) ?? '')) onSetProp('key_quote', e.target.value) }} placeholder="“câu nói cô đọng nhất của bài này”" className={flat} />
+              </Row>
+            </>
+          )}
           {(p.board as string) && (
             <Row label="Đầu ra media" hint="định dạng content (chỉ thẻ Xưởng)">
               <div className="flex gap-2">
@@ -300,27 +323,38 @@ export function PageFooter({ node, pages, outLinks, backLinks, mdText, canE, lit
 
       {lite ? null : <>
       {/* ❤️ LIÊN KẾT 8 CHIỀU — gốc rễ framework: trang chưa nối = chưa thuộc về cuộc đời bạn */}
-      <Sect title={`❤️ Liên kết 8 chiều (${litDims}/8 chiều sáng)`} hint="trang càng nối nhiều chiều càng chuyển hoá sâu — bấm ＋ để nối ngay">
+      <Sect title={`❤️ Liên kết 8 chiều (${litDims}/8 chiều sáng)`} hint="🧡 Cảm xúc & 💙 Thời gian TỰ sáng từ Properties (không cần nối trang) — 6 chiều còn lại bấm ＋ Nối tới trang khác">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           {byDim.map(({ k, d, out, back }) => {
-            const lit = out.length + back.length > 0
+            // emotion & time là THUỘC TÍNH của trang (điền ở Properties), KHÔNG phải quan hệ giữa 2 trang → bỏ picker
+            const isAttr = k === 'emotion' || k === 'time'
+            const attrVal = k === 'emotion' ? (node.emotion ?? '') : k === 'time' ? (node.event_date ?? '') : ''
+            const lit = isAttr ? !!attrVal : out.length + back.length > 0
             return (
               <div key={k} className={`rounded-xl border p-2.5 ${lit ? 'bg-white/[0.04] border-white/15' : 'bg-white/[0.015] border-white/5'}`}
                 style={lit ? { boxShadow: `inset 2px 0 0 ${d.color}` } : undefined}>
                 <div className="flex items-center gap-1.5 mb-1.5">
                   <span className="w-2 h-2 rounded-full shrink-0" style={{ background: d.color, opacity: lit ? 1 : 0.35 }} />
                   <span className={`text-xs font-semibold ${lit ? 'text-zinc-200' : 'text-zinc-600'}`}>{d.icon} {d.label}</span>
-                  {lit && <span className="text-[10px] text-zinc-600">{out.length + back.length}</span>}
-                  {canE && <button onClick={() => setPicker(picker?.dim === k ? null : { dim: k, q: '' })} title={`Nối trang theo chiều ${d.label}`} className="ml-auto text-[10px] rounded bg-white/5 border border-white/10 px-1.5 py-0.5 text-zinc-500 hover:text-white hover:border-white/30">＋ Nối</button>}
+                  {isAttr
+                    ? <span className="ml-auto text-[8.5px] uppercase tracking-wider text-zinc-600 font-mono">tự động</span>
+                    : <>{lit && <span className="text-[10px] text-zinc-600">{out.length + back.length}</span>}
+                       {canE && <button onClick={() => setPicker(picker?.dim === k ? null : { dim: k, q: '' })} title={`Nối trang theo chiều ${d.label}`} className="ml-auto text-[10px] rounded bg-white/5 border border-white/10 px-1.5 py-0.5 text-zinc-500 hover:text-white hover:border-white/30">＋ Nối</button>}</>}
                 </div>
-                {lit ? (
+                {isAttr ? (
+                  lit
+                    ? <p className="text-xs font-medium" style={{ color: d.color }}>{k === 'emotion' ? attrVal : new Date(attrVal).toLocaleDateString('vi')}</p>
+                    : <p className="text-[10px] text-zinc-700 leading-relaxed italic">{k === 'emotion'
+                        ? ((node.layer === 'corporate' || node.layer === 'humanity') ? 'Cảm xúc là của riêng bạn — 🪞 Ánh xạ bài này về kho cá nhân để ghi cảm nhận.' : 'Điền ở 📌 Properties phía trên (Cảm xúc) — không cần nối trang.')
+                        : 'Điền ở 📌 Properties phía trên (Ngày sự kiện) — không cần nối trang.'}</p>
+                ) : lit ? (
                   <div className="flex flex-wrap gap-1">
                     {out.map(pg => pageChip(pg, '→', d.color))}
                     {back.map(pg => pageChip(pg, '←', d.color))}
                   </div>
                 ) : <p className="text-[10px] text-zinc-700 leading-relaxed italic">{d.q}</p>}
-                {/* picker nối ngay tại chiều này */}
-                {picker?.dim === k && (
+                {/* picker nối ngay tại chiều này (chỉ 6 chiều quan hệ) */}
+                {!isAttr && picker?.dim === k && (
                   <div className="mt-2 rounded-lg bg-black/30 border border-white/10 p-1.5">
                     <input autoFocus value={picker.q} onChange={e => setPicker({ dim: k, q: e.target.value })} placeholder={`Tìm trang để nối chiều ${d.label}…`} className="w-full bg-transparent outline-none text-xs px-1 py-0.5 mb-1 text-zinc-200" />
                     <div className="max-h-36 overflow-auto space-y-0.5">

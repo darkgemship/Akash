@@ -2,6 +2,18 @@
 
 > Ghi lại mỗi đợt build để lần sau làm tốt hơn. Quy trình chuẩn: **đọc docs → sửa code → `npm run build` → test thật trên preview (đăng nhập, bấm từng nút) → cập nhật docs**.
 
+## 2026-06-16 (đợt 17) — 🧠 Tách THUỘC TÍNH ↔ LIÊN KẾT (giảm cognitive load) + Properties theo kho + gợi ý tiêu đề
+Founder: header đè chữ; AI gợi ý title; nghiên cứu lại Properties (trường tối thiểu hữu dụng, đặc biệt QNET/Nhân loại cho AI rẻ); đánh giá lại logic cảm xúc/8 chiều — đang quá tải, dễ bỏ sót, AI rối.
+**Insight gốc**: trong "8 chiều", Cảm xúc & Thời gian KHÔNG phải quan hệ giữa 2 trang — chúng là THUỘC TÍNH của trang. Bắt user "nối trang để gắn cảm xúc" = category error → cognitive load. Tách rõ:
+- **THUỘC TÍNH** (điền 1 lần ở Properties, KHÔNG nối): Cảm xúc (cột emotion), Thời gian (event_date), Tóm tắt 1 câu, Loại, Từ khoá. Điểm 8 chiều vẫn tự derive từ các cột này (transformScore không đổi).
+- **LIÊN KẾT** (quan hệ trang↔trang, có picker ＋Nối): Kiến thức, Trải nghiệm, Con người, Giá trị, Tham chiếu, Neo (6 chiều).
+1. **Footer**: tile 🧡 Cảm xúc + 💙 Thời gian → nhãn "TỰ ĐỘNG", bỏ picker; sáng theo cột emotion/event_date; hint trỏ về Properties (trang cá nhân) hoặc "🪞 Ánh xạ" (trang QNET/Nhân loại — cảm xúc chỉ thuộc kho cá nhân).
+2. **Properties cá nhân**: thêm field **Cảm xúc** (7 chip → cột emotion, qua onSetEmotion/saveEmotion). User vẫn tự thêm "Trường của tôi".
+3. **Properties kho chung (QNET/Nhân loại)**: 2 trường vàng cho AI rẻ viết hay — **🎯 Dùng khi nào** (when_to_use: bối cảnh nên trích) + **❝ Câu trích đắt** (key_quote: câu quotable sẵn). Cùng Tóm tắt 1 câu + Nguồn + Từ khoá = đủ để model thấp tạo content đúng ngữ cảnh.
+4. **Gợi ý tiêu đề** (page.tsx): nút "✨ Gợi ý tiêu đề" hiện khi title generic + có nội dung → lấy từ Tóm tắt 1 câu (ưu tiên) hoặc câu có nghĩa đầu tiên. AI rewrite body = Phase 2 khi cắm key.
+5. **Header hết đè chữ**: command bar Home + viewBar + know header → spacer flex-1 + status `xl:block min-w-0 overflow-hidden`, bỏ "ALIVE" cho gọn.
+**Verify**: screenshot Home (clock không đè status), trang cá nhân (chip Cảm xúc ở Properties + footer Cảm xúc/Thời gian "tự động"), QNET (Dùng khi nào + Câu trích đắt). tsc + build xanh.
+
 ## 2026-06-13 (đợt 16) — 🧭 "3 câu hôm nay" theo DISC + MBTI + màn xác nhận
 Founder: sau khi trả lời cho hiện xác nhận & lưu; câu hỏi lần tới dùng khung DISC / MBTI để hiểu tính cách.
 1. **Bank câu hỏi theo khung tính cách** (Pages.tsx QA modal): 16 câu gắn nhãn — 8 DISC (D/I/S/C × 2) + 8 MBTI (E/I·S/N·T/F·J/P). Mỗi ngày chọn 3 câu, stride 5 (nguyên tố cùng nhau 16) → phủ cả 2 khung, xoay vòng theo ngày. Nhãn hiện dưới mỗi câu (hud-label).

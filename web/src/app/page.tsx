@@ -466,6 +466,12 @@ function Workspace({ user }: { user: User }) {
     if (error) { setErr(error.message); return }
     if (orgId) loadTree(orgId)
   }
+  async function saveEmotion(e: string) {
+    if (!editing) return
+    const { error } = await supabase.from('nodes').update({ emotion: e || null }).eq('id', editing.id)
+    if (error) { setErr(error.message); return }
+    if (orgId) loadTree(orgId)
+  }
   // lưu trang hiện tại thành template tái dùng (sửa được trong trang 🧩 Template)
   // bật/tắt xem markdown (lấy bản md mới nhất từ DB)
   async function toggleMd() {
@@ -580,6 +586,29 @@ function Workspace({ user }: { user: User }) {
     await supabase.from('nodes').update({ title: editTitle }).eq('id', editing.id)
     setEditing({ ...editing, title: editTitle })
     if (orgId) { loadTree(orgId); loadGraph(orgId) }
+  }
+  // tiêu đề "mặc định/máy đặt" → đáng để gợi ý lại từ nội dung
+  function isGenericTitle(t: string) { return !t.trim() || /^(Trang mới|Trang chưa|Ghi chú|Nhật ký|Bảng dữ liệu|Cảm nhận:)/i.test(t.trim()) }
+  // gợi ý tiêu đề từ Tóm tắt 1 câu (ưu tiên) hoặc câu có nghĩa đầu tiên trong body. (AI rewrite body = Phase 2 khi cắm key)
+  function suggestTitle(): string {
+    const nd = nodeOf(editing?.id ?? null)
+    const sum = ((nd?.props as Record<string, unknown> | null)?.summary as string) ?? ''
+    if (sum.trim()) return sum.trim().replace(/[.。!?]+$/, '').slice(0, 72)
+    for (const raw of (mdText || '').split('\n')) {
+      const l = raw.trim()
+      if (!l || l.startsWith('#') || l.startsWith('>') || l.startsWith('-') || l.startsWith('|') || /^\*\*(Loại|Tóm tắt|Nguồn|Ngày|Campaign|Gốc)/i.test(l)) continue
+      const clean = l.replace(/[*_`#>]/g, '').trim()
+      if (clean.length > 8) return clean.replace(/[.。!?]+$/, '').slice(0, 72)
+    }
+    return ''
+  }
+  async function applySuggestedTitle() {
+    const t = suggestTitle(); if (!t || !editing) return
+    setEditTitle(t)
+    await supabase.from('nodes').update({ title: t }).eq('id', editing.id)
+    setEditing({ ...editing, title: t })
+    if (orgId) { loadTree(orgId); loadGraph(orgId) }
+    setToast('✨ Đã đặt tiêu đề từ nội dung — sửa lại nếu muốn'); setTimeout(() => setToast(''), 2500)
   }
   async function saveIcon(icon: string) {
     if (!editing) return
@@ -701,8 +730,8 @@ function Workspace({ user }: { user: User }) {
   // thanh đầu dùng chung cho các view không phải Kho/Home (wordmark A·K·A·S·H + tài khoản)
   const viewBar = (
     <div className="flex items-center justify-between px-6 py-3 border-b border-[var(--hud-line)] shrink-0">
-      <div className="flex items-center gap-3"><Wordmark size="md" dotted /><span className="hidden md:block"><StatusLine items={['CORE', 'MEMORY', 'LINK', 'ONLINE']} /></span></div>
-      {accountCluster}
+      <div className="flex items-center gap-3 min-w-0"><Wordmark size="md" dotted /><span className="hidden xl:block min-w-0 overflow-hidden whitespace-nowrap"><StatusLine items={['CORE', 'MEMORY', 'LINK', 'ONLINE']} /></span></div>
+      <div className="shrink-0">{accountCluster}</div>
     </div>
   )
 
@@ -731,11 +760,11 @@ function Workspace({ user }: { user: User }) {
       {page === 'know' ? (
         <>
       <header className="flex items-center justify-between px-6 py-4 border-b border-[var(--hud-line)]">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 min-w-0">
           <Wordmark size="md" dotted />
-          <span className="hidden lg:block"><StatusLine items={['CORE', 'MEMORY', 'LINK', 'ONLINE']} /></span>
+          <span className="hidden xl:block min-w-0 overflow-hidden whitespace-nowrap"><StatusLine items={['CORE', 'MEMORY', 'LINK', 'ONLINE']} /></span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           <div className="flex gap-1 bg-white/5 border border-white/10 rounded-xl p-1 text-sm">
             <button onClick={() => setView('folder')} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition ${view === 'folder' ? 'ak-cta text-white' : 'text-zinc-400 hover:text-zinc-200'}`}><IDoc size={15} /> Trang</button>
             <button onClick={() => setView('galaxy')} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition ${view === 'galaxy' ? 'ak-cta text-white' : 'text-zinc-400 hover:text-zinc-200'}`}><IOrbit size={15} /> Galaxy</button>
@@ -951,6 +980,9 @@ function Workspace({ user }: { user: User }) {
                   </div>
                 </div>
                 <input value={editTitle} readOnly={!canEditLayer(layerOf(editing.id))} onChange={e => setEditTitle(e.target.value)} onBlur={saveTitle} onKeyDown={e => e.key === 'Enter' && (e.target as HTMLInputElement).blur()} className="ak-display w-full text-4xl font-bold bg-transparent outline-none placeholder:text-zinc-700 mb-2" placeholder="Trang chưa có tiêu đề" />
+                {canEditLayer(layerOf(editing.id)) && isGenericTitle(editTitle) && suggestTitle() && (
+                  <button onClick={applySuggestedTitle} title="Đặt tiêu đề từ nội dung (Tóm tắt 1 câu / câu đầu)" className="mb-2 -mt-1 inline-flex items-center gap-1.5 text-[11px] rounded-lg bg-violet-500/10 border border-violet-400/25 text-violet-200 px-2.5 py-1 hover:bg-violet-500/20 transition">✨ Gợi ý tiêu đề: <span className="text-zinc-300 italic truncate max-w-[360px]">“{suggestTitle()}”</span></button>
+                )}
                 {/* ① PROPERTIES — 📌 trường chuẩn ban biên tập (fix cứng) + ✏️ trường riêng user (PageFrame.tsx). Trang tổng (kho/hub) không có */}
                 {(() => {
                   const node = nodeOf(editing.id)
@@ -961,7 +993,7 @@ function Workspace({ user }: { user: User }) {
                   const chain = ancestors(editing.id)
                   const hubN = chain.find(a => a.id !== node.id && (a.kind === 'folder' || a.subtype === 'hub')) ?? chain.find(a => a.kind === 'kho')
                   return (
-                    <PropsPanel node={node} canE={canE} isEditor={!!role?.can_edit} hubLabel={hubN ? `${hubN.icon || ''} ${hubN.title || ''}`.trim() : null} onSetProp={setNodeProp} onSaveDate={saveEventDate}>
+                    <PropsPanel node={node} canE={canE} isEditor={!!role?.can_edit} hubLabel={hubN ? `${hubN.icon || ''} ${hubN.title || ''}`.trim() : null} onSetProp={setNodeProp} onSaveDate={saveEventDate} onSetEmotion={saveEmotion}>
                       {node?.status === 'pending' && <span className="rounded-lg bg-amber-500/15 border border-amber-400/30 text-amber-300 px-2 py-1">⏳ Chờ duyệt</span>}
                       {/* duyệt ngay trong trang (người có quyền) */}
                       {node?.status === 'pending' && role?.can_approve && (
