@@ -448,16 +448,6 @@ function Workspace({ user }: { user: User }) {
     openNoteEditor({ id, title, kind, parent_id: parentId })
   }
   // chuyển bài đã chín thành thẻ trên Board content
-  async function toContent() {
-    if (!editing) return
-    const { data } = await supabase.from('nodes').select('props').eq('id', editing.id).single()
-    const props = { ...((data?.props as Record<string, unknown>) ?? {}), board: 'idea' }
-    const { error } = await supabase.from('nodes').update({ props }).eq('id', editing.id)
-    if (error) { setErr('Không đưa được vào Board: ' + error.message); return }
-    logEvent('content', editing.id)
-    setToast('📣 Đã đưa vào Board content (cột Ý tưởng)')
-    setTimeout(() => setToast(''), 3000)
-  }
   // properties chuẩn đầu trang
   async function setNodeProp(key: string, val: unknown) {
     if (!editing) return
@@ -864,7 +854,7 @@ function Workspace({ user }: { user: User }) {
                     {depth?.learned
                       ? <>
                           <span className="flex items-center gap-1.5 text-xs rounded-lg bg-violet-500/15 border border-violet-400/30 text-violet-300 px-2 py-1 tabular-nums"><ITarget size={13} /> {(() => { const nd2 = nodeOf(editing.id); const t = transformScore(dimSignals({ out: outRaw, back: backRaw, event_date: nd2?.event_date, emotion: nd2?.emotion, props: nd2?.props })); return `${t.total} · ${t.covered}/8` })()}</span>
-                          <button onClick={() => setShowDigest(true)} className="flex items-center gap-1.5 text-xs rounded-lg bg-white/10 border border-white/10 px-2.5 py-1 hover:bg-white/15"><IRefresh size={13} /> Ôn lại</button>
+                          <button onClick={() => setShowDigest(true)} title="Mở lại — thắp tiếp chiều còn tối để tăng điểm" className="flex items-center gap-1.5 text-xs rounded-lg bg-white/10 border border-white/10 px-2.5 py-1 hover:bg-white/15"><IRefresh size={13} /> Chuyển hoá tiếp</button>
                         </>
                       : <button onClick={() => setShowDigest(true)} className="flex items-center gap-1.5 text-xs rounded-lg ak-cta px-3 py-1 font-semibold"><IGrad size={13} /> Chuyển hoá bài này</button>}
                     <span className="text-[10px] text-zinc-600 ml-auto">{backRaw.length} liên kết tới đây</span>
@@ -941,8 +931,7 @@ function Workspace({ user }: { user: User }) {
                     return (depth?.learned || t8.learned) ? (
                       <>
                         <button onClick={() => setShowRadar(s => !s)} title={`Độ Chuyển hoá ${t8.total} · ${t8.covered}/8 chiều sáng`} className="flex items-center gap-1.5 text-xs rounded-lg bg-violet-500/15 border border-violet-400/30 text-violet-300 px-2.5 py-1 hover:bg-violet-500/25 tabular-nums"><ITarget size={13} /> {t8.total} · {t8.covered}/8</button>
-                        <button onClick={() => setShowDigest(true)} className="flex items-center gap-1.5 text-xs rounded-lg bg-white/10 border border-white/10 px-2.5 py-1 hover:bg-white/15"><IRefresh size={13} /> Ôn lại</button>
-                        {nd?.owner_id === user.id && layerOf(editing.id) === 'personal' && <button onClick={toContent} title="Bài đã chín → tạo content" className="flex items-center gap-1.5 text-xs rounded-lg bg-amber-400 text-black hover:bg-amber-300 px-2.5 py-1 font-semibold"><IMegaphone size={13} /> Content</button>}
+                        <button onClick={() => setShowDigest(true)} title="Mở lại — thắp tiếp chiều còn tối để tăng điểm" className="flex items-center gap-1.5 text-xs rounded-lg bg-white/10 border border-white/10 px-2.5 py-1 hover:bg-white/15"><IRefresh size={13} /> Chuyển hoá tiếp</button>
                         {showRadar && (
                           <>
                             <div className="fixed inset-0 z-20" onClick={() => setShowRadar(false)} />

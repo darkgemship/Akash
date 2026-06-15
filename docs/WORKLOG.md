@@ -2,6 +2,14 @@
 
 > Ghi lại mỗi đợt build để lần sau làm tốt hơn. Quy trình chuẩn: **đọc docs → sửa code → `npm run build` → test thật trên preview (đăng nhập, bấm từng nút) → cập nhật docs**.
 
+## 2026-06-16 (đợt 19) — 🔧 Điểm Chuyển hoá KHỚP + Digest resume + dọn Ôn lại/Content + đổi tên Linh hồn
+Founder: "Hồn cốt"→"Linh hồn"; điểm chấm xong không lên; mở lại phải thấy đáp án cũ + điền thêm tăng điểm; "Ôn lại" & nút Content vô nghĩa → bỏ.
+1. **Bug điểm lệch (chí mạng)**: màn ăn mừng Digest dùng `depthScore` (radar 5-cạnh CŨ → hiện 91) trong khi badge trang dùng `transformScore` (8 chiều, 26·3/8) → user thấy "điểm không lên". Fix: sau finish, re-fetch links+thuộc tính vừa lưu → `transformScore` → ăn mừng hiện ĐÚNG số (verify: 26·3/8 = badge). depthScore chỉ còn cho lịch ôn nội bộ.
+2. **Digest resume**: useEffect nạp lại `props.principle` + `props.action`/due + links đã có (tick sẵn kOut/kIn/rOut/rIn/valSel/lifeSel) ngoài emotion/event_date. Mở lại = thấy việc đã làm, điền thêm để tăng điểm; addLink chống trùng nên finish lại an toàn.
+3. **"Hồn cốt" → "Linh hồn"** (STEPS + header bước 6).
+4. **Dọn nút vô nghĩa**: bỏ "Ôn lại" (đổi thành **"Chuyển hoá tiếp"** — giờ resume được nên CÓ nghĩa: thắp tiếp chiều tối) ở cả peek + header; bỏ hẳn nút vàng **Content** (toContent) — đường tạo content đi qua Content Engine. Todo Home "Ôn lại" → "Chuyển hoá tiếp".
+**Verify**: chạy Digest "Nhất quán" → Hoàn tất → ăn mừng 26·3/8 = badge; Linh hồn hiện, Hồn cốt mất; header hết Ôn lại/Content. tsc + build xanh.
+
 ## 2026-06-16 (đợt 18) — 🔗 Gộp luồng Insight: tên page theo BÀI HỌC + truy nguồn, nối Tham chiếu
 Founder: insight từ bài KOL đang lấy câu cảm thán ("rất là hay") làm tên page — vô nghĩa, không truy được nguồn.
 **Đề xuất chốt — GỘP 2 luồng insight làm một**: dù từ Home hay từ bài KOL, đều qua cùng "Đào sâu 30s" → vào 💎 Kim cương bài học.

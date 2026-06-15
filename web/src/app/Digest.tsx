@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 import type { GNode } from './Galaxy'
+import { dimSignals, transformScore } from '@/lib/transformScore'
 
 const W = [1, 1.2, 1.5, 1.8, 2.5]
 export function depthScore(d: { connections: number; meaning: number; evidence: number; experience: number; action: number }) {
@@ -20,7 +21,7 @@ const DIM8: { key: string; label: string; color: string }[] = [
   { key: 'values', label: 'Giá trị', color: '#a78bfa' },
   { key: 'anchor', label: 'Neo', color: '#f87171' },
 ]
-const STEPS = ['Đọc & nhặt', 'Kiến thức', 'Tham chiếu', 'Cuộc đời', 'Thời gian', 'Hồn cốt', 'Hành động']
+const STEPS = ['Đọc & nhặt', 'Kiến thức', 'Tham chiếu', 'Cuộc đời', 'Thời gian', 'Linh hồn', 'Hành động']
 const EMOTIONS = [['😮', 'vỡ òa'], ['💗', 'chạm'], ['🔥', 'thôi thúc'], ['😣', 'nhói'], ['🌫️', 'hoài nghi']] as const
 const VALUE_SUGGEST = ['Kỷ luật', 'Trung thực', 'Biết ơn', 'Phụng sự', 'Can đảm', 'Tự do', 'Gia đình', 'Học hỏi', 'Sức khỏe', 'Sáng tạo', 'Khiêm nhường', 'Kiên trì']
 const STOP = new Set(['những', 'được', 'không', 'trong', 'với', 'của', 'cho', 'và', 'các', 'một', 'ngày', 'tháng', 'đầu', 'sau', 'trước', 'cách'])
@@ -89,9 +90,14 @@ export default function Digest({ folder, others, orgId, userId, onClose, onSaved
 
   // nạp nội dung bài (M1) + giá trị cốt lõi + dòng đời
   useEffect(() => {
-    supabase.from('nodes').select('content,md,event_date,emotion').eq('id', folder.id).single().then(({ data }) => {
+    supabase.from('nodes').select('content,md,event_date,emotion,props').eq('id', folder.id).single().then(({ data }) => {
       if (data?.event_date) setEventDate(data.event_date as string)
       if (data?.emotion) setEmo(data.emotion as string)
+      // RESUME: nạp lại đáp án cũ để user thấy & điền thêm (tăng điểm), không làm lại từ đầu
+      const pp = (data?.props ?? {}) as Record<string, unknown>
+      if (pp.principle) setPrinciple(pp.principle as string)
+      const act = pp.action as { text?: string; due?: string | null } | undefined
+      if (act?.text) { setAction(act.text); if (act.due) setDue(act.due) }
       const content = data?.content as { id?: string; content?: { text?: string }[] }[] | null
       let bs: Q[] = []
       if (content?.length) {
@@ -106,6 +112,17 @@ export default function Digest({ folder, others, orgId, userId, onClose, onSaved
     })
     supabase.from('nodes').select('id,title').eq('owner_id', userId).eq('subtype', 'core_value').then(({ data }) => setCoreValues((data as { id: string; title: string }[]) ?? []))
     supabase.from('nodes').select('id,title,event_date').eq('owner_id', userId).eq('subtype', 'life_event').order('event_date').then(({ data }) => setLifeEvents((data as { id: string; title: string; event_date: string | null }[]) ?? []))
+    // RESUME: nạp các liên kết đã có → tick sẵn (addLink tự chống trùng nên finish lại an toàn)
+    supabase.from('links').select('dimension,from_node,to_node').or(`from_node.eq.${folder.id},to_node.eq.${folder.id}`).then(({ data }) => {
+      const out = (data ?? []).filter(l => l.from_node === folder.id)
+      const back = (data ?? []).filter(l => l.to_node === folder.id)
+      setKOut(out.filter(l => l.dimension === 'knowledge').map(l => l.to_node))
+      setKIn(back.filter(l => l.dimension === 'knowledge').map(l => l.from_node))
+      setROut(out.filter(l => l.dimension === 'reference').map(l => l.to_node))
+      setRIn(back.filter(l => l.dimension === 'reference').map(l => l.from_node))
+      setValSel(out.filter(l => l.dimension === 'values').map(l => l.to_node))
+      setLifeSel(out.filter(l => l.dimension === 'time').map(l => l.to_node))
+    })
   }, [folder.id, userId])
 
   const ranked = useMemo(() => {
@@ -263,8 +280,14 @@ export default function Digest({ folder, others, orgId, userId, onClose, onSaved
     }, { onConflict: 'node_id,user_id' })
     if (lingering.trim()) await supabase.from('open_questions').insert({ user_id: userId, node_id: folder.id, question: lingering.trim(), status: 'open' })
     await supabase.from('events').insert({ user_id: userId, type: 'tham', node_id: folder.id })
+    // ĐIỂM THẬT = transformScore từ links + thuộc tính VỪA LƯU (khớp badge trang, không lệch với depthScore cũ)
+    const { data: lk } = await supabase.from('links').select('dimension,excerpt,from_node,to_node').or(`from_node.eq.${folder.id},to_node.eq.${folder.id}`)
+    const lout = (lk ?? []).filter(l => l.from_node === folder.id)
+    const lback = (lk ?? []).filter(l => l.to_node === folder.id)
+    const { data: nd } = await supabase.from('nodes').select('emotion,event_date,props').eq('id', folder.id).single()
+    const t8 = transformScore(dimSignals({ out: lout, back: lback, emotion: nd?.emotion as string | null, event_date: nd?.event_date as string | null, props: nd?.props as Record<string, unknown> | null }))
     setBusy(false); onSaved()
-    setCelebrate({ score: depthScore(merged), covered: dimsCovered })
+    setCelebrate({ score: t8.total, covered: t8.covered })
   }
 
   const inputCls = 'w-full rounded-xl bg-white/5 border border-white/10 p-3 text-sm outline-none focus:border-violet-400/50'
@@ -378,7 +401,7 @@ export default function Digest({ folder, others, orgId, userId, onClose, onSaved
           )}
           {step === 5 && (
             <>
-              <p className="text-sm text-zinc-400 mb-2">💎 <b>Hồn cốt</b> — bài này phụng sự giá trị nào của bạn, và câu neo của riêng bạn.</p>
+              <p className="text-sm text-zinc-400 mb-2">💎 <b>Linh hồn</b> — bài này phụng sự giá trị nào của bạn, và câu neo của riêng bạn.</p>
               <div className="rounded-xl bg-white/[0.03] border border-white/10 p-3 mb-2.5">
                 <div className="text-[10px] uppercase tracking-wider text-violet-300/80 mb-2">⭐ Giá trị cốt lõi {coreValues.length === 0 && valPick.length === 0 && '— lần đầu: chọn 3–7 giá trị bạn sống vì nó'}</div>
                 {coreValues.length > 0 ? (
