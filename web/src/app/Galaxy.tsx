@@ -17,7 +17,11 @@ const DIM_LABEL: Record<string, string> = {
   people: 'Con người', time: 'Thời gian', reference: 'Tham chiếu', anchor: 'Neo',
 }
 type Motion = 'drift' | 'pulse' | 'still'
-type Mode = 'galaxy' | 'mandala' | 'radar' | 'timeline' | 'neuro'
+type Mode = 'galaxy' | 'mandala' | 'radar' | 'timeline' | 'neuro' | 'rings'
+// 🪐 3 VÒNG ĐỒNG TÂM — màu nền mỗi ring (cá nhân cyan sống ở lõi → QNET tím → nhân loại hồng)
+const RING_HUE: Record<string, number> = { personal: 188, corporate: 266, humanity: 312 }
+const RING_TINT: Record<string, string> = { personal: '#22d3ee', corporate: '#a78bfa', humanity: '#e879f9' }
+const RING_NAME: Record<string, string> = { personal: 'ĐỜI TÔI', corporate: 'QNET', humanity: 'NHÂN LOẠI' }
 // thứ tự 8 trục radar theo framework
 const DIM_ORDER = ['knowledge', 'experience', 'emotion', 'values', 'people', 'time', 'reference', 'anchor']
 
@@ -72,6 +76,7 @@ export default function Galaxy({ nodes, links, onOpen, onConnect, modeReq }: {
   const primaryDimRef = useRef<Map<string, string>>(new Map())                // node → trục chính (radar)
   const unplacedRef = useRef<GNode[]>([])                                     // radar: chưa có link chiều / timeline: chưa có date
   const tlMetaRef = useRef<Record<string, { pxPerMs: number; y: number; min: number }> | null>(null)
+  const ringMetaRef = useRef<{ cx: number; cy: number; RING: Record<string, number>; Rmax: number } | null>(null)
   useEffect(() => { if (modeReq?.mode) { setMode(modeReq.mode as Mode); setMotion('still') } }, [modeReq]) // eslint-disable-line react-hooks/exhaustive-deps
   const tlZoomRef = useRef(1)                       // zoom THỜI GIAN quanh cột HÔM NAY (1 = thấy trọn quá khứ)
   const relayoutRef = useRef<() => void>(() => {})  // wheel gọi lại layout khi đổi time-zoom
@@ -252,6 +257,25 @@ export default function Galaxy({ nodes, links, onOpen, onConnect, modeReq }: {
             m.set(n.id, { x, y: mm.y - 26 - lane * 32, r: SIZE[n.kind] ?? 4, color: COLOR[n.kind] ?? COLOR.note, node: n, phase: rand() * Math.PI * 2 })
           }
         } else tlMetaRef.current = null
+      } else if (mode === 'rings') {
+        // 🪐 3 VÒNG ĐỒNG TÂM (entanglement): cá nhân ở LÕI → QNET → nhân loại ngoài cùng
+        const Rmax = Math.min(W, H) * 0.43
+        const RING: Record<string, number> = { personal: Rmax * 0.42, corporate: Rmax * 0.70, humanity: Rmax * 0.99 }
+        ringMetaRef.current = { cx, cy, RING, Rmax }
+        const offset: Record<string, number> = { personal: 0, corporate: 0.8, humanity: 1.7 }
+        for (const layer of ['personal', 'corporate', 'humanity']) {
+          const ns = nodes.filter(n => (n.layer ?? 'personal') === layer && n.kind !== 'kho')
+          const R = RING[layer]
+          ns.forEach((n, i) => {
+            const a = offset[layer] + (i / Math.max(1, ns.length)) * Math.PI * 2
+            const jit = (rand() - 0.5) * Rmax * 0.05
+            m.set(n.id, {
+              x: cx + Math.cos(a) * (R + jit), y: cy + Math.sin(a) * (R + jit),
+              r: Math.min(11, (SIZE[n.kind] ?? 5) + (degRef.current.get(n.id) ?? 0) * 0.5),
+              color: RING_TINT[layer], node: n, phase: rand() * Math.PI * 2,
+            })
+          })
+        }
       } else if (mode === 'neuro') {
         // 🧠 NEURO 3D: mỗi nhánh lớn = một "vùng não" trên mặt cầu, node rải quanh tâm vùng
         const ids2 = new Set(nodes.map(n => n.id))
@@ -392,6 +416,104 @@ export default function Galaxy({ nodes, links, onOpen, onConnect, modeReq }: {
       if (frame % 30 === 0 && emaDt > 26 && qual > 0.5) { qual -= 0.25; layout() }
       let nBeat = 0, nFireCl = -1, nFire = 0  // nhịp tim + vùng đang "firing"
       ctx.clearRect(0, 0, cv.width, cv.height)
+      // ════════ 🪐 3 VÒNG ĐỒNG TÂM — entanglement rings, đập theo nhịp tim ════════
+      if (mode === 'rings' && ringMetaRef.current) {
+        const { cx: wcx, cy: wcy, RING, Rmax } = ringMetaRef.current
+        const csx = SX(wcx), csy = SY(wcy), k = cam.current.k * dpr
+        // ❤️ NHỊP TIM lub-dub (~1.4s): bừng sáng rồi hạ — 0.55→1.0
+        const period = 140, ph = (t % period) / period
+        const beat = 0.55 + 0.45 * (Math.exp(-Math.pow((ph - 0.10) / 0.05, 2)) + 0.6 * Math.exp(-Math.pow((ph - 0.27) / 0.06, 2)))
+        const hash = (i: number, s: number) => { const x = Math.sin(i * 12.9898 + s * 78.233) * 43758.5453; return x - Math.floor(x) }
+        // nền hư không + bụi sao mờ
+        const bg = ctx.createRadialGradient(csx, csy, 0, csx, csy, Math.max(cv.width, cv.height) * 0.7)
+        bg.addColorStop(0, 'rgba(20,16,34,0.55)'); bg.addColorStop(1, 'rgba(6,6,12,0)')
+        ctx.fillStyle = bg; ctx.fillRect(0, 0, cv.width, cv.height)
+        for (let i = 0; i < 90; i++) {
+          const sx2 = hash(i, 1) * cv.width, sy2 = hash(i, 2) * cv.height
+          ctx.fillStyle = `rgba(255,255,255,${(0.04 + hash(i, 3) * 0.10) * beat})`
+          ctx.fillRect(sx2, sy2, dpr, dpr)
+        }
+        const LAYERS3 = ['personal', 'corporate', 'humanity'] as const
+        // ── vành hạt mỗi ring ──
+        LAYERS3.forEach((layer, ri) => {
+          const R = RING[layer]; if (!R) return
+          const Rs = R * k
+          const N = Math.round((340 + ri * 300) * qual)   // dày → vành mịn như mây hạt (ảnh tham chiếu)
+          const baseHue = RING_HUE[layer]
+          const rot = t * 0.00035 * (ri % 2 ? -1 : 1)
+          const bandPx = R * 0.13 * k
+          for (let i = 0; i < N; i++) {
+            const a = (i / N) * Math.PI * 2 + rot + hash(i, ri) * 0.04
+            const g = hash(i, ri * 7 + 3) * 2 - 1
+            const band = Math.sign(g) * Math.pow(Math.abs(g), 1.5) * bandPx + (hash(i, ri + 9) > 0.94 ? (hash(i, ri) - 0.5) * bandPx * 2.2 : 0)
+            const px = csx + Math.cos(a) * (Rs + band), py = csy + Math.sin(a) * (Rs + band)
+            if (px < -20 || px > cv.width + 20 || py < -20 || py > cv.height + 20) continue
+            const tw = 0.3 + 0.65 * hash(i, ri * 3 + 1)
+            const fade = 1 - Math.min(1, Math.abs(band) / (bandPx * 1.25)) * 0.65
+            const hue = baseHue + Math.sin(a * 3 + ri * 1.3) * 30
+            ctx.fillStyle = `hsla(${hue},88%,${58 + tw * 22}%,${(tw * fade * beat).toFixed(3)})`
+            const bright = hash(i, ri * 5 + 2) > 0.9
+            if (bright) { const s = glowSprite(`hsl(${hue},88%,68%)`); const sg = 3.2 * dpr; ctx.globalAlpha = tw * beat; ctx.drawImage(s, px - sg, py - sg, sg * 2, sg * 2); ctx.globalAlpha = 1 }
+            ctx.fillRect(px, py, (bright ? 1.8 : 1) * dpr, (bright ? 1.8 : 1) * dpr)
+          }
+          // tên ring (mờ, ở mép phải)
+          ctx.fillStyle = `hsla(${baseHue},70%,72%,${0.5 * beat + 0.2})`
+          ctx.font = `${9 * dpr}px var(--font-geist-mono), monospace`; ctx.textAlign = 'left'
+          ctx.fillText(RING_NAME[layer], csx + Rs + 8 * dpr, csy - 2 * dpr)
+        })
+        // ── điểm nối ENTANGLEMENT: link nối 2 kho khác nhau → tia sáng giữa 2 ring ──
+        links.forEach(l => {
+          const a = pts.current.get(l.from_node), b = pts.current.get(l.to_node)
+          if (!a || !b || (a.node.layer ?? 'personal') === (b.node.layer ?? 'personal')) return
+          const ax = SX(a.x), ay = SY(a.y), bx = SX(b.x), by = SY(b.y)
+          const c = DIM_COLOR[l.dimension ?? ''] ?? '#c4b5fd'
+          ctx.strokeStyle = withAlpha(c, 0.10 + 0.32 * beat); ctx.lineWidth = (0.6 + 0.5 * beat) * dpr
+          // cong nhẹ về tâm → cảm giác "vướng víu lượng tử"
+          const mx = (ax + bx) / 2 + (csx - (ax + bx) / 2) * 0.25, my = (ay + by) / 2 + (csy - (ay + by) / 2) * 0.25
+          ctx.beginPath(); ctx.moveTo(ax, ay); ctx.quadraticCurveTo(mx, my, bx, by); ctx.stroke()
+          // hạt sáng chạy dọc theo nhịp
+          const tt = (t * 0.004 + (l.from_node.charCodeAt(0) % 9) * 0.11) % 1
+          const u = 1 - tt, qx = u * u * ax + 2 * u * tt * mx + tt * tt * bx, qy = u * u * ay + 2 * u * tt * my + tt * tt * by
+          const sg = 5 * dpr * beat; ctx.drawImage(glowSprite(c), qx - sg, qy - sg, sg * 2, sg * 2)
+        })
+        // ── node thật = glint sáng trên vành ──
+        const focusId0 = selRef.current
+        const fset = focusId0 ? new Set<string>([focusId0]) : null
+        if (fset) links.forEach(l => { if (l.from_node === focusId0) fset.add(l.to_node); if (l.to_node === focusId0) fset.add(l.from_node) })
+        pts.current.forEach(p => {
+          const px = SX(p.x), py = SY(p.y)
+          if (px < -30 || px > cv.width + 30 || py < -30 || py > cv.height + 30) return
+          const hot = hoverId.current === p.node.id
+          const dim = fset && !fset.has(p.node.id)
+          const rr = Math.max(1.4, p.r * 0.5 * k)
+          const sg = (rr + 3 * dpr) * (hot ? 1.7 : 1) * (0.7 + 0.5 * beat)
+          ctx.globalAlpha = dim ? 0.18 : 1
+          ctx.drawImage(glowSprite(p.color), px - sg, py - sg, sg * 2, sg * 2)
+          ctx.fillStyle = hot ? '#fff' : p.color
+          ctx.beginPath(); ctx.arc(px, py, rr * (hot ? 1.3 : 1), 0, 6.28); ctx.fill()
+          ctx.globalAlpha = 1
+          // nhãn: node hover/chọn → đường dẫn + tên (kiểu ảnh tham chiếu)
+          if (hot || p.node.id === focusId0) {
+            const side = px > cv.width / 2 ? -1 : 1
+            ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.lineWidth = dpr
+            ctx.beginPath(); ctx.moveTo(px + side * (rr + 3 * dpr), py); ctx.lineTo(px + side * 46 * dpr, py); ctx.stroke()
+            ctx.fillStyle = '#fff'; ctx.font = `${11 * dpr}px var(--font-geist-mono), monospace`
+            ctx.textAlign = side > 0 ? 'left' : 'right'
+            ctx.fillText((p.node.title ?? 'Trang').slice(0, 26).toUpperCase(), px + side * 50 * dpr, py + 3.5 * dpr)
+          }
+        })
+        // ── HUD góc + tiêu đề ──
+        const m2 = 14 * dpr, L = 24 * dpr
+        ctx.strokeStyle = 'rgba(167,139,250,.5)'; ctx.lineWidth = 1.5 * dpr
+        for (const [gx, gy, dx2, dy2] of [[m2, m2, 1, 1], [cv.width - m2, m2, -1, 1], [m2, cv.height - m2, 1, -1], [cv.width - m2, cv.height - m2, -1, -1]] as const)
+          { ctx.beginPath(); ctx.moveTo(gx + dx2 * L, gy); ctx.lineTo(gx, gy); ctx.lineTo(gx, gy + dy2 * L); ctx.stroke() }
+        ctx.fillStyle = 'rgba(220,210,245,.8)'; ctx.font = `bold ${10 * dpr}px var(--font-geist-mono), monospace`; ctx.textAlign = 'left'
+        ctx.fillText('A.K.A.S.H — 3 VÒNG ĐỒNG TÂM · ENTANGLED', m2 + 8 * dpr, m2 + 38 * dpr)
+        ctx.fillStyle = 'rgba(220,210,245,.45)'; ctx.font = `${8.5 * dpr}px var(--font-geist-mono), monospace`
+        ctx.fillText(`${nodes.length} NODE · ${links.length} LIÊN KẾT · ♥ ${(beat).toFixed(2)}`, m2 + 8 * dpr, m2 + 52 * dpr)
+        raf = requestAnimationFrame(draw)
+        return
+      }
       // 🧠 NEURO: xoay RẤT chậm để đọc được (user feedback: "quay vòng vòng không nhìn được") — kéo nền để tự xoay
       if (mode === 'neuro') {
         if (!panning.current) rotRef.current.a += 0.0006 * dtMs / 16.7
@@ -1148,6 +1270,7 @@ export default function Galaxy({ nodes, links, onOpen, onConnect, modeReq }: {
           <button onClick={() => { setMode('radar'); setMotion('still'); setFlow(false); setDimOff(new Set()) }} title="8 chiều liên kết cân hay lệch — bấm trục để soi riêng" className={`px-2 py-1.5 rounded-lg ${mode === 'radar' ? 'bg-violet-500/35 text-violet-100' : 'text-zinc-400 hover:bg-white/10'}`}>🎯 Radar</button>
           <button onClick={() => { setMode('timeline'); setMotion('still') }} title="Dòng đời — tri thức đan vào mốc thời gian thực" className={`px-2 py-1.5 rounded-lg ${mode === 'timeline' ? 'bg-blue-500/35 text-blue-100 shadow-lg shadow-blue-500/30' : 'text-zinc-400 hover:bg-white/10'}`}>📜 Dòng đời</button>
           <button onClick={() => { setMode('neuro'); setMotion('still'); setFlow(true) }} title="Bộ não 3D tự xoay — kéo nền để xoay, mỗi nhánh một vùng não" className={`px-2 py-1.5 rounded-lg ${mode === 'neuro' ? 'bg-emerald-500/35 text-emerald-100 shadow-lg shadow-emerald-500/30' : 'text-zinc-400 hover:bg-white/10'}`}>🧠 Neuro</button>
+          <button onClick={() => { setMode('rings'); setMotion('still') }} title="3 vòng đồng tâm — đời tôi ở lõi, QNET, nhân loại; đập theo nhịp tim" className={`px-2 py-1.5 rounded-lg ${mode === 'rings' ? 'bg-pink-500/30 text-pink-100 shadow-lg shadow-pink-500/30' : 'text-zinc-400 hover:bg-white/10'}`}>🪐 3 Vòng</button>
         </div>
         <div className="flex items-center gap-1 rounded-md bg-[#10101a]/85 backdrop-blur border border-[var(--hud-line)] p-1">
           <button onClick={() => { const c = center(); zoomAt(c.x, c.y, 1.25) }} title="Phóng to" className="w-8 h-8 grid place-items-center rounded-lg text-zinc-300 hover:bg-white/10 text-lg">＋</button>
