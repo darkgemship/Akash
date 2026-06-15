@@ -12,6 +12,7 @@ import Warp from './Warp'
 import { IVault, IHome, IPen, IBoard, ICheck, IUsers, IUser, ISearch, IPlus, IDots, IChevron, ILogout, IDoc, IOrbit, IUpload, ICode, ITarget, IRefresh, IMegaphone, IGrad, IX, IExpand, IEye, IEyeOff } from './Icons'
 import { DIMS, PropsPanel, PageFooter, Dim8Bars } from './PageFrame'
 import { dimSignals, transformScore } from '@/lib/transformScore'
+import { Wordmark, StatusLine } from './Hud'
 
 const Editor = dynamic(() => import('./Editor'), { ssr: false })
 const Database = dynamic(() => import('./Database'), { ssr: false })
@@ -107,9 +108,9 @@ function viError(m: string): string {
 
 function AkashMark({ size = 48 }: { size?: number }) {
   return (
-    <div className="dq-mark relative grid place-items-center rounded-2xl bg-gradient-to-br from-violet-600 via-blue-600 to-cyan-400 shadow-lg shadow-violet-500/40" style={{ width: size, height: size }}>
-      <span className="font-black text-white" style={{ fontSize: size * 0.52, lineHeight: 1 }}>A</span>
-      <span className="absolute inset-0 rounded-2xl ring-1 ring-white/30" />
+    <div className="dq-mark relative grid place-items-center rounded-lg bg-gradient-to-br from-violet-600 via-blue-600 to-cyan-400 shadow-lg shadow-violet-500/40" style={{ width: size, height: size }}>
+      <span className="font-mono font-bold text-white" style={{ fontSize: size * 0.5, lineHeight: 1 }}>A</span>
+      <span className="absolute inset-0 rounded-lg ring-1 ring-white/30" />
     </div>
   )
 }
@@ -671,9 +672,9 @@ function Workspace({ user }: { user: User }) {
           const active = page === p
           return (
             <button key={p} onClick={() => setPage(p)} title={label}
-              className={`group relative w-11 h-11 rounded-xl grid place-items-center transition ${active ? 'text-white bg-white/10 border border-white/15' : 'text-zinc-500 hover:text-zinc-200 hover:bg-white/5 border border-transparent'}`}>
+              className={`group relative w-11 h-11 rounded-lg grid place-items-center transition ${active ? 'text-white hud-panel hud-glow-edge' : 'text-zinc-500 hover:text-zinc-200 hover:bg-white/5 border border-transparent'}`}>
               {ic}
-              <span className={`absolute left-[-13px] w-[3px] rounded-full bg-[#8b5cf6] transition-all ${active ? 'h-6 opacity-100' : 'h-0 opacity-0'}`} />
+              <span className={`absolute left-[-13px] w-[3px] rounded-full bg-[var(--hud-accent)] transition-all ${active ? 'h-6 opacity-100' : 'h-0 opacity-0'}`} style={active ? { boxShadow: '0 0 8px var(--hud-accent)' } : undefined} />
               {p === 'review' && (() => { const c = tree.filter(n => n.status === 'pending').length; return c > 0 ? <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 grid place-items-center rounded-full bg-amber-500 text-[9px] font-bold text-black">{c}</span> : null })()}
             </button>
           )
@@ -682,8 +683,11 @@ function Workspace({ user }: { user: User }) {
       <div className="flex-1 min-w-0 flex flex-col h-screen overflow-hidden">
       {page === 'know' ? (
         <>
-      <header className="flex items-center justify-between px-6 py-4 border-b border-white/10">
-        <span className="text-xl font-black tracking-tight ak-logo-grad">Akash</span>
+      <header className="flex items-center justify-between px-6 py-4 border-b border-[var(--hud-line)]">
+        <div className="flex items-center gap-3">
+          <Wordmark size="md" dotted />
+          <span className="hidden lg:block"><StatusLine items={['CORE', 'MEMORY', 'LINK', 'ONLINE']} /></span>
+        </div>
         <div className="flex items-center gap-2">
           <div className="flex gap-1 bg-white/5 border border-white/10 rounded-xl p-1 text-sm">
             <button onClick={() => setView('folder')} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition ${view === 'folder' ? 'ak-cta text-white' : 'text-zinc-400 hover:text-zinc-200'}`}><IDoc size={15} /> Trang</button>

@@ -2,6 +2,17 @@
 
 > Ghi lại mỗi đợt build để lần sau làm tốt hơn. Quy trình chuẩn: **đọc docs → sửa code → `npm run build` → test thật trên preview (đăng nhập, bấm từng nút) → cập nhật docs**.
 
+## 2026-06-13 (đợt 13) — 🦾 REBRAND JARVIS HUD: Akash thành "bộ não" Command Center
+**Founder** (kèm 4 ảnh V.A.U.L.T./Agentic OS): nghiên cứu UI high-tech (font, viền, node-link), làm KHÔNG quá Notion, vẫn mượt như Claude → rebrand toàn bộ thành bộ não kiểu Jarvis. Founder chốt: HUD cho CẢ 2 theme + skin toàn app + 1 màn Command Center.
+**Triết lý tổng hợp**: Jarvis ở VỎ (chrome) — Claude ở RUỘT (đọc/viết). Chi tiết BRANDING §7.
+1. **Hud.tsx** (mới): Corners (góc ngoặc ⌐¬⌙⌟), HudPanel, HudLabel, Dot/StatusLine (● CORE·MEMORY·LINK·ONLINE), Wordmark (A·K·A·S·H mono giãn cách), HudStat, **Constellation** (canvas chòm sao node-link phát sáng, mulberry32 seed cố định, drift+twinkle, resolve --hud-accent ra hex).
+2. **globals.css**: token `--hud-*` riêng cho dark (graphite + glow tím) và light (kem + bóng); class .hud-label/.hud-panel/.hud-num/.hud-dot/.hud-wordmark/.hud-rule.
+3. **Áp toàn app qua 3 component gốc**: Card/Lbl (Pages+Hubs) + Sect (PageFrame) → .hud-panel/.hud-label → mọi card hết bo tròn Notion, thành panel hairline; mọi eyebrow thành mono.
+4. **Chrome**: nav rail active = hud-glow-edge + bar accent glow; AkashMark "A" mono bo nhẹ; header 'know' = Wordmark + StatusLine.
+5. **Command Center** (Today reskin, GIỮ logic): command bar (wordmark + status + clock live client-only) → identity strip mono (ADMIN · 61 QI · 1D STREAK) → hero "AI hiểu bạn" trên nền Constellation + Corners.
+**Verify**: screenshot dark ("HUD trong vũ trụ") + light ("HUD trên giấy") + trang know (vỏ Jarvis, ruột Claude). tsc sạch, build production xanh.
+**Lưu ý**: clock dùng useState(null)+useEffect → tránh lệch hydrate; canvas phải resolve CSS var ra hex (ctx không hiểu var).
+
 ## 2026-06-13 (đợt 12) — 🪶 TRIẾT LÝ CLAUDE: giấy ấm + serif Lora + heading trung tính
 **Founder**: "dùng triết lý design của claude bỏ vào Akash — thực sự clean như claude". Giữ 1-accent tím; đổi nền/chữ/nhịp (BRANDING §6 mới).
 1. **globals.css**: light = giấy kem Claude (#faf9f5/#f0eee6/mực ấm 1f1e1d, viền rgba(31,30,29)); dark = graphite ấm (remap toàn bộ thang hex cũ #06060c…#1c1c26 → #1b1a18…#2e2d2a, kèm các biến thể /85–/97) + remap text-zinc-* lạnh → stone ấm; editor: h1/h2/h3 serif trung tính (bỏ tím/cyan), blockquote serif nghiêng border tím (bỏ nền vàng), code mộc.

@@ -12,8 +12,8 @@ import { supabase } from '@/lib/supabaseClient'
 
 type AnyNode = { id: string; title: string | null; layer?: string; parent_id?: string | null; icon?: string | null; status?: string; subtype?: string | null; owner_id?: string | null; md?: string | null; created_at?: string; props?: Record<string, unknown> | null }
 
-const Card = ({ children, className = '' }: { children: React.ReactNode; className?: string }) => <div className={`rounded-2xl bg-white/5 border border-white/10 p-5 ${className}`}>{children}</div>
-const Lbl = ({ children }: { children: React.ReactNode }) => <div className="text-[11px] uppercase tracking-wider text-zinc-500 mb-2 font-semibold">{children}</div>
+const Card = ({ children, className = '' }: { children: React.ReactNode; className?: string }) => <div className={`hud-panel p-5 ${className}`}>{children}</div>
+const Lbl = ({ children }: { children: React.ReactNode }) => <div className="hud-label mb-2">{children}</div>
 
 /* render md đơn giản (đồng bộ kiểu với Studio pretty view) */
 function MiniMd({ md }: { md: string }) {

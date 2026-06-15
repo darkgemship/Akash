@@ -65,8 +65,8 @@ export function Dim8Bars({ x, height = 26 }: { x: Record<string, number>; height
   )
 }
 const Sect = ({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) => (
-  <div className="mt-6 pt-5 border-t border-white/10">
-    <div className="text-[11px] uppercase tracking-wide text-zinc-500 mb-2">{title} {hint && <span className="normal-case text-zinc-600">— {hint}</span>}</div>
+  <div className="mt-6 pt-5 border-t border-[var(--hud-line)]">
+    <div className="hud-label mb-2">{title} {hint && <span className="normal-case tracking-normal text-[var(--hud-dim)] font-sans">— {hint}</span>}</div>
     {children}
   </div>
 )

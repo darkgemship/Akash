@@ -86,3 +86,23 @@ Giữ tím Akash làm accent duy nhất (§1-accent không đổi), nhưng toàn
 6. Theme mặc định cho user mới = LIGHT kem (chữ ký Claude); toggle 🌙/☀️ giữ nguyên; Galaxy vẫn là "cửa sổ vũ trụ" nền tối trên giấy.
 
 > Đổi sang terracotta (#d97757 — màu Claude chính hiệu) nếu founder muốn full-Claude: chỉ cần đổi `--ak-violet`. Hiện giữ tím để Akash vẫn là Akash.
+
+## §7 — JARVIS HUD (founder 13/6: "Akash thành bộ não như Jarvis Ironman")
+
+Tham chiếu: dashboard V.A.U.L.T. / Agentic OS / Command Center (high-tech, mono, viền hairline, chòm sao node-link phát sáng). Nguyên tắc tổng hợp — **Jarvis ở VỎ, Claude ở RUỘT**:
+
+- **Vỏ (chrome)** = high-tech: nhãn eyebrow mono in hoa giãn cách `0.2em`, viền hairline `0.5px`, **góc ngoặc ⌐¬⌙⌟**, status dot đập sống, số liệu mono tabular, wordmark `A·K·A·S·H`, dòng `● CORE · MEMORY · LINK · ONLINE · ALIVE`, đồng hồ live.
+- **Ruột (đọc/viết)** = êm như Claude: editor giữ Lora + Be Vietnam, thân bài/Properties không đổi (§6).
+- **Hai theme ngang nhau** (founder chọn): dark = "HUD trong vũ trụ" (graphite ấm + glow tím `--hud-accent #a78bfa`), light = "HUD trên giấy" (kem + viền mực, glow → đổ bóng nhẹ `#6d28d9`).
+- **Constellation** (`Hud.tsx`): canvas chòm sao ~86–110 điểm, cạnh nối điểm gần, drift + twinkle chậm, seed cố định (mulberry32) → ổn định. Làm nền hero Command Center, opacity 60%. Canvas resolve `--hud-accent` ra hex thật.
+- **Command Center** = Home (Today) reskin: command bar (wordmark + status + clock) → identity strip mono → hero "AI hiểu bạn" trên nền constellation + góc ngoặc → các khối HUD-panel.
+
+### Token HUD (globals.css)
+`--hud-accent · --hud-edge (góc ngoặc) · --hud-line (hairline) · --hud-panel-bg · --hud-num · --hud-dim · --hud-glow · --hud-text-glow` — định nghĩa riêng cho `html:not([data-theme=light])` và `[data-theme=light]`.
+
+### Class & component
+CSS: `.hud-label[-accent] · .hud-panel · .hud-hover · .hud-glow-edge · .hud-num[-accent] · .hud-dot[-live] · .hud-wordmark · .hud-rule`.
+`Hud.tsx`: `Corners · HudPanel · HudLabel · Dot · StatusLine · Wordmark · HudStat · Constellation`.
+Đòn bẩy áp toàn app: 3 component gốc `Card`/`Lbl` (Pages, Hubs) + `Sect` (PageFrame) đổi sang `.hud-panel`/`.hud-label` → mọi card/nhãn nâng cấp một lượt, không sửa từng nơi.
+
+> Vẫn giữ 1-accent tím (§1) + giấy kem Claude (§6); Jarvis chỉ thêm tầng "vỏ HUD" lên trên. Muốn full-Claude terracotta thì đổi `--ak-violet` + `--hud-accent`.

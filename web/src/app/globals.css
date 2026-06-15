@@ -36,6 +36,65 @@ body {
   font-family: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
 }
 
+/* ===== JARVIS HUD SYSTEM (BRANDING §7) — "bộ não" Akash =====
+   Vỏ high-tech: nhãn mono, viền hairline, góc ngoặc, status dot, số mono.
+   Token tự đổi theo theme: dark = HUD trong vũ trụ, light = HUD trên giấy. */
+html:not([data-theme='light']) {
+  --hud-accent: #a78bfa;
+  --hud-edge: rgba(167,139,250,.55);          /* góc ngoặc + viền sáng */
+  --hud-line: rgba(236,233,226,.10);          /* viền hairline thường */
+  --hud-panel-bg: rgba(236,233,226,.018);
+  --hud-panel-bg-hover: rgba(167,139,250,.06);
+  --hud-num: #faf9f5;
+  --hud-dim: #605d56;
+  --hud-glow: 0 0 14px rgba(167,139,250,.45);
+  --hud-text-glow: 0 0 12px rgba(167,139,250,.55);
+}
+[data-theme='light'] {
+  --hud-accent: #6d28d9;
+  --hud-edge: rgba(109,40,217,.5);
+  --hud-line: rgba(31,30,29,.14);
+  --hud-panel-bg: rgba(31,30,29,.012);
+  --hud-panel-bg-hover: rgba(109,40,217,.05);
+  --hud-num: #1f1e1d;
+  --hud-dim: #8f8a80;
+  --hud-glow: 0 2px 14px rgba(109,40,217,.14);
+  --hud-text-glow: none;
+}
+.hud-label {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 10px; font-weight: 500; text-transform: uppercase;
+  letter-spacing: 0.2em; color: var(--hud-dim); line-height: 1.4;
+}
+.hud-label-accent { color: var(--hud-accent); }
+.hud-panel {
+  border: 0.5px solid var(--hud-line);
+  background: var(--hud-panel-bg);
+  border-radius: 5px;
+}
+.hud-hover:hover { background: var(--hud-panel-bg-hover); border-color: var(--hud-edge); }
+.hud-glow-edge { border-color: var(--hud-edge); box-shadow: var(--hud-glow); }
+.hud-num {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-variant-numeric: tabular-nums; font-weight: 600;
+  font-size: 1.9rem; line-height: 1; color: var(--hud-num); letter-spacing: -0.01em;
+}
+.hud-num-accent { color: var(--hud-accent); text-shadow: var(--hud-text-glow); }
+.hud-dot {
+  display: inline-block; border-radius: 9999px; background: var(--dot, var(--hud-accent));
+  box-shadow: 0 0 6px var(--dot, var(--hud-accent)); flex-shrink: 0;
+}
+.hud-dot-live { animation: hud-pulse 1.8s ease-in-out infinite; }
+@keyframes hud-pulse { 0%,100% { opacity: .45; transform: scale(.82) } 50% { opacity: 1; transform: scale(1.08) } }
+.hud-wordmark {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-weight: 700; letter-spacing: 0.32em; text-transform: uppercase;
+  color: var(--hud-accent); text-shadow: var(--hud-text-glow); padding-left: 0.32em;
+}
+.hud-rule { height: 0.5px; background: var(--hud-line); border: 0; }
+/* tick góc trên panel hero (giống VAULT) */
+.hud-bracket { position: relative; }
+
 /* ===== AKASH utility — 1-ACCENT (founder chốt 12/6, theo research Linear/Raycast/Geist) =====
    Gradient CHỈ còn sống ở: logo, celebration, canvas Galaxy. Chrome = 1 accent tím + neutral. */
 .ak-grad { background: var(--ak-violet); }                /* avatar/ring/progress — solid accent */

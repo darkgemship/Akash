@@ -4,14 +4,15 @@ import type { User } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabaseClient'
 import { depthScore } from './Digest'
 import { DIM_COLOR } from './Galaxy'
+import { Wordmark, StatusLine, Constellation, Corners } from './Hud'
 
 type N = { id: string; title: string | null; kind: string; parent_id: string | null }
 
 function Card({ children, className = '' }: { children: React.ReactNode; className?: string }) {
-  return <div className={`rounded-2xl bg-white/5 border border-white/10 p-5 ${className}`}>{children}</div>
+  return <div className={`hud-panel p-5 ${className}`}>{children}</div>
 }
 function Lbl({ children }: { children: React.ReactNode }) {
-  return <div className="text-[11px] uppercase tracking-wider text-zinc-500 mb-2 font-semibold">{children}</div>
+  return <div className="hud-label mb-2">{children}</div>
 }
 
 /* ---------- PROFILE (đổi mật khẩu thật + quản trị thành viên) ---------- */
@@ -607,6 +608,9 @@ export function Today({ user, role, stats, recent, pages, editorial = [], counts
       if (qs.length) { const day = Math.floor(Date.now() / 86400000); setQuote({ text: qs[day % qs.length].slice(2), from: 'Kim Chỉ Nam của bạn', id: data!.id as string }) }
     })
   }, [user.id])
+  // đồng hồ HUD — chỉ chạy client để tránh lệch hydrate
+  const [now, setNow] = useState<Date | null>(null)
+  useEffect(() => { setNow(new Date()); const t = setInterval(() => setNow(new Date()), 1000); return () => clearInterval(t) }, [])
   const hour = new Date().getHours()
   const greet = hour < 11 ? 'Chào buổi sáng' : hour < 14 ? 'Chào buổi trưa' : hour < 18 ? 'Chào buổi chiều' : 'Chào buổi tối'
   const learnedCount = pages.filter(p => learnedIds.has(p.id)).length
@@ -626,16 +630,30 @@ export function Today({ user, role, stats, recent, pages, editorial = [], counts
   for (const n of editorial.filter(e => e.status === 'draft').slice(0, 2)) todos.push({ icon: '🔁', label: `Sửa & nộp lại: ${n.title || 'Trang'}`, sub: (n as { note?: string }).note ? `BTV góp ý: ${(n as { note?: string }).note}` : 'bài bị trả lại', act: () => onOpen(n), cta: 'Sửa ngay' })
   if (role?.can_approve && (counts?.pendingAll ?? 0) > 0) todos.push({ icon: '📨', label: `${counts!.pendingAll} bài chờ bạn duyệt`, sub: 'thành viên đang đợi', act: () => onRaw?.(), cta: 'Vào duyệt' })
   return (
-    <div className="p-8 max-w-4xl mx-auto">
-      {/* ===== ACCOUNT ngay đầu Home ===== */}
+    <div className="p-8 max-w-5xl mx-auto">
+      {/* ===== COMMAND BAR — đầu não Akash (wordmark · status · clock) ===== */}
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <Wordmark size="lg" dotted />
+          <span className="hidden md:block"><StatusLine items={['CORE', 'MEMORY', 'LINK', 'ONLINE', 'ALIVE']} /></span>
+        </div>
+        <div className="hud-num text-right shrink-0" style={{ fontSize: '1.5rem' }}>
+          {now ? now.toLocaleTimeString('vi', { hour: '2-digit', minute: '2-digit' }) : '--:--'}
+          <span className="hud-label ml-2" style={{ fontSize: 9 }}>{now ? now.toLocaleDateString('vi', { weekday: 'short', day: '2-digit', month: '2-digit' }) : ''}</span>
+        </div>
+      </div>
+      <hr className="hud-rule mb-5" />
+      {/* ===== IDENTITY strip ===== */}
       <div className="flex items-center gap-4 mb-6">
-        <div className="w-12 h-12 rounded-2xl ak-grad grid place-items-center text-lg font-black text-white shrink-0">{(user.email ?? 'A')[0].toUpperCase()}</div>
+        <div className="w-12 h-12 rounded-lg ak-grad grid place-items-center text-lg font-mono font-bold text-white shrink-0 ring-1 ring-white/20">{(user.email ?? 'A')[0].toUpperCase()}</div>
         <div className="min-w-0 flex-1">
           <h1 className="ak-display text-2xl font-semibold truncate">{greet}, {user.email?.split('@')[0]} 👋</h1>
-          <div className="flex items-center gap-2 text-[11px] text-zinc-500 flex-wrap">
-            <span className="rounded-lg bg-white/5 border border-white/10 px-2 py-0.5">{roleName}</span>
-            <span className="text-amber-300 font-semibold">⚡ {qi} Qi</span>
-            <span className={streak > 0 ? 'text-orange-300' : ''}>🔥 {streak} ngày liên tục</span>
+          <div className="flex items-center gap-2 text-[11px] flex-wrap mt-0.5">
+            <span className="hud-label hud-label-accent">{roleName}</span>
+            <span className="text-[var(--hud-dim)]">·</span>
+            <span className="font-mono text-amber-400 font-semibold">⚡ {qi} QI</span>
+            <span className="text-[var(--hud-dim)]">·</span>
+            <span className={`font-mono ${streak > 0 ? 'text-orange-300' : 'text-[var(--hud-dim)]'}`}>🔥 {streak}D STREAK</span>
           </div>
         </div>
       </div>
@@ -674,8 +692,10 @@ export function Today({ user, role, stats, recent, pages, editorial = [], counts
         ]
         const pctAI = Math.round(parts.reduce((s2, p2) => s2 + p2[1], 0))
         return (
-          <Card className="mb-4 !p-6">
-            <div className="flex items-center gap-6 flex-wrap">
+          <Card className="mb-4 !p-6 relative overflow-hidden">
+            <Corners />
+            <div className="absolute inset-0 opacity-60 pointer-events-none"><Constellation height={300} density={86} accent="var(--hud-accent)" /></div>
+            <div className="relative flex items-center gap-6 flex-wrap">
               <div className="relative shrink-0">
                 <svg width="132" height="132" viewBox="0 0 132 132" className="-rotate-90">
                   <circle cx="66" cy="66" r="56" fill="none" stroke="rgba(127,127,160,.12)" strokeWidth="11" />
