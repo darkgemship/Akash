@@ -12,7 +12,7 @@ import Warp from './Warp'
 import { IVault, IHome, IPen, IBoard, ICheck, IUsers, IUser, ISearch, IPlus, IDots, IChevron, ILogout, IDoc, IOrbit, IUpload, ICode, ITarget, IRefresh, IMegaphone, IGrad, IX, IExpand, IEye, IEyeOff } from './Icons'
 import { DIMS, PropsPanel, PageFooter, Dim8Bars } from './PageFrame'
 import { dimSignals, transformScore } from '@/lib/transformScore'
-import { Wordmark, StatusLine } from './Hud'
+import { Wordmark, StatusLine, Corners } from './Hud'
 
 const Editor = dynamic(() => import('./Editor'), { ssr: false })
 const Database = dynamic(() => import('./Database'), { ssr: false })
@@ -152,13 +152,14 @@ function Login() {
         <div className="w-full max-w-5xl grid lg:grid-cols-[1.1fr_1fr] gap-12 items-center">
           {/* BRAND HERO */}
           <div className="hidden lg:block">
-            <div className="flex items-center gap-4 mb-6">
-              <AkashMark size={64} />
+            <div className="flex items-center gap-4 mb-5">
+              <AkashMark size={60} />
               <div>
-                <div className="text-5xl font-black tracking-tight ak-logo-grad">Akash</div>
-                <div className="text-[11px] uppercase tracking-[0.3em] text-zinc-500 mt-1">Akashic knowledge engine</div>
+                <div className="-mb-0.5"><Wordmark size="lg" dotted /></div>
+                <div className="hud-label mt-1.5">Akashic knowledge engine</div>
               </div>
             </div>
+            <div className="mb-6"><StatusLine items={['CORE', 'MEMORY', 'LINK', 'WARP READY']} /></div>
             <h1 className="text-2xl font-bold leading-snug mb-6 text-zinc-100">Biến trải nghiệm thành <span className="text-zinc-50">trí tuệ</span>,<br />biến trí tuệ thành <span className="bg-gradient-to-r from-amber-400 to-yellow-300 bg-clip-text text-transparent">content</span>.</h1>
             <div className="space-y-3">
               {([
@@ -166,8 +167,8 @@ function Login() {
                 [<ITarget key="t" size={20} />, 'Độ Chuyển hoá 8 chiều', 'mỗi liên kết thật thắp sáng một chiều — không học vẹt được'],
                 [<IMegaphone key="m" size={20} />, 'Học thật → dạy được', 'Bài chín tự động thành nguyên liệu content của bạn'],
               ] as [React.ReactNode, string, string][]).map(([ic, t, d]) => (
-                <div key={t} className="flex items-center gap-3.5 rounded-2xl bg-white/[0.04] border border-white/10 px-4 py-3 backdrop-blur-md">
-                  <span className="w-9 h-9 grid place-items-center rounded-xl bg-white/10 border border-white/15 text-cyan-200 shrink-0">{ic}</span>
+                <div key={t} className="flex items-center gap-3.5 hud-panel px-4 py-3 backdrop-blur-md">
+                  <span className="w-9 h-9 grid place-items-center rounded-lg bg-white/10 border border-white/15 text-cyan-200 shrink-0">{ic}</span>
                   <div>
                     <div className="text-sm font-semibold text-zinc-100">{t}</div>
                     <div className="text-xs text-zinc-500">{d}</div>
@@ -180,11 +181,11 @@ function Login() {
 
           {/* FORM CARD */}
           <div className="mx-auto w-full max-w-md">
-            <div className="rounded-3xl p-[1.5px] bg-gradient-to-br from-violet-500/60 via-white/10 to-cyan-500/60 shadow-2xl shadow-violet-500/15">
-              <div className="rounded-3xl bg-[#0b0b14]/90 backdrop-blur-xl p-8">
+            <div className="relative hud-panel hud-glow-edge bg-[#0b0b14]/80 backdrop-blur-xl p-8 shadow-2xl shadow-violet-500/15">
+              <Corners size={14} />
                 <div className="lg:hidden flex items-center gap-3 mb-5">
                   <AkashMark size={44} />
-                  <div className="text-2xl font-black ak-logo-grad">Akash</div>
+                  <Wordmark size="md" dotted />
                 </div>
                 {/* tab chuyển chế độ */}
                 <div className="grid grid-cols-2 gap-1 rounded-2xl bg-white/5 border border-white/10 p-1 mb-6 text-sm">
@@ -194,9 +195,9 @@ function Login() {
                 <h2 className="text-lg font-bold mb-1">{mode === 'in' ? 'Sẵn sàng cất cánh' : 'Bắt đầu hành trình'}</h2>
                 <p className="text-xs text-zinc-500 mb-5">{mode === 'in' ? 'Đăng nhập để bay vào vũ trụ tri thức của bạn.' : 'Tạo tài khoản — vào org chung với vai Thành viên, có ngay kho cá nhân riêng tư.'}</p>
 
-                <label className="block text-[11px] uppercase tracking-wider text-zinc-500 mb-1.5">Email</label>
+                <label className="block hud-label mb-1.5">Email</label>
                 <input className="w-full mb-4 rounded-xl bg-white/5 border border-white/10 px-3.5 py-3 text-sm outline-none focus:border-violet-400/70 focus:bg-white/[0.07] transition" placeholder="ban@email.com" autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} />
-                <label className="block text-[11px] uppercase tracking-wider text-zinc-500 mb-1.5">Mật khẩu</label>
+                <label className="block hud-label mb-1.5">Mật khẩu</label>
                 <div className="relative mb-5">
                   <input className="w-full rounded-xl bg-white/5 border border-white/10 px-3.5 py-3 pr-11 text-sm outline-none focus:border-violet-400/70 focus:bg-white/[0.07] transition" placeholder="Tối thiểu 6 ký tự" type={showPw ? 'text' : 'password'} autoComplete={mode === 'in' ? 'current-password' : 'new-password'} value={pw} onChange={e => setPw(e.target.value)} onKeyDown={e => e.key === 'Enter' && go()} />
                   <button onClick={() => setShowPw(s => !s)} title={showPw ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'} className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 grid place-items-center rounded-lg text-zinc-500 hover:text-white hover:bg-white/10">{showPw ? <IEyeOff size={16} /> : <IEye size={16} />}</button>
@@ -206,7 +207,6 @@ function Login() {
                 </button>
                 {msg && <p className={`text-xs mt-3 leading-relaxed ${ok ? 'text-emerald-400' : 'text-amber-300'}`}>{msg}</p>}
                 <p className="text-[11px] text-zinc-600 mt-5 text-center">Nhấn <kbd className="px-1.5 py-0.5 rounded border border-white/15 bg-white/5 text-zinc-400">↵ Enter</kbd> để gửi · Bảo mật bởi Supabase Auth</p>
-              </div>
             </div>
           </div>
         </div>
@@ -814,7 +814,7 @@ function Workspace({ user }: { user: User }) {
                     ) : <p className="text-zinc-600 text-sm py-3">Đang tải nội dung…</p>}
                     {backRaw.length > 0 && (
                       <div className="mt-5 pt-4 border-t border-white/10">
-                        <div className="text-[10px] uppercase tracking-wide text-zinc-500 mb-2">🔗 Liên kết đến trang này</div>
+                        <div className="hud-label mb-2">🔗 Liên kết đến trang này</div>
                         <div className="flex flex-wrap gap-1.5">
                           {backRaw.map((b, i) => {
                             const src = nodeOf(b.from_node); if (!src) return null
@@ -871,7 +871,7 @@ function Workspace({ user }: { user: User }) {
                           <>
                             <div className="fixed inset-0 z-20" onClick={() => setShowRadar(false)} />
                             <div className="absolute right-0 top-9 z-30 rounded-2xl bg-[#1c1c26] border border-white/10 shadow-2xl p-4 w-[240px]">
-                              <div className="text-[10px] uppercase tracking-wider text-zinc-500 mb-2 text-center">Độ Chuyển hoá — 8 chiều</div>
+                              <div className="hud-label mb-2 text-center">Độ Chuyển hoá — 8 chiều</div>
                               <Dim8Bars x={x8} height={42} />
                               <div className="text-center mt-2">
                                 <span className="text-2xl font-black ak-grad-text tabular-nums">{t8.total}</span>
@@ -999,7 +999,7 @@ function Workspace({ user }: { user: User }) {
                   />
                 ) : mdView ? (
                   <div className="rounded-xl bg-black/30 border border-white/10 p-4 my-2">
-                    <div className="text-[10px] uppercase tracking-wider text-zinc-500 mb-2">Markdown gốc (chỉ đọc) — tắt {'{ }'} MD để sửa dạng trang</div>
+                    <div className="hud-label mb-2">Markdown gốc (chỉ đọc) — tắt {'{ }'} MD để sửa dạng trang</div>
                     <pre className="text-[13px] leading-relaxed text-zinc-300 whitespace-pre-wrap font-mono">{mdFresh || '— trống —'}</pre>
                   </div>
                 ) : (

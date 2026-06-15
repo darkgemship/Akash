@@ -2,6 +2,13 @@
 
 > Ghi lại mỗi đợt build để lần sau làm tốt hơn. Quy trình chuẩn: **đọc docs → sửa code → `npm run build` → test thật trên preview (đăng nhập, bấm từng nút) → cập nhật docs**.
 
+## 2026-06-13 (đợt 14) — 🚀 ĐỒNG BỘ HUD: login bay vào vũ trụ + Galaxy + quét nốt
+**Founder**: "đồng bộ hết + login có hiệu ứng bay vào vũ trụ + toàn bộ phần còn lại".
+1. **Login = warp drive** (Warp.tsx sẵn có, sao streak hyperspace): brand hero wordmark mono `A·K·A·S·H` + glow, eyebrow "AKASHIC KNOWLEDGE ENGINE", StatusLine `● CORE·MEMORY·LINK·WARP READY`, feature cards → hud-panel; form card bỏ viền gradient → hud-panel + hud-glow-edge + góc ngoặc Corners; nhãn Email/Mật khẩu → hud-label. (login luôn dark `dq-dark` — đúng tinh thần vũ trụ.)
+2. **Galaxy**: panel nổi rounded-xl/2xl → rounded-md + viền `--hud-line`; eyebrow legend/gợi ý/orphan → hud-label (canvas vốn đã dùng font mono).
+3. **Quét nốt**: eyebrow inline còn sót ở page.tsx (peek/radar) + Digest.tsx → hud-label.
+**Verify**: screenshot login warp (desktop hero + mobile form) — sao bay xuyên vũ trụ, panel glow + góc ngoặc, wordmark mono. tsc sạch, build xanh.
+
 ## 2026-06-13 (đợt 13) — 🦾 REBRAND JARVIS HUD: Akash thành "bộ não" Command Center
 **Founder** (kèm 4 ảnh V.A.U.L.T./Agentic OS): nghiên cứu UI high-tech (font, viền, node-link), làm KHÔNG quá Notion, vẫn mượt như Claude → rebrand toàn bộ thành bộ não kiểu Jarvis. Founder chốt: HUD cho CẢ 2 theme + skin toàn app + 1 màn Command Center.
 **Triết lý tổng hợp**: Jarvis ở VỎ (chrome) — Claude ở RUỘT (đọc/viết). Chi tiết BRANDING §7.

@@ -434,7 +434,7 @@ export default function Digest({ folder, others, orgId, userId, onClose, onSaved
                   {DIM8.map(d => <span key={d.key} className="w-3.5 h-3.5 rounded-full" style={{ background: dims[d.key] ? d.color : '#ffffff15', boxShadow: dims[d.key] ? `0 0 10px ${d.color}` : 'none' }} />)}
                 </div>
                 <div className="text-5xl font-black text-zinc-50 mb-1">{celebrate.score}</div>
-                <div className="text-[11px] uppercase tracking-widest text-zinc-500 mb-1">Độ Chuyển hoá</div>
+                <div className="hud-label mb-1">Độ Chuyển hoá</div>
                 <p className="text-xs text-zinc-500 mb-5">{celebrate.covered}/8 chiều · node sẽ sáng hơn trên Galaxy ✨ · hẹn ôn lại sau {[1,3,7,21,60][0]} ngày</p>
                 <button onClick={onClose} className="rounded-xl ak-cta px-6 py-2.5 text-sm font-bold">Tiếp tục hành trình →</button>
               </div>

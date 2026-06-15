@@ -1142,21 +1142,21 @@ export default function Galaxy({ nodes, links, onOpen, onConnect, modeReq }: {
 
       {/* HUD phải: mode + zoom + motion + flow + connect */}
       <div className="absolute top-3 right-3 flex flex-col items-end gap-2 z-10">
-        <div className="flex items-center gap-1 rounded-xl bg-[#10101a]/85 backdrop-blur border border-white/10 p-1 text-[11px]">
+        <div className="flex items-center gap-1 rounded-md bg-[#10101a]/85 backdrop-blur border border-[var(--hud-line)] p-1 text-[11px]">
           <button onClick={() => setMode('galaxy')} title="Cấu trúc kho — cái gì nằm trong cái gì" className={`px-2 py-1.5 rounded-lg ${mode === 'galaxy' ? 'bg-violet-500/40 text-white' : 'text-zinc-400 hover:bg-white/10'}`}>🌌 Galaxy</button>
           <button onClick={() => { setMode('mandala'); setFlow(true) }} title="Cây Sự Sống — tri thức nở trên đỉnh đầu" className={`px-2 py-1.5 rounded-lg ${mode === 'mandala' ? 'bg-amber-500/35 text-amber-100 shadow-lg shadow-amber-500/30' : 'text-zinc-400 hover:bg-white/10'}`}>🧘 Mandala</button>
           <button onClick={() => { setMode('radar'); setMotion('still'); setFlow(false); setDimOff(new Set()) }} title="8 chiều liên kết cân hay lệch — bấm trục để soi riêng" className={`px-2 py-1.5 rounded-lg ${mode === 'radar' ? 'bg-violet-500/35 text-violet-100' : 'text-zinc-400 hover:bg-white/10'}`}>🎯 Radar</button>
           <button onClick={() => { setMode('timeline'); setMotion('still') }} title="Dòng đời — tri thức đan vào mốc thời gian thực" className={`px-2 py-1.5 rounded-lg ${mode === 'timeline' ? 'bg-blue-500/35 text-blue-100 shadow-lg shadow-blue-500/30' : 'text-zinc-400 hover:bg-white/10'}`}>📜 Dòng đời</button>
           <button onClick={() => { setMode('neuro'); setMotion('still'); setFlow(true) }} title="Bộ não 3D tự xoay — kéo nền để xoay, mỗi nhánh một vùng não" className={`px-2 py-1.5 rounded-lg ${mode === 'neuro' ? 'bg-emerald-500/35 text-emerald-100 shadow-lg shadow-emerald-500/30' : 'text-zinc-400 hover:bg-white/10'}`}>🧠 Neuro</button>
         </div>
-        <div className="flex items-center gap-1 rounded-xl bg-[#10101a]/85 backdrop-blur border border-white/10 p-1">
+        <div className="flex items-center gap-1 rounded-md bg-[#10101a]/85 backdrop-blur border border-[var(--hud-line)] p-1">
           <button onClick={() => { const c = center(); zoomAt(c.x, c.y, 1.25) }} title="Phóng to" className="w-8 h-8 grid place-items-center rounded-lg text-zinc-300 hover:bg-white/10 text-lg">＋</button>
           <button onClick={() => { const c = center(); zoomAt(c.x, c.y, 0.8) }} title="Thu nhỏ" className="w-8 h-8 grid place-items-center rounded-lg text-zinc-300 hover:bg-white/10 text-lg">−</button>
           <button onClick={resetCam} title="Về mặc định" className="w-8 h-8 grid place-items-center rounded-lg text-zinc-300 hover:bg-white/10 text-sm">⟳</button>
           <span className="text-[10px] text-zinc-500 w-10 text-center">{zoomPct}%</span>
         </div>
-        {(mode === 'galaxy' || mode === 'mandala') && <div className="flex items-center gap-1 rounded-xl bg-[#10101a]/85 backdrop-blur border border-white/10 p-1 text-[11px]">
-          <span className="text-[8px] uppercase tracking-widest text-zinc-600 pl-1.5 pr-0.5">node</span>
+        {(mode === 'galaxy' || mode === 'mandala') && <div className="flex items-center gap-1 rounded-md bg-[#10101a]/85 backdrop-blur border border-[var(--hud-line)] p-1 text-[11px]">
+          <span className="hud-label pl-1.5 pr-0.5">node</span>
           {([
             ['drift', 'Trôi', 'dq-prev-drift', 'Node trôi lững lờ như sao — ngắm tổng thể', 'bg-blue-500/30 text-blue-100'],
             ['pulse', 'Nhịp', 'dq-prev-pulse', 'Node phập phồng theo nhịp thở — cảm kho đang sống', 'bg-amber-500/30 text-amber-100'],
@@ -1167,7 +1167,7 @@ export default function Galaxy({ nodes, links, onOpen, onConnect, modeReq }: {
             </button>
           ))}
         </div>}
-        <div className="flex items-center gap-1 rounded-xl bg-[#10101a]/85 backdrop-blur border border-white/10 p-1 text-[11px]">
+        <div className="flex items-center gap-1 rounded-md bg-[#10101a]/85 backdrop-blur border border-[var(--hud-line)] p-1 text-[11px]">
           {(mode === 'galaxy' || mode === 'mandala') && <button onClick={() => setFlow(f => !f)} title="Hạt năng lượng chạy dọc mọi liên kết — thấy tri thức đang truyền" className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg ${flow ? 'bg-cyan-500/30 text-cyan-100' : 'text-zinc-400 hover:bg-white/10'}`}><span className="dq-prev-flow" />Dòng chảy</button>}
           {onConnect && <button onClick={() => { setConnect(c => !c); pickRef.current = null; setPicked(null) }} title="Bấm 2 node để tạo liên kết mới — có vụ nổ ăn mừng" className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg ${connect ? 'bg-amber-500/30 text-amber-100' : 'text-zinc-400 hover:bg-white/10'}`}><span className="dq-prev-link" />Nối</button>}
           <button onClick={() => setSugOpen(s => !s)} title="Máy soi cặp trang nên nối mà chưa nối" className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg ${sugOpen ? 'bg-violet-500/30 text-violet-100' : 'text-zinc-400 hover:bg-white/10'}`}><span className="dq-prev-sug">✨</span>Gợi ý</button>
@@ -1183,8 +1183,8 @@ export default function Galaxy({ nodes, links, onOpen, onConnect, modeReq }: {
 
       {/* gợi ý liên kết */}
       {sugOpen && (
-        <div className="absolute top-16 left-3 z-10 w-[300px] rounded-2xl bg-[#10101a]/92 backdrop-blur border border-white/10 p-3">
-          <div className="text-[10px] uppercase tracking-wider text-zinc-500 mb-2">✨ Gợi ý nối tri thức <span className="normal-case">(AI thật khi nối API — tạm theo từ khoá)</span></div>
+        <div className="absolute top-16 left-3 z-10 w-[300px] rounded-md bg-[#10101a]/92 backdrop-blur border border-[var(--hud-line)] p-3">
+          <div className="hud-label mb-2">✨ Gợi ý nối tri thức <span className="normal-case">(AI thật khi nối API — tạm theo từ khoá)</span></div>
           {suggestions.length === 0 ? <p className="text-xs text-zinc-600">Chưa tìm thấy cặp nào còn thiếu — kho của bạn nối khá đủ rồi 🎉</p> : (
             <div className="space-y-2">
               {suggestions.map((s, i) => (
@@ -1202,9 +1202,9 @@ export default function Galaxy({ nodes, links, onOpen, onConnect, modeReq }: {
       )}
 
       {/* chú giải = ĐỦ 8 CHIỀU framework, đếm link, bấm để lọc */}
-      <div className="absolute bottom-3 left-3 rounded-2xl bg-[#10101a]/88 backdrop-blur border border-white/10 px-3.5 py-2.5 z-10">
+      <div className="absolute bottom-3 left-3 rounded-md bg-[#10101a]/88 backdrop-blur border border-[var(--hud-line)] px-3.5 py-2.5 z-10">
         <div className="flex items-center justify-between gap-4 mb-2">
-          <span className="text-[9px] uppercase tracking-[0.18em] text-zinc-500 font-bold">8 chiều liên kết</span>
+          <span className="hud-label">8 chiều liên kết</span>
           {dimOff.size > 0
             ? <button onClick={() => setDimOff(new Set())} className="text-[9px] text-violet-300 hover:underline">hiện tất cả</button>
             : <span className="text-[9px] text-zinc-700">bấm để lọc</span>}
@@ -1235,8 +1235,8 @@ export default function Galaxy({ nodes, links, onOpen, onConnect, modeReq }: {
         </button>
       )}
       {unplacedOpen && (mode === 'radar' || mode === 'timeline' || mode === 'neuro') && (
-        <div className="absolute bottom-20 right-3 z-10 w-[280px] max-h-[320px] overflow-auto rounded-2xl bg-[#10101a]/92 backdrop-blur border border-white/10 p-3">
-          <div className="text-[10px] uppercase tracking-wider text-zinc-500 mb-2">⬡ Chưa vào bản đồ — bấm để mở</div>
+        <div className="absolute bottom-20 right-3 z-10 w-[280px] max-h-[320px] overflow-auto rounded-md bg-[#10101a]/92 backdrop-blur border border-[var(--hud-line)] p-3">
+          <div className="hud-label mb-2">⬡ Chưa vào bản đồ — bấm để mở</div>
           <div className="space-y-1">
             {unplacedRef.current.slice(0, 20).map(n => (
               <button key={n.id} onClick={() => { setUnplacedOpen(false); onOpen(n) }} className="w-full text-left text-xs rounded-lg bg-white/[0.04] border border-white/10 px-2.5 py-1.5 text-zinc-300 hover:border-violet-400/40 truncate">{n.title || 'Trang'}</button>
