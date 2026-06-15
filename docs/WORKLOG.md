@@ -2,6 +2,14 @@
 
 > Ghi lại mỗi đợt build để lần sau làm tốt hơn. Quy trình chuẩn: **đọc docs → sửa code → `npm run build` → test thật trên preview (đăng nhập, bấm từng nút) → cập nhật docs**.
 
+## 2026-06-13 (đợt 16) — 🧭 "3 câu hôm nay" theo DISC + MBTI + màn xác nhận
+Founder: sau khi trả lời cho hiện xác nhận & lưu; câu hỏi lần tới dùng khung DISC / MBTI để hiểu tính cách.
+1. **Bank câu hỏi theo khung tính cách** (Pages.tsx QA modal): 16 câu gắn nhãn — 8 DISC (D/I/S/C × 2) + 8 MBTI (E/I·S/N·T/F·J/P). Mỗi ngày chọn 3 câu, stride 5 (nguyên tố cùng nhau 16) → phủ cả 2 khung, xoay vòng theo ngày. Nhãn hiện dưới mỗi câu (hud-label).
+2. **Lưu có cấu trúc**: ghi `**[DISC · D — quyết đoán] {câu}**\n{trả lời}` dưới mục `## 🧭 Tính cách · {ngày}` trong 🪞 "Tôi là ai" → AI đọc suy ra hồ sơ DISC/MBTI; event meta {framework:'disc_mbti', n}.
+3. **Màn xác nhận sau khi lưu**: thay vì đóng câm → hiện "🪞 Đã lưu N câu vào Tôi là ai" + nút "Mở trang Tôi là ai" / "Xong" (state qaSaved). Modal khoác HUD (góc ngoặc + glow).
+4. **Fix bug trùng trang**: lookup cũ `.limit(1).maybeSingle()` lỗi & tạo trùng khi đã lỡ có >1 "Tôi là ai" → đổi `.order(created_at).limit(1)` lấy [0]. Dọn DB còn 1 trang.
+**Verify**: preview mở modal (nhãn DISC/MBTI), điền 2 câu → màn "Đã lưu 2 câu" + nút mở trang; DB lưu đúng format có nhãn. tsc + build xanh.
+
 ## 2026-06-13 (đợt 15) — 🧩 Account ở Home · wordmark mọi view · Insight đào sâu · fix Trích dẫn
 Phản hồi founder sau khi duyệt HUD:
 1. **Tài khoản/Thoát về Home** (thay vì Kho): tách `themeBtn` + `accountCluster` (theme · email · Thoát) trong Workspace. Home command bar + mọi view dùng accountCluster; Kho header chỉ còn themeBtn (đúng "log out ở home thay vì kho").

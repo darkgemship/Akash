@@ -582,6 +582,7 @@ export function Today({ user, role, stats, recent, pages, editorial = [], counts
   const [quote, setQuote] = useState<{ text: string; from: string; id: string } | null>(null)
   const [qaOpen, setQaOpen] = useState(false)
   const [qaAns, setQaAns] = useState(['', '', ''])
+  const [qaSaved, setQaSaved] = useState<{ n: number; id: string } | null>(null)
   useEffect(() => {
     supabase.from('wisdom_depth').select('node_id,learned,next_review_at').eq('user_id', user.id).then(({ data }) => {
       setLearnedIds(new Set((data ?? []).filter(d => d.learned).map(d => d.node_id as string)))
@@ -722,7 +723,7 @@ export function Today({ user, role, stats, recent, pages, editorial = [], counts
                   ))}
                 </div>
                 <div className="flex flex-wrap gap-1.5">
-                  <button onClick={() => setQaOpen(true)} className="text-[11px] rounded-lg ak-cta px-3 py-1.5 font-bold">💬 Trả lời 3 câu hôm nay</button>
+                  <button onClick={() => { setQaSaved(null); setQaAns(['', '', '']); setQaOpen(true) }} className="text-[11px] rounded-lg ak-cta px-3 py-1.5 font-bold">💬 Trả lời 3 câu hôm nay</button>
                   <button disabled title="Kết nối FB/Insta để AI đọc giọng content — khi cắm API" className="text-[11px] rounded-lg bg-white/5 border border-white/10 px-3 py-1.5 text-zinc-600">🔗 FB/Insta · soon</button>
                 </div>
               </div>
@@ -834,40 +835,76 @@ export function Today({ user, role, stats, recent, pages, editorial = [], counts
 
       {/* 💬 3 CÂU MỖI NGÀY — AI nắm dần con người bạn */}
       {qaOpen && (() => {
-        const BANK = [
-          'Điều gì hôm nay làm bạn tự hào nhất?', 'Nỗi sợ lớn nhất của bạn trong công việc hiện tại?', 'Nếu dư 1 giờ mỗi ngày, bạn làm gì?',
-          'Khách hàng gần nhất hỏi bạn điều gì?', 'Câu nói nào của ai đó còn vang trong đầu bạn?', 'Bạn đang né tránh việc gì?',
-          'Thành tựu 5 năm tới bạn muốn kể lại là gì?', 'Điều gì khiến bạn bắt đầu QNET?', 'Hôm nay ai làm bạn biết ơn?',
-          'Bạn giỏi điều gì mà ít ai biết?', 'Một thói quen bạn muốn bỏ?', 'Nếu không sợ gì cả, ngày mai bạn làm gì?'
+        // Bộ câu hỏi soi TÍNH CÁCH theo 2 khung chuẩn: DISC (D/I/S/C) + MBTI (4 trục).
+        // Mỗi câu mang nhãn để AI đọc trang "Tôi là ai" suy ra hồ sơ tính cách. Xoay vòng để dần phủ hết các chiều.
+        const BANK: { q: string; t: string }[] = [
+          { q: 'Khi gặp trở ngại lớn, phản ứng đầu tiên của bạn là lao vào xử lý hay lùi lại phân tích?', t: 'DISC · D — quyết đoán' },
+          { q: 'Bạn thích tự quyết nhanh hay bàn bạc kỹ rồi mới làm?', t: 'DISC · D — kiểm soát' },
+          { q: 'Bạn nạp năng lượng từ gặp gỡ nhiều người hay từ làm việc tập trung một mình?', t: 'DISC · I — ảnh hưởng' },
+          { q: 'Khi thuyết phục khách, bạn nghiêng về kể câu chuyện cảm xúc hay đưa số liệu?', t: 'DISC · I — giao tiếp' },
+          { q: 'Bạn thích nhịp ổn định lâu dài hay thay đổi liên tục cho mới mẻ?', t: 'DISC · S — ổn định' },
+          { q: 'Khi cả team căng thẳng, vai trò tự nhiên của bạn là gì?', t: 'DISC · S — hoà giải' },
+          { q: 'Trước một quyết định lớn, bạn cần bao nhiêu thông tin mới thấy yên tâm?', t: 'DISC · C — chuẩn mực' },
+          { q: 'Điều gì làm bạn khó chịu nhất: làm ẩu, sai quy trình, hay thiếu kế hoạch?', t: 'DISC · C — chi tiết' },
+          { q: 'Sau một ngày dài, bạn hồi sức bằng gặp gỡ bạn bè hay ở một mình?', t: 'MBTI · Hướng ngoại↔nội (E/I)' },
+          { q: 'Bạn để ý chi tiết thực tế trước mắt, hay bức tranh lớn & khả năng tương lai?', t: 'MBTI · Giác quan↔Trực giác (S/N)' },
+          { q: 'Khi quyết định khó, bạn nghiêng về logic đúng–sai hay tác động lên con người?', t: 'MBTI · Lý trí↔Cảm xúc (T/F)' },
+          { q: 'Bạn thoải mái khi mọi thứ đã chốt kế hoạch, hay thích để ngỏ linh hoạt?', t: 'MBTI · Nguyên tắc↔Linh hoạt (J/P)' },
+          { q: 'Bạn dễ nói "không" để giữ nguyên tắc, hay châm chước để giữ hoà khí?', t: 'MBTI · T/F' },
+          { q: 'Một chuyến đi: bạn lên lịch chi tiết hay tuỳ hứng tới đâu hay tới đó?', t: 'MBTI · J/P' },
+          { q: 'Trong nhóm đông người lạ, bạn chủ động bắt chuyện hay chờ người khác mở lời?', t: 'MBTI · E/I' },
+          { q: 'Bạn tin vào kinh nghiệm đã kiểm chứng hay ý tưởng chưa ai thử?', t: 'MBTI · S/N' },
         ]
         const day = Math.floor(Date.now() / 86400000)
-        const qs = [BANK[day % 12], BANK[(day + 4) % 12], BANK[(day + 8) % 12]]
+        // stride 5 (nguyên tố cùng nhau với 16) → 3 câu mỗi ngày phủ cả DISC lẫn MBTI, xoay vòng theo ngày
+        const qs = [0, 1, 2].map(k => BANK[(day * 3 + k * 5) % BANK.length])
+        const done = qaSaved
         return (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[58] grid place-items-center p-6" onClick={() => setQaOpen(false)}>
-            <div className="w-[480px] max-w-[92vw] rounded-2xl bg-[#15151f] border border-white/10 shadow-2xl p-5" onClick={e => e.stopPropagation()}>
-              <div className="text-sm font-bold mb-1">💬 3 câu hôm nay — để AI hiểu bạn sâu hơn</div>
-              <p className="text-xs text-zinc-500 mb-3">Trả lời thật — tất cả vào trang "Tôi là ai" trong kho riêng của bạn.</p>
-              {qs.map((q2, i) => (
-                <div key={i} className="mb-2.5">
-                  <div className="text-xs text-zinc-300 mb-1">{i + 1}. {q2}</div>
-                  <textarea value={qaAns[i]} onChange={e => setQaAns(a => a.map((x, j) => j === i ? e.target.value : x))} className="w-full h-14 rounded-xl bg-white/5 border border-white/10 p-2.5 text-xs outline-none focus:border-violet-400/50" />
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[58] grid place-items-center p-6" onClick={() => { setQaOpen(false); setQaSaved(null) }}>
+            <div className="w-[480px] max-w-[92vw] hud-panel hud-glow-edge relative bg-[#15151f] shadow-2xl p-5" onClick={e => e.stopPropagation()}>
+              <Corners size={12} />
+              {done ? (
+                <div className="text-center py-4">
+                  <div className="text-4xl mb-2">🪞</div>
+                  <div className="ak-display text-lg font-semibold mb-1">Đã lưu {done.n} câu vào "Tôi là ai"</div>
+                  <p className="text-xs text-zinc-500 mb-4">AI sẽ đọc trang này để hiểu tính cách bạn theo DISC · MBTI — càng trả lời, hồ sơ càng rõ.</p>
+                  <div className="flex gap-2 justify-center">
+                    <button onClick={() => { setQaSaved(null); setQaOpen(false) }} className="rounded-lg bg-white/5 border border-[var(--hud-line)] px-4 py-2 text-xs hover:bg-white/10">Xong</button>
+                    <button onClick={() => { onOpenId(done.id); setQaSaved(null); setQaOpen(false) }} className="rounded-lg ak-cta px-4 py-2 text-xs font-bold">Mở trang "Tôi là ai"</button>
+                  </div>
                 </div>
-              ))}
-              <button onClick={async () => {
-                const filled = qs.map((q2, i) => qaAns[i].trim() ? `**${q2}**\n${qaAns[i].trim()}` : null).filter(Boolean)
-                if (!filled.length) { setQaOpen(false); return }
-                let { data: me } = await supabase.from('nodes').select('id,md,org_id,parent_id').eq('owner_id', user.id).eq('subtype', 'profile_me').limit(1).maybeSingle()
-                if (!me) {
-                  const { data: kho } = await supabase.from('nodes').select('id,org_id').eq('owner_id', user.id).eq('kind', 'kho').limit(1).maybeSingle()
-                  const nid = crypto.randomUUID()
-                  await supabase.from('nodes').insert({ id: nid, org_id: kho?.org_id, owner_id: user.id, layer: 'personal', kind: 'page', parent_id: kho?.id ?? null, title: 'Tôi là ai', icon: '🪞', subtype: 'profile_me', md: '# Tôi là ai\n\nAI đọc trang này để hiểu con người bạn.', status: 'published', min_level: 1 })
-                  me = { id: nid, md: '# Tôi là ai', org_id: kho?.org_id, parent_id: kho?.id }
-                }
-                const today = new Date().toLocaleDateString('vi')
-                await supabase.from('nodes').update({ md: `${me.md ?? ''}\n\n## ${today}\n\n${filled.join('\n\n')}` }).eq('id', me.id)
-                await supabase.from('events').insert({ user_id: user.id, type: 'ai_qa', node_id: me.id })
-                setQaAns(['', '', '']); setQaOpen(false)
-              }} className="w-full rounded-xl ak-cta py-2.5 text-sm font-bold">✓ Lưu vào "Tôi là ai"</button>
+              ) : (
+                <>
+                  <div className="ak-display text-base font-semibold mb-1">💬 3 câu hôm nay — để AI hiểu tính cách bạn</div>
+                  <p className="text-xs text-zinc-500 mb-3">Theo khung <b className="text-violet-300">DISC</b> + <b className="text-cyan-300">MBTI</b> · trả lời thật — tất cả vào 🪞 "Tôi là ai" trong kho riêng.</p>
+                  {qs.map((qq, i) => (
+                    <div key={i} className="mb-2.5">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-xs text-zinc-300">{i + 1}. {qq.q}</span>
+                      </div>
+                      <span className="hud-label" style={{ fontSize: 8.5 }}>{qq.t}</span>
+                      <textarea value={qaAns[i]} onChange={e => setQaAns(a => a.map((x, j) => j === i ? e.target.value : x))} className="mt-1 w-full h-14 rounded-lg bg-white/5 border border-[var(--hud-line)] p-2.5 text-xs outline-none focus:border-violet-400/50" />
+                    </div>
+                  ))}
+                  <button onClick={async () => {
+                    const filled = qs.map((qq, i) => qaAns[i].trim() ? `**[${qq.t}] ${qq.q}**\n${qaAns[i].trim()}` : null).filter(Boolean)
+                    if (!filled.length) { setQaOpen(false); return }
+                    // lấy trang sớm nhất (KHÔNG maybeSingle — lỗi & tạo trùng khi đã lỡ có >1 "Tôi là ai")
+                    const { data: meRows } = await supabase.from('nodes').select('id,md,org_id,parent_id').eq('owner_id', user.id).eq('subtype', 'profile_me').order('created_at', { ascending: true }).limit(1)
+                    let me = meRows?.[0]
+                    if (!me) {
+                      const { data: kho } = await supabase.from('nodes').select('id,org_id').eq('owner_id', user.id).eq('kind', 'kho').limit(1).maybeSingle()
+                      const nid = crypto.randomUUID()
+                      await supabase.from('nodes').insert({ id: nid, org_id: kho?.org_id, owner_id: user.id, layer: 'personal', kind: 'page', parent_id: kho?.id ?? null, title: 'Tôi là ai', icon: '🪞', subtype: 'profile_me', md: '# Tôi là ai\n\nAI đọc trang này để hiểu con người + TÍNH CÁCH bạn (DISC · MBTI).', status: 'published', min_level: 1 })
+                      me = { id: nid, md: '# Tôi là ai', org_id: kho?.org_id, parent_id: kho?.id }
+                    }
+                    const today = new Date().toLocaleDateString('vi')
+                    await supabase.from('nodes').update({ md: `${me.md ?? ''}\n\n## 🧭 Tính cách · ${today}\n\n${filled.join('\n\n')}` }).eq('id', me.id)
+                    await supabase.from('events').insert({ user_id: user.id, type: 'ai_qa', node_id: me.id, meta: { framework: 'disc_mbti', n: filled.length } })
+                    setQaAns(['', '', '']); setQaSaved({ n: filled.length, id: me.id })
+                  }} className="w-full rounded-lg ak-cta py-2.5 text-sm font-bold">✓ Lưu vào "Tôi là ai"</button>
+                </>
+              )}
             </div>
           </div>
         )
