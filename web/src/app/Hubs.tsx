@@ -33,23 +33,45 @@ function MiniMd({ md }: { md: string }) {
 }
 
 /* ========================== 🌟 KOL FEED ========================== */
-export function KolFeed({ canEdit, onOpenPage, onInsight }: {
+export function KolFeed({ canEdit, orgId, onOpenPage, onInsight }: {
   canEdit: boolean
+  orgId?: string | null
   onOpenPage: (id: string) => void
   onInsight: (text: string, sourceTitle: string, sourceId: string) => void
 }) {
   const [posts, setPosts] = useState<AnyNode[]>([])
   const [profiles, setProfiles] = useState<AnyNode[]>([])
+  const [news, setNews] = useState<AnyNode[]>([])
+  const [feed, setFeed] = useState<'kol' | 'news'>('kol')
   const [who, setWho] = useState<string>('all')
   const [open, setOpen] = useState<AnyNode | null>(null)
   const [insightDraft, setInsightDraft] = useState('')
-  useEffect(() => {
-    supabase.from('nodes').select('id,title,md,props,subtype,created_at').in('subtype', ['kol_post', 'kol_profile']).order('position').then(({ data }) => {
+  const [compose, setCompose] = useState<{ title: string; summary: string; source: string; quote: string; when: string } | null>(null)
+  const loadFeeds = () => {
+    supabase.from('nodes').select('id,title,md,props,subtype,created_at').in('subtype', ['kol_post', 'kol_profile', 'news']).order('created_at', { ascending: false }).then(({ data }) => {
       const all = (data as AnyNode[]) ?? []
       setPosts(all.filter(n => n.subtype === 'kol_post'))
       setProfiles(all.filter(n => n.subtype === 'kol_profile'))
+      setNews(all.filter(n => n.subtype === 'news'))
     })
-  }, [])
+  }
+  useEffect(loadFeeds, [])
+  async function postNews() {
+    if (!compose?.title.trim() || !orgId) return
+    const { data: kho } = await supabase.from('nodes').select('id').eq('layer', 'humanity').eq('kind', 'kho').limit(1).maybeSingle()
+    let { data: home } = await supabase.from('nodes').select('id').eq('subtype', 'news_home').limit(1).maybeSingle()
+    if (!home && kho) { const id = crypto.randomUUID(); await supabase.from('nodes').insert({ id, org_id: orgId, owner_id: null, layer: 'humanity', kind: 'page', parent_id: kho.id, title: '📰 Dòng tin ngành', icon: '📰', subtype: 'news_home', status: 'published', min_level: 1 }); home = { id } }
+    const id = crypto.randomUUID()
+    const c = compose
+    await supabase.from('nodes').insert({
+      id, org_id: orgId, owner_id: null, layer: 'humanity', kind: 'page', parent_id: home?.id ?? kho?.id ?? null,
+      title: c.title.trim(), icon: '📰', subtype: 'news', status: 'published', min_level: 1,
+      event_date: new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10),
+      props: { page_type: 'nguon', summary: c.summary.trim(), source: c.source.trim(), key_quote: c.quote.trim(), when_to_use: c.when.trim() },
+      md: `**Loại:** 📰 Tin ngành · **Ngày:** ${new Date().toLocaleDateString('vi')}\n\n**Tóm tắt 1 câu:** ${c.summary.trim()}\n\n**Nguồn:** ${c.source.trim()}\n\n## ❝ Câu trích đắt\n${c.quote.trim()}\n\n## 🎯 Dùng khi nào\n${c.when.trim()}`,
+    })
+    setCompose(null); loadFeeds()
+  }
   const kols = useMemo(() => Array.from(new Set(posts.map(p => p.props?.kol as string).filter(Boolean))), [posts])
   const shown = posts.filter(p => who === 'all' || (p.props?.kol as string) === who)
   const kolName = (k: string) => k === 'steve-jobs' ? '🍎 Steve Jobs' : k === 'bill-gates' ? '🪟 Bill Gates' : k
@@ -57,9 +79,15 @@ export function KolFeed({ canEdit, onOpenPage, onInsight }: {
     <div className="px-8 py-6 max-w-5xl mx-auto">
       <div className="flex items-center justify-between flex-wrap gap-2 mb-1">
         <h2 className="text-xl font-extrabold">🌟 Người khổng lồ</h2>
-        {canEdit && <span className="text-[10px] text-zinc-600">Editor: thêm bài = tạo trang con trong 🌟 KOL Feed (kho tập đoàn)</span>}
+        {canEdit && feed === 'news' && <button onClick={() => setCompose({ title: '', summary: '', source: '', quote: '', when: '' })} className="text-xs rounded-lg ak-cta px-3 py-1.5 font-bold">➕ Đăng tin</button>}
       </div>
-      <p className="text-zinc-500 text-sm mb-4">Đọc một lát cắt đời người lớn → rút <b className="text-amber-300">insight của bạn</b> → nạp vào kho → thành content.</p>
+      <p className="text-zinc-500 text-sm mb-3">Đọc một lát cắt đời người lớn / tin ngành → rút <b className="text-amber-300">insight của bạn</b> → nạp vào kho → thành content.</p>
+      {/* tab nguồn cảm hứng */}
+      <div className="flex gap-1 mb-4 rounded-lg bg-white/5 border border-[var(--hud-line)] p-1 w-fit text-xs">
+        <button onClick={() => setFeed('kol')} className={`px-3 py-1.5 rounded-md font-semibold transition ${feed === 'kol' ? 'ak-cta text-white' : 'text-zinc-400 hover:text-zinc-200'}`}>🌟 KOL</button>
+        <button onClick={() => setFeed('news')} className={`px-3 py-1.5 rounded-md font-semibold transition ${feed === 'news' ? 'ak-cta text-white' : 'text-zinc-400 hover:text-zinc-200'}`}>📰 Tin ngành{news.length > 0 && <span className="ml-1 opacity-70">{news.length}</span>}</button>
+      </div>
+      {feed === 'kol' && <>
       {/* stories row — hồ sơ KOL */}
       <div className="flex gap-3 mb-4 overflow-x-auto pb-1">
         <button onClick={() => setWho('all')} className={`shrink-0 flex flex-col items-center gap-1 ${who === 'all' ? '' : 'opacity-60'}`}>
@@ -95,19 +123,60 @@ export function KolFeed({ canEdit, onOpenPage, onInsight }: {
         })}
         {shown.length === 0 && <p className="text-sm text-zinc-600 col-span-3 py-10 text-center">Chưa có bài — editor tạo trang con trong 🌟 KOL Feed.</p>}
       </div>
+      </>}
+      {feed === 'news' && (
+        <div className="space-y-2">
+          {news.map(p => (
+            <button key={p.id} onClick={() => { setOpen(p); setInsightDraft('') }} className="w-full text-left rounded-xl bg-white/[0.04] border border-white/10 hover:border-violet-400/50 transition p-4 flex gap-3">
+              <span className="text-2xl shrink-0">📰</span>
+              <div className="min-w-0 flex-1">
+                <div className="text-sm font-bold leading-snug mb-0.5">{p.title}</div>
+                <p className="text-[12px] text-zinc-400 line-clamp-2">{(p.props?.summary as string) || ''}</p>
+                <div className="flex items-center gap-2 mt-1 text-[10px] text-zinc-600">
+                  <span>{(p.props?.source as string) || 'nguồn ?'}</span>
+                  {(p.props?.when_to_use as string) && <span className="rounded bg-violet-500/15 text-violet-300 px-1.5 py-0.5">🎯 {(p.props!.when_to_use as string).slice(0, 40)}</span>}
+                </div>
+              </div>
+              <span className="self-center text-[10px] rounded-lg bg-amber-400/15 border border-amber-400/30 text-amber-200 px-2 py-1 shrink-0">💎 Rút insight</span>
+            </button>
+          ))}
+          {news.length === 0 && <p className="text-sm text-zinc-600 py-10 text-center">Chưa có tin nào.{canEdit ? ' Bấm ➕ Đăng tin để thêm.' : ' Ban biên tập sẽ cập nhật.'}</p>}
+        </div>
+      )}
+      {/* compose tin (editor) */}
+      {compose && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[62] grid place-items-center p-6" onClick={() => setCompose(null)}>
+          <div className="w-[520px] max-w-[94vw] rounded-2xl bg-[#10121d] border border-white/10 shadow-2xl p-5 space-y-2.5" onClick={e => e.stopPropagation()}>
+            <div className="font-bold mb-1">📰 Đăng tin ngành — bắn cho cả cộng đồng</div>
+            <input value={compose.title} onChange={e => setCompose(c => c && { ...c, title: e.target.value })} placeholder="Tiêu đề tin…" className="w-full rounded-lg bg-white/5 border border-[var(--hud-line)] px-3 py-2 text-sm outline-none focus:border-violet-400/50" />
+            <input value={compose.summary} onChange={e => setCompose(c => c && { ...c, summary: e.target.value })} placeholder="Tóm tắt 1 câu (AI đọc để gợi content)…" className="w-full rounded-lg bg-white/5 border border-[var(--hud-line)] px-3 py-2 text-sm outline-none focus:border-violet-400/50" />
+            <input value={compose.source} onChange={e => setCompose(c => c && { ...c, source: e.target.value })} placeholder="Nguồn (báo / link / tổ chức)…" className="w-full rounded-lg bg-white/5 border border-[var(--hud-line)] px-3 py-2 text-sm outline-none focus:border-violet-400/50" />
+            <input value={compose.quote} onChange={e => setCompose(c => c && { ...c, quote: e.target.value })} placeholder="❝ Câu trích đắt (quotable sẵn)…" className="w-full rounded-lg bg-white/5 border border-[var(--hud-line)] px-3 py-2 text-sm outline-none focus:border-violet-400/50" />
+            <input value={compose.when} onChange={e => setCompose(c => c && { ...c, when: e.target.value })} placeholder="🎯 Dùng khi nào (bối cảnh nên trích)…" className="w-full rounded-lg bg-white/5 border border-[var(--hud-line)] px-3 py-2 text-sm outline-none focus:border-violet-400/50" />
+            <div className="flex justify-end gap-2 pt-1">
+              <button onClick={() => setCompose(null)} className="text-xs rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-zinc-400">Huỷ</button>
+              <button onClick={postNews} disabled={!compose.title.trim()} className="text-xs rounded-lg ak-cta px-4 py-2 font-bold disabled:opacity-40">📡 Đăng & bắn cho user</button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* viewer */}
       {open && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[60] grid place-items-center p-6" onClick={() => setOpen(null)}>
           <div className="w-[640px] max-w-[94vw] max-h-[88vh] overflow-auto rounded-2xl bg-[#10121d] border border-white/10 shadow-2xl" onClick={e => e.stopPropagation()}>
             {(open.props?.image_url as string) && <img src={open.props!.image_url as string} alt="" className="w-full max-h-60 object-cover" />}
             <div className="p-5">
-              <div className="text-[10px] text-zinc-500 mb-1">{kolName((open.props?.kol as string) ?? '')} · {open.props?.year as string} · ảnh: {open.props?.image_credit as string}</div>
+              <div className="text-[10px] text-zinc-500 mb-1">{open.subtype === 'news' ? `📰 Tin ngành · ${(open.props?.source as string) || ''}` : `${kolName((open.props?.kol as string) ?? '')} · ${open.props?.year as string} · ảnh: ${open.props?.image_credit as string}`}</div>
               <h3 className="text-lg font-extrabold mb-3">{open.title}</h3>
-              <MiniMd md={(open.md ?? '').split('## 💎 Insight')[0].split('\n').slice(6).join('\n')} />
+              {open.subtype === 'news'
+                ? <p className="text-sm text-zinc-300">{(open.props?.summary as string) || ''}</p>
+                : <MiniMd md={(open.md ?? '').split('## 💎 Insight')[0].split('\n').slice(6).join('\n')} />}
               <div className="mt-4 rounded-xl bg-amber-500/10 border border-amber-400/25 px-4 py-3">
-                <div className="text-[10px] uppercase tracking-wider text-amber-300/80 mb-1">💎 Insight gợi ý</div>
-                <p className="text-sm text-amber-100/90">{open.props?.insight as string}</p>
-                {(open.props?.quote as string) && <p className="text-xs text-zinc-400 italic mt-2">“{open.props?.quote as string}”</p>}
+                <div className="text-[10px] uppercase tracking-wider text-amber-300/80 mb-1">{open.subtype === 'news' ? '❝ Câu trích đắt · 🎯 dùng khi nào' : '💎 Insight gợi ý'}</div>
+                <p className="text-sm text-amber-100/90">{open.subtype === 'news' ? ((open.props?.key_quote as string) || (open.props?.summary as string) || '') : (open.props?.insight as string)}</p>
+                {open.subtype === 'news'
+                  ? (open.props?.when_to_use as string) && <p className="text-xs text-zinc-400 mt-2">🎯 {open.props?.when_to_use as string}</p>
+                  : (open.props?.quote as string) && <p className="text-xs text-zinc-400 italic mt-2">“{open.props?.quote as string}”</p>}
               </div>
               {/* RÚT INSIGHT CỦA RIÊNG BẠN — vòng lặp đọc → kho → content */}
               <div className="mt-3">

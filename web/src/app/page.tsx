@@ -1216,7 +1216,7 @@ function Workspace({ user }: { user: User }) {
             createPage(studio, 'personal', 'page', { title, md, props: { page_type: 'quy-trinh', via: 'engine' } })
             setPage('know')
           }} /></div>
-        : page === 'kol' ? <div className="flex-1 overflow-auto"><KolFeed canEdit={!!role?.can_edit} onOpenPage={(id) => { const t = nodeOf(id); if (t) { openNoteEditor(t); setPage('know') } }} onInsight={(text, srcTitle, srcId) => {
+        : page === 'kol' ? <div className="flex-1 overflow-auto"><KolFeed canEdit={!!role?.can_edit} orgId={orgId} onOpenPage={(id) => { const t = nodeOf(id); if (t) { openNoteEditor(t); setPage('know') } }} onInsight={(text, srcTitle, srcId) => {
             // GỘP với luồng insight ở Home: mở cùng "Đào sâu 30s" → tên page theo BÀI HỌC, nối Tham chiếu về bài gốc
             setCapDeep({ kind: 'insight', text, emo: '', who: '', lesson: '', src: `${srcTitle} (KOL feed)`, srcId, srcTitle, gocstory: srcTitle, apply: '' })
           }} /></div>

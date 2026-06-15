@@ -2,6 +2,11 @@
 
 > Ghi lại mỗi đợt build để lần sau làm tốt hơn. Quy trình chuẩn: **đọc docs → sửa code → `npm run build` → test thật trên preview (đăng nhập, bấm từng nút) → cập nhật docs**.
 
+## 2026-06-16 (đợt 20) — 🪐 Galaxy "3 Vòng đồng tâm" + 📰 News feed
+**A — Mode 3 Vòng (theo ảnh quantum-entanglement founder gửi)**: Galaxy.tsx mode mới `rings`. Layout: 3 ring đồng tâm — cá nhân (cyan #22d3ee) ở LÕI → QNET (tím) → nhân loại (hồng) ngoài cùng. Draw tự chứa: nền hư không + bụi sao, mỗi ring là vành HẠT mịn (340–940 hạt, gaussian band, gradient hue quanh vòng) phát sáng **đập theo nhịp tim lub-dub** (beat 0.55→1.0, chu kỳ ~1.4s); node thật = glint sáng trên vành (size theo degree) + nhãn leader-line khi hover/chọn; **tia ENTANGLEMENT** = link nối 2 kho khác nhau vẽ thành đường cong sáng có hạt chạy theo nhịp. Nút mode 🪐 3 Vòng. Verify: render mượt, không lỗi console, sát ảnh tham chiếu.
+**B — News (founder đề xuất, mình recommend tab thay vì nhánh sâu)**: KolFeed thêm tab 🌟 KOL / 📰 Tin ngành. Editor "➕ Đăng tin" (form: tiêu đề, tóm tắt, nguồn, ❝ câu trích đắt, 🎯 dùng khi nào) → tạo node subtype='news' layer humanity dưới hub '📰 Dòng tin ngành', owner null (của org). User đọc → "💎 Rút insight" dùng LẠI luồng onInsight (đào sâu 30s → Kim cương + nối Tham chiếu về tin gốc). Tái dùng 2 trường vàng + luồng insight đã gộp — không cơ chế mới.
+**Verify**: mode 3 vòng screenshot (cyan/tím/hồng + tia chéo); đăng tin "AI tạo video giá rẻ 2026" → hiện ở tab Tin ngành với badge dù-khi-nào. tsc + build xanh.
+
 ## 2026-06-16 (đợt 19) — 🔧 Điểm Chuyển hoá KHỚP + Digest resume + dọn Ôn lại/Content + đổi tên Linh hồn
 Founder: "Hồn cốt"→"Linh hồn"; điểm chấm xong không lên; mở lại phải thấy đáp án cũ + điền thêm tăng điểm; "Ôn lại" & nút Content vô nghĩa → bỏ.
 1. **Bug điểm lệch (chí mạng)**: màn ăn mừng Digest dùng `depthScore` (radar 5-cạnh CŨ → hiện 91) trong khi badge trang dùng `transformScore` (8 chiều, 26·3/8) → user thấy "điểm không lên". Fix: sau finish, re-fetch links+thuộc tính vừa lưu → `transformScore` → ăn mừng hiện ĐÚNG số (verify: 26·3/8 = badge). depthScore chỉ còn cho lịch ôn nội bộ.
