@@ -2,6 +2,14 @@
 
 > Ghi lại mỗi đợt build để lần sau làm tốt hơn. Quy trình chuẩn: **đọc docs → sửa code → `npm run build` → test thật trên preview (đăng nhập, bấm từng nút) → cập nhật docs**.
 
+## 2026-06-13 (đợt 15) — 🧩 Account ở Home · wordmark mọi view · Insight đào sâu · fix Trích dẫn
+Phản hồi founder sau khi duyệt HUD:
+1. **Tài khoản/Thoát về Home** (thay vì Kho): tách `themeBtn` + `accountCluster` (theme · email · Thoát) trong Workspace. Home command bar + mọi view dùng accountCluster; Kho header chỉ còn themeBtn (đúng "log out ở home thay vì kho").
+2. **Wordmark A·K·A·S·H mọi view**: thêm `viewBar` (Wordmark + StatusLine + accountCluster) bọc chung các view engine/kol/board/review/users/profile; Today & Know vốn đã có. (Galaxy neuro cũng đã có "A.K.A.S.H — NEURO LINK".)
+3. **Insight cũng đào sâu 30s** (như trải nghiệm): capture insight giờ mở dialog 3 câu RIÊNG cho insight — ⚡ tinh chỉnh 1 câu sắc bén · 🌍 đến từ đâu (gốc) · 🎯 áp dụng 7 ngày tới. capDeep mang `kind`; finishCapture(skip) nhánh theo kind (insight→Kim cương bài học, exp→Hành trình). Verify DB: pt=bai-hoc, principle set, gốc/áp dụng vào md.
+4. **Fix nhân đôi ngoặc ở "Trích dẫn"**: text blockquote đã có sẵn `"` nhưng render lại bọc thêm `&ldquo;&rdquo;` → `""…""`. Thêm stripQ (bỏ 💬 + lớp ngoặc ngoài) + splitAttr (tách "— nguồn" cuối câu thành src) + lọc dòng `> —` nối tiếp. Giờ mỗi câu 1 cặp “…” sạch, nguồn tách riêng.
+**Verify**: screenshot Home (account+Thoát), Content Engine (viewBar wordmark), dialog insight đào sâu, Kim Chỉ Nam (trích dẫn hết nhân đôi). tsc + build xanh.
+
 ## 2026-06-13 (đợt 14) — 🚀 ĐỒNG BỘ HUD: login bay vào vũ trụ + Galaxy + quét nốt
 **Founder**: "đồng bộ hết + login có hiệu ứng bay vào vũ trụ + toàn bộ phần còn lại".
 1. **Login = warp drive** (Warp.tsx sẵn có, sao streak hyperspace): brand hero wordmark mono `A·K·A·S·H` + glow, eyebrow "AKASHIC KNOWLEDGE ENGINE", StatusLine `● CORE·MEMORY·LINK·WARP READY`, feature cards → hud-panel; form card bỏ viền gradient → hud-panel + hud-glow-edge + góc ngoặc Corners; nhãn Email/Mật khẩu → hud-label. (login luôn dark `dq-dark` — đúng tinh thần vũ trụ.)

@@ -258,10 +258,16 @@ export function PageFooter({ node, pages, outLinks, backLinks, mdText, canE, lit
   }))
   const litDims = byDim.filter(x => x.out.length + x.back.length > 0).length
 
+  // bỏ emoji 💬 + lớp ngoặc kép có sẵn (tránh nhân đôi “ ” khi render); tách "— nguồn" cuối câu thành src
+  const stripQ = (s: string) => s.replace(/^\s*💬\s*/, '').replace(/^[“”"'\s]+/, '').replace(/[“”"'\s]+$/, '').trim()
+  const splitAttr = (s: string): { t: string; attr?: string } => {
+    const m = s.match(/^(.*?)\s+[—–-]\s+([^—–]{2,60})$/)
+    return m && m[1].length > 10 ? { t: stripQ(m[1]), attr: m[2].trim() } : { t: stripQ(s) }
+  }
   const quotes = [
-    ...mdText.split('\n').filter(l => l.trim().startsWith('> ')).map(l => ({ t: l.trim().slice(2), src: 'trong bài' })),
-    ...backLinks.filter(b => b.excerpt).map(b => ({ t: b.excerpt as string, src: byId.get(b.from_node)?.title ?? 'liên kết' })),
-    ...outLinks.filter(o => o.excerpt).map(o => ({ t: o.excerpt as string, src: byId.get(o.to_node)?.title ?? 'liên kết' })),
+    ...mdText.split('\n').filter(l => l.trim().startsWith('> ') && !/^>\s*[—–-]/.test(l.trim())).map(l => { const x = splitAttr(l.trim().slice(2)); return { t: x.t, src: x.attr ?? 'trong bài' } }),
+    ...backLinks.filter(b => b.excerpt).map(b => ({ t: stripQ(b.excerpt as string), src: byId.get(b.from_node)?.title ?? 'liên kết' })),
+    ...outLinks.filter(o => o.excerpt).map(o => ({ t: stripQ(o.excerpt as string), src: byId.get(o.to_node)?.title ?? 'liên kết' })),
   ].filter(q => q.t.trim().length > 5).slice(0, 6)
   const refs = outLinks.filter(o => o.dimension === 'reference').map(o => byId.get(o.to_node)).filter((x): x is FrameNode => !!x)
   const atts = ((p.attachments as { name: string; url: string }[]) ?? [])

@@ -252,7 +252,7 @@ function Workspace({ user }: { user: User }) {
   const [toast, setToast] = useState('')
   const [tplFor, setTplFor] = useState<{ parentId: string | null; layer: string } | null>(null)
   const [lifeWiz, setLifeWiz] = useState(false)
-  const [capDeep, setCapDeep] = useState<{ text: string; emo: string; who: string; lesson: string } | null>(null)
+  const [capDeep, setCapDeep] = useState<{ kind: 'exp' | 'insight'; text: string; emo: string; who: string; lesson: string; src: string; gocstory: string; apply: string } | null>(null)
   const [galaxyModeReq, setGalaxyModeReq] = useState<{ mode: string; t: number } | null>(null)
   const [mobileNav, setMobileNav] = useState(false)
   const [themeLight, setThemeLight] = useState(false)
@@ -352,18 +352,40 @@ function Workspace({ user }: { user: User }) {
   }
   // P0 fix (audit 12/6): user mới chưa có cây gốc → tự tạo hub trước khi nạp, KHÔNG rơi về gốc kho
   // hoàn tất nạp trải nghiệm sau bước đào sâu — emotion vào CỘT, người/bài học vào đúng mục md
-  async function finishCapture(text: string, emo: string, who: string, lesson: string) {
+  async function finishCapture(skip = false) {
+    const cd = capDeep; if (!cd) return
     setCapDeep(null)
-    const parent = await ensureHub('journey', 'Hành trình anh hùng của tôi', '📓')
     const nowD = new Date()
     const today = new Date(Date.now() - nowD.getTimezoneOffset() * 60000).toISOString().slice(0, 10)
     const id = crypto.randomUUID()
+    // ── INSIGHT: đào sâu "gốc nào sinh ra + áp dụng vào đâu" → Kim cương bài học ──
+    if (cd.kind === 'insight') {
+      const parent = await ensureHub('lessons', 'Kim cương bài học', '💎')
+      const principle = (skip ? '' : cd.lesson.trim()) || cd.text
+      const goc = skip ? '' : cd.gocstory.trim()
+      const apply = skip ? '' : cd.apply.trim()
+      const title = cd.text.length > 60 ? cd.text.slice(0, 57).trimEnd() + '…' : cd.text
+      const { error } = await supabase.from('nodes').insert({
+        id, org_id: orgId, owner_id: user.id, layer: 'personal', kind: 'note', parent_id: parent,
+        title, event_date: today, status: 'published', min_level: 1,
+        props: { page_type: 'bai-hoc', via: 'capture', ...(principle.trim() ? { principle: principle.trim() } : {}) },
+        md: `**Loại:** 🎓 Bài học · **Ngày sự kiện:** ${nowD.toLocaleDateString('vi')}\n\n**Tóm tắt 1 câu:** ${principle}\n\n**Nguồn:** ${cd.src.trim() || 'tự đúc rút'}\n\n## ⚡ Nguyên lý cốt lõi\n${cd.text}\n\n## 🌍 Trải nghiệm gốc nào sinh ra insight này?\n${goc ? '- ' + goc : '- (nối chiều 🌱 trải nghiệm về trang chuyện gốc)'}\n\n## 🎯 Áp dụng trong 7 ngày tới\n- ${apply || ''}`,
+      })
+      if (error) { setErr(error.message); return }
+      logEvent('capture_deep', id, { kind: 'insight', goc: !!goc, apply: !!apply })
+      if (orgId) { await loadTree(orgId); loadGraph(orgId) }
+      openNoteEditor({ id, title, kind: 'note', parent_id: parent }); setPage('know')
+      return
+    }
+    // ── TRẢI NGHIỆM: emotion vào CỘT, người/bài học vào đúng mục md → Hành trình ──
+    const parent = await ensureHub('journey', 'Hành trình anh hùng của tôi', '📓')
+    const emo = skip ? '' : cd.emo, who = skip ? '' : cd.who, lesson = skip ? '' : cd.lesson
     const { error } = await supabase.from('nodes').insert({
       id, org_id: orgId, owner_id: user.id, layer: 'personal', kind: 'note', parent_id: parent,
       title: `Nhật ký ${nowD.toLocaleDateString('vi')} · ${nowD.getHours()}h${String(nowD.getMinutes()).padStart(2, '0')}`,
       event_date: today, emotion: emo || null, status: 'published', min_level: 1,
       props: { page_type: 'trai-nghiem', via: 'capture', ...(lesson.trim() ? { principle: lesson.trim() } : {}) },
-      md: `**Loại:** 🌱 Trải nghiệm · **Ngày sự kiện:** ${nowD.toLocaleDateString('vi')}\n\n**Tóm tắt 1 câu:** ${lesson.trim() || text.slice(0, 120)}\n\n**Nguồn:** tự trải nghiệm\n\n## ⚡ Chuyện gì xảy ra\n${text}\n\n## ❤️ Cảm xúc\n${emo || '—'}\n\n## 💚 Ai liên quan\n${who.trim() || '—'}\n\n## 🎓 Bài học rút ra\n- ${lesson.trim() || ''}\n\n**Cảnh này nói gì về tôi:** `,
+      md: `**Loại:** 🌱 Trải nghiệm · **Ngày sự kiện:** ${nowD.toLocaleDateString('vi')}\n\n**Tóm tắt 1 câu:** ${lesson.trim() || cd.text.slice(0, 120)}\n\n**Nguồn:** tự trải nghiệm\n\n## ⚡ Chuyện gì xảy ra\n${cd.text}\n\n## ❤️ Cảm xúc\n${emo || '—'}\n\n## 💚 Ai liên quan\n${who.trim() || '—'}\n\n## 🎓 Bài học rút ra\n- ${lesson.trim() || ''}\n\n**Cảnh này nói gì về tôi:** `,
     })
     if (error) { setErr(error.message); return }
     logEvent('capture_deep', id, { emo: !!emo, who: !!who.trim(), lesson: !!lesson.trim() })
@@ -659,6 +681,31 @@ function Workspace({ user }: { user: User }) {
     )
   }
 
+  // đổi theme + cụm tài khoản dùng chung (Home + mọi view, KHÔNG còn riêng ở Kho)
+  const toggleTheme = () => {
+    const cur = document.documentElement.getAttribute('data-theme') === 'light' ? '' : 'light'
+    if (cur) document.documentElement.setAttribute('data-theme', cur); else document.documentElement.removeAttribute('data-theme')
+    try { localStorage.setItem('akash-theme', cur) } catch { /* */ }
+    setThemeLight(cur === 'light')
+  }
+  const themeBtn = (
+    <button onClick={toggleTheme} title="Đổi giao diện sáng/tối" className="w-8 h-8 grid place-items-center rounded-lg bg-white/5 border border-[var(--hud-line)] hover:bg-white/10 shrink-0">{themeLight ? '🌙' : '☀️'}</button>
+  )
+  const accountCluster = (
+    <div className="flex items-center gap-2">
+      {themeBtn}
+      <span className="hidden sm:inline hud-label">{user.email?.split('@')[0]}</span>
+      <button onClick={() => supabase.auth.signOut()} title="Đăng xuất" className="flex items-center gap-1.5 rounded-lg bg-white/5 border border-[var(--hud-line)] px-3 py-1.5 text-xs hover:bg-white/10 hover:text-white transition"><ILogout size={14} /> Thoát</button>
+    </div>
+  )
+  // thanh đầu dùng chung cho các view không phải Kho/Home (wordmark A·K·A·S·H + tài khoản)
+  const viewBar = (
+    <div className="flex items-center justify-between px-6 py-3 border-b border-[var(--hud-line)] shrink-0">
+      <div className="flex items-center gap-3"><Wordmark size="md" dotted /><span className="hidden md:block"><StatusLine items={['CORE', 'MEMORY', 'LINK', 'ONLINE']} /></span></div>
+      {accountCluster}
+    </div>
+  )
+
   return (
     <div className="min-h-screen bg-[#07070d] text-zinc-100 flex">
       <nav className="w-16 border-r border-white/10 flex flex-col items-center py-4 gap-2 shrink-0">
@@ -700,15 +747,8 @@ function Workspace({ user }: { user: User }) {
           <button onClick={() => setPage('today')} title="Mở Nhập liệu (trong Hôm nay)" className="flex items-center gap-1.5 text-xs rounded-xl bg-white/5 border border-white/10 px-3 py-2 text-zinc-300 hover:bg-white/10 hover:border-white/20 transition">📥 Raw</button>
         </div>
         <div className="flex items-center gap-3 text-sm text-zinc-400">
-          <button onClick={() => setMobileNav(v => !v)} title="Cây trang" className="md:hidden w-8 h-8 grid place-items-center rounded-lg bg-white/5 border border-white/10">☰</button>
-          <button onClick={() => {
-            const cur = document.documentElement.getAttribute('data-theme') === 'light' ? '' : 'light'
-            if (cur) document.documentElement.setAttribute('data-theme', cur); else document.documentElement.removeAttribute('data-theme')
-            try { localStorage.setItem('akash-theme', cur) } catch { /* */ }
-            setThemeLight(cur === 'light')
-          }} title="Đổi giao diện sáng/tối" className="w-8 h-8 grid place-items-center rounded-lg bg-white/5 border border-white/10 hover:bg-white/10">{themeLight ? '🌙' : '☀️'}</button>
-          <span className="hidden sm:inline text-xs">{user.email}</span>
-          <button onClick={() => supabase.auth.signOut()} title="Đăng xuất" className="flex items-center gap-1.5 rounded-lg bg-white/5 border border-white/10 px-3 py-1.5 text-xs hover:bg-white/10 hover:text-white transition"><ILogout size={14} /> Thoát</button>
+          <button onClick={() => setMobileNav(v => !v)} title="Cây trang" className="md:hidden w-8 h-8 grid place-items-center rounded-lg bg-white/5 border border-[var(--hud-line)]">☰</button>
+          {themeBtn}
         </div>
       </header>
 
@@ -1094,6 +1134,7 @@ function Workspace({ user }: { user: User }) {
           <Today
             user={user}
             role={role}
+            account={accountCluster}
             stats={{ pages: tree.filter(n => n.kind !== 'kho').length, notes: tree.filter(n => n.kind === 'note').length, links: links.length }}
             recent={recent.map(id => nodeOf(id)).filter((n): n is TNode => !!n)}
             pages={personalPages.filter(n => n.kind === 'note' || n.kind === 'page')}
@@ -1124,24 +1165,8 @@ function Workspace({ user }: { user: User }) {
                 setToast('⚠ Chưa lưu được quote — thử lại nhé'); setTimeout(() => setToast(''), 3000)
                 return
               }
-              const isInsight = type === 'insight'
-              if (!isInsight) { setCapDeep({ text: title, emo: '', who: '', lesson: '' }); return } // trải nghiệm → hỏi đào sâu trước khi nạp
-              const parent = await ensureHub('lessons', 'Kim cương bài học', '💎')
-              const today = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10) // ngày LOCAL, không lệch UTC
-              const nowD = new Date()
-              // title gọn — KHÔNG lấy nguyên văn dài (feedback 12/6): nhật ký theo ngày-giờ, insight cắt 60 ký tự
-              const niceTitle = isInsight
-                ? (title.length > 60 ? title.slice(0, 57).trimEnd() + '…' : title)
-                : `Nhật ký ${nowD.toLocaleDateString('vi')} · ${nowD.getHours()}h${String(nowD.getMinutes()).padStart(2, '0')}`
-              createPage(parent, 'personal', 'note', {
-                title: niceTitle,
-                event_date: today, // mắt xích GHI phải đan vào trục thời gian (KHO-CHUAN §2bis)
-                props: { page_type: isInsight ? 'bai-hoc' : 'trai-nghiem', via: 'capture' },
-                md: isInsight
-                  ? `**Loại:** 🎓 Bài học · **Ngày sự kiện:** ${new Date().toLocaleDateString('vi')}\n\n**Tóm tắt 1 câu:** ${title}\n\n**Nguồn:** ${source || 'tự đúc rút'}\n\n## ⚡ Nguyên lý cốt lõi\n${title}\n\n## 🌍 Trải nghiệm gốc nào sinh ra insight này?\n- (nối chiều 🌱 trải nghiệm về trang chuyện gốc)\n\n## 🎯 Áp dụng\n- [ ] `
-                  : `**Loại:** 🌱 Trải nghiệm · **Ngày sự kiện:** ${new Date().toLocaleDateString('vi')}\n\n**Tóm tắt 1 câu:** ${title}\n\n**Nguồn:** tự trải nghiệm\n\n## 📍 Bối cảnh\n\n## ⚡ Chuyện gì xảy ra\n${title}\n\n## ❤️ Cảm xúc\n\n## 🎓 Bài học rút ra\n- \n\n**Cảnh này nói gì về tôi:** `,
-              })
-              setPage('know')
+              // exp + insight đều mở "đào sâu 30s" để bắt não vận động trước khi nạp (quote ở trên đã return)
+              setCapDeep({ kind: type === 'insight' ? 'insight' : 'exp', text: title, emo: '', who: '', lesson: type === 'insight' ? title : '', src: source ?? '', gocstory: '', apply: '' })
             }}
             onGalaxy={() => { setPage('know'); setView('galaxy') }}
             onDigest={(n) => { openNoteEditor(n as Node); setPage('know'); setShowDigest(true) }}
@@ -1157,7 +1182,8 @@ function Workspace({ user }: { user: User }) {
           />
           <Studio orgId={orgId} user={user} canEdit={!!role?.can_edit} canApprove={!!role?.can_approve} pages={tree.map(n => ({ id: n.id, title: n.title, layer: n.layer, kind: n.kind, parent_id: n.parent_id, icon: n.icon, subtype: n.subtype }))} onOpen={(id) => { const t = nodeOf(id); if (t) { openNoteEditor(t); setPage('know') } }} onReload={() => { if (orgId) { loadTree(orgId); loadGraph(orgId) } }} />
           </div>
-        : page === 'engine' ? <div className="flex-1 overflow-auto"><ContentEngine user={user} orgId={orgId} pages={tree} onOpenPage={(id) => { const t = nodeOf(id); if (t) { openNoteEditor(t); setPage('know') } }} onCreatePlan={async (title, md) => {
+        : (<div className="flex-1 flex flex-col min-h-0">{viewBar}{
+          page === 'engine' ? <div className="flex-1 overflow-auto"><ContentEngine user={user} orgId={orgId} pages={tree} onOpenPage={(id) => { const t = nodeOf(id); if (t) { openNoteEditor(t); setPage('know') } }} onCreatePlan={async (title, md) => {
             const studio = await ensureHub('studio', 'Xưởng content', '🎬')
             createPage(studio, 'personal', 'page', { title, md, props: { page_type: 'quy-trinh', via: 'engine' } })
             setPage('know')
@@ -1176,34 +1202,55 @@ function Workspace({ user }: { user: User }) {
         : page === 'board' ? <div className="flex-1 overflow-auto"><Board orgId={orgId} userId={user.id} onOpen={(id) => { const t = nodeOf(id); if (t) { openNoteEditor(t); setPage('know') } }} /></div>
         : page === 'review' ? <div className="flex-1 overflow-auto"><ReviewHub me={user.id} onOpen={(id) => { const t = nodeOf(id); if (t) { openNoteEditor(t); setPage('know') } }} onChanged={() => { if (orgId) { loadTree(orgId); loadGraph(orgId) } }} /></div>
         : page === 'users' ? <div className="flex-1 overflow-auto"><MembersHub me={user.id} orgId={orgId} pages={tree} canAdmin={role?.level === 5 || !!role?.can_approve} onOpenPage={(id) => { const t = nodeOf(id); if (t) { openNoteEditor(t); setPage('know') } }} /></div>
-        : <div className="flex-1 overflow-auto"><Profile user={user} /></div>}
+        : <div className="flex-1 overflow-auto"><Profile user={user} /></div>
+        }</div>)}
       </div>
 
-      {/* ✍️ ĐÀO SÂU TRẢI NGHIỆM — 3 câu bắt não làm việc trước khi nạp (skip được) */}
+      {/* ✍️ ĐÀO SÂU 30s — bắt não làm việc trước khi nạp (skip được). Khác câu hỏi theo loại. */}
       {capDeep && (
         <div className="fixed inset-0 z-[70] bg-black/70 backdrop-blur-md grid place-items-center p-6" onClick={() => setCapDeep(null)}>
-          <div className="w-[560px] max-w-[94vw] rounded-3xl bg-[#10121d] border border-white/10 shadow-2xl p-6" onClick={e => e.stopPropagation()}>
-            <h3 className="text-lg font-extrabold mb-1">Đào sâu 30 giây — cho trải nghiệm này có nghĩa</h3>
+          <div className="w-[560px] max-w-[94vw] hud-panel hud-glow-edge relative bg-[#10121d] shadow-2xl p-6" onClick={e => e.stopPropagation()}>
+            <Corners size={12} />
+            <h3 className="ak-display text-lg font-semibold mb-1">{capDeep.kind === 'insight' ? 'Đào sâu 30 giây — cho insight này thành kim cương' : 'Đào sâu 30 giây — cho trải nghiệm này có nghĩa'}</h3>
             <p className="text-xs text-zinc-500 mb-4 italic line-clamp-2">“{capDeep.text}”</p>
-            <div className="mb-3">
-              <div className="text-[12px] font-medium text-zinc-400 mb-1.5">🧡 Lúc đó bạn cảm thấy gì?</div>
-              <div className="flex flex-wrap gap-1.5">
-                {[['😮', 'vỡ òa'], ['💗', 'chạm'], ['🔥', 'thôi thúc'], ['😣', 'nhói'], ['😤', 'ức'], ['😌', 'nhẹ nhõm'], ['🌫️', 'hoài nghi']].map(([ic, l]) => (
-                  <button key={l} onClick={() => setCapDeep(c => c && ({ ...c, emo: c.emo === l ? '' : l }))} className={`px-2.5 py-1.5 rounded-lg text-xs border ${capDeep.emo === l ? 'bg-amber-500/20 border-amber-400/50 text-amber-100' : 'bg-white/5 border-white/10 text-zinc-400'}`}>{ic} {l}</button>
-                ))}
-              </div>
-            </div>
-            <div className="mb-3">
-              <div className="text-[12px] font-medium text-zinc-400 mb-1.5">💚 Ai liên quan đến chuyện này?</div>
-              <input value={capDeep.who} onChange={e => setCapDeep(c => c && ({ ...c, who: e.target.value }))} placeholder="tên người — khách, đồng đội, gia đình… (bỏ trống được)" className="w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2 text-sm outline-none focus:border-violet-400/40" />
-            </div>
-            <div className="mb-4">
-              <div className="text-[12px] font-medium text-zinc-400 mb-1.5">💎 Nếu rút thành MỘT câu bài học?</div>
-              <input value={capDeep.lesson} onChange={e => setCapDeep(c => c && ({ ...c, lesson: e.target.value }))} placeholder="một câu của riêng bạn — không chép sách" className="w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2 text-sm outline-none focus:border-violet-400/40" />
-            </div>
+            {capDeep.kind === 'insight' ? (
+              <>
+                <div className="mb-3">
+                  <div className="hud-label mb-1.5">⚡ Tinh chỉnh thành MỘT câu sắc bén</div>
+                  <input value={capDeep.lesson} onChange={e => setCapDeep(c => c && ({ ...c, lesson: e.target.value }))} placeholder="viết lại cho gọn & của riêng bạn — không chép sách" className="w-full rounded-lg bg-white/5 border border-[var(--hud-line)] px-3 py-2 text-sm outline-none focus:border-violet-400/40" />
+                </div>
+                <div className="mb-3">
+                  <div className="hud-label mb-1.5">🌍 Insight này đến TỪ ĐÂU? (chuyện / người / sách)</div>
+                  <input value={capDeep.gocstory} onChange={e => setCapDeep(c => c && ({ ...c, gocstory: e.target.value }))} placeholder="gốc rễ thật — để sau này nối về trải nghiệm gốc" className="w-full rounded-lg bg-white/5 border border-[var(--hud-line)] px-3 py-2 text-sm outline-none focus:border-violet-400/40" />
+                </div>
+                <div className="mb-4">
+                  <div className="hud-label mb-1.5">🎯 Bạn sẽ ÁP DỤNG vào đâu trong 7 ngày tới?</div>
+                  <input value={capDeep.apply} onChange={e => setCapDeep(c => c && ({ ...c, apply: e.target.value }))} placeholder="một hành động cụ thể — biết để làm, không để biết" className="w-full rounded-lg bg-white/5 border border-[var(--hud-line)] px-3 py-2 text-sm outline-none focus:border-violet-400/40" />
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="mb-3">
+                  <div className="hud-label mb-1.5">🧡 Lúc đó bạn cảm thấy gì?</div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {[['😮', 'vỡ òa'], ['💗', 'chạm'], ['🔥', 'thôi thúc'], ['😣', 'nhói'], ['😤', 'ức'], ['😌', 'nhẹ nhõm'], ['🌫️', 'hoài nghi']].map(([ic, l]) => (
+                      <button key={l} onClick={() => setCapDeep(c => c && ({ ...c, emo: c.emo === l ? '' : l }))} className={`px-2.5 py-1.5 rounded-lg text-xs border ${capDeep.emo === l ? 'bg-amber-500/20 border-amber-400/50 text-amber-100' : 'bg-white/5 border-[var(--hud-line)] text-zinc-400'}`}>{ic} {l}</button>
+                    ))}
+                  </div>
+                </div>
+                <div className="mb-3">
+                  <div className="hud-label mb-1.5">💚 Ai liên quan đến chuyện này?</div>
+                  <input value={capDeep.who} onChange={e => setCapDeep(c => c && ({ ...c, who: e.target.value }))} placeholder="tên người — khách, đồng đội, gia đình… (bỏ trống được)" className="w-full rounded-lg bg-white/5 border border-[var(--hud-line)] px-3 py-2 text-sm outline-none focus:border-violet-400/40" />
+                </div>
+                <div className="mb-4">
+                  <div className="hud-label mb-1.5">💎 Nếu rút thành MỘT câu bài học?</div>
+                  <input value={capDeep.lesson} onChange={e => setCapDeep(c => c && ({ ...c, lesson: e.target.value }))} placeholder="một câu của riêng bạn — không chép sách" className="w-full rounded-lg bg-white/5 border border-[var(--hud-line)] px-3 py-2 text-sm outline-none focus:border-violet-400/40" />
+                </div>
+              </>
+            )}
             <div className="flex items-center justify-between">
-              <button onClick={() => finishCapture(capDeep.text, '', '', '')} className="text-xs text-zinc-600 hover:text-zinc-300">Bỏ qua — nạp luôn</button>
-              <button onClick={() => finishCapture(capDeep.text, capDeep.emo, capDeep.who, capDeep.lesson)} className="rounded-xl ak-cta px-6 py-2.5 text-sm font-bold">✓ Nạp vào Hành trình</button>
+              <button onClick={() => finishCapture(true)} className="text-xs text-zinc-600 hover:text-zinc-300">Bỏ qua — nạp luôn</button>
+              <button onClick={() => finishCapture(false)} className="rounded-lg ak-cta px-6 py-2.5 text-sm font-bold">{capDeep.kind === 'insight' ? '✓ Nạp vào Kim cương' : '✓ Nạp vào Hành trình'}</button>
             </div>
           </div>
         </div>

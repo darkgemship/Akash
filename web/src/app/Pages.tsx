@@ -553,7 +553,7 @@ const CAP_TYPES: [string, string, string][] = [
   ['insight', '💎 Insight', 'Ý chợt loé — vào 💎 Kim cương bài học'],
   ['quote', '💬 Quote đắt', 'Câu nói hay vừa nghe/đọc — kèm nguồn'],
 ]
-export function Today({ user, role, stats, recent, pages, editorial = [], counts, onOpen, onOpenId, onCapture, onGalaxy, onDigest, onRaw, onKolAll }: {
+export function Today({ user, role, stats, recent, pages, editorial = [], counts, account, onOpen, onOpenId, onCapture, onGalaxy, onDigest, onRaw, onKolAll }: {
   user: User
   role?: { level: number; can_edit: boolean; can_approve: boolean } | null
   stats: { pages: number; notes: number; links: number; dims?: number }
@@ -561,6 +561,7 @@ export function Today({ user, role, stats, recent, pages, editorial = [], counts
   pages: TodayNode[]            // note cá nhân — để tính "cần chuyển hoá"
   editorial?: (TodayNode & { status?: string; note?: string })[]
   counts?: { values: number; mantras: number; people: number; dated: number; pendingAll?: number }
+  account?: React.ReactNode    // cụm tài khoản (theme + email + thoát) — đặt ở Home thay vì Kho
   onOpen: (n: TodayNode) => void
   onOpenId: (id: string) => void
   onCapture: (title: string, type?: string, source?: string) => void
@@ -637,9 +638,12 @@ export function Today({ user, role, stats, recent, pages, editorial = [], counts
           <Wordmark size="lg" dotted />
           <span className="hidden md:block"><StatusLine items={['CORE', 'MEMORY', 'LINK', 'ONLINE', 'ALIVE']} /></span>
         </div>
-        <div className="hud-num text-right shrink-0" style={{ fontSize: '1.5rem' }}>
-          {now ? now.toLocaleTimeString('vi', { hour: '2-digit', minute: '2-digit' }) : '--:--'}
-          <span className="hud-label ml-2" style={{ fontSize: 9 }}>{now ? now.toLocaleDateString('vi', { weekday: 'short', day: '2-digit', month: '2-digit' }) : ''}</span>
+        <div className="flex items-center gap-4 shrink-0">
+          <div className="hud-num text-right" style={{ fontSize: '1.5rem' }}>
+            {now ? now.toLocaleTimeString('vi', { hour: '2-digit', minute: '2-digit' }) : '--:--'}
+            <span className="hud-label ml-2" style={{ fontSize: 9 }}>{now ? now.toLocaleDateString('vi', { weekday: 'short', day: '2-digit', month: '2-digit' }) : ''}</span>
+          </div>
+          {account}
         </div>
       </div>
       <hr className="hud-rule mb-5" />
