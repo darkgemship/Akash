@@ -2,6 +2,14 @@
 
 > Ghi lại mỗi đợt build để lần sau làm tốt hơn. Quy trình chuẩn: **đọc docs → sửa code → `npm run build` → test thật trên preview (đăng nhập, bấm từng nút) → cập nhật docs**.
 
+## 2026-06-16 (đợt 18) — 🔗 Gộp luồng Insight: tên page theo BÀI HỌC + truy nguồn, nối Tham chiếu
+Founder: insight từ bài KOL đang lấy câu cảm thán ("rất là hay") làm tên page — vô nghĩa, không truy được nguồn.
+**Đề xuất chốt — GỘP 2 luồng insight làm một**: dù từ Home hay từ bài KOL, đều qua cùng "Đào sâu 30s" → vào 💎 Kim cương bài học.
+- **Tên page** (logic mới, finishCapture insight): ưu tiên = câu BÀI HỌC (principle, viên kim cương) → chưa có thì `💡 Insight từ: [tên bài gốc]` (truy nguồn) → cuối cùng mới tới câu gốc. KHÔNG bao giờ để câu cảm thán làm tên.
+- **KOL onInsight**: không tạo thẳng nữa → mở capDeep(kind insight) với srcId/srcTitle, gocstory tự điền tên bài gốc; sau khi nạp tự nối chiều `reference` về bài gốc + props.mirror_of.
+- Provenance luôn giữ: Nguồn = "[bài] (KOL feed)" + link Tham chiếu (bấm về bài gốc) + mục "## 🌍 Từ bài".
+**Verify**: KOL feed → rút insight "rất hay" → đào sâu → bài học "Đầu tư vào thứ chưa thấy hữu dụng…" → DB: title=bài học, pt=bai-hoc, via=kol, mirror_of=bài gốc, 1 ref link, parent=Kim cương. Dọn page test. build xanh.
+
 ## 2026-06-16 (đợt 17) — 🧠 Tách THUỘC TÍNH ↔ LIÊN KẾT (giảm cognitive load) + Properties theo kho + gợi ý tiêu đề
 Founder: header đè chữ; AI gợi ý title; nghiên cứu lại Properties (trường tối thiểu hữu dụng, đặc biệt QNET/Nhân loại cho AI rẻ); đánh giá lại logic cảm xúc/8 chiều — đang quá tải, dễ bỏ sót, AI rối.
 **Insight gốc**: trong "8 chiều", Cảm xúc & Thời gian KHÔNG phải quan hệ giữa 2 trang — chúng là THUỘC TÍNH của trang. Bắt user "nối trang để gắn cảm xúc" = category error → cognitive load. Tách rõ:

@@ -252,7 +252,7 @@ function Workspace({ user }: { user: User }) {
   const [toast, setToast] = useState('')
   const [tplFor, setTplFor] = useState<{ parentId: string | null; layer: string } | null>(null)
   const [lifeWiz, setLifeWiz] = useState(false)
-  const [capDeep, setCapDeep] = useState<{ kind: 'exp' | 'insight'; text: string; emo: string; who: string; lesson: string; src: string; gocstory: string; apply: string } | null>(null)
+  const [capDeep, setCapDeep] = useState<{ kind: 'exp' | 'insight'; text: string; emo: string; who: string; lesson: string; src: string; gocstory: string; apply: string; srcId?: string; srcTitle?: string } | null>(null)
   const [galaxyModeReq, setGalaxyModeReq] = useState<{ mode: string; t: number } | null>(null)
   const [mobileNav, setMobileNav] = useState(false)
   const [themeLight, setThemeLight] = useState(false)
@@ -361,18 +361,25 @@ function Workspace({ user }: { user: User }) {
     // ── INSIGHT: đào sâu "gốc nào sinh ra + áp dụng vào đâu" → Kim cương bài học ──
     if (cd.kind === 'insight') {
       const parent = await ensureHub('lessons', 'Kim cương bài học', '💎')
-      const principle = (skip ? '' : cd.lesson.trim()) || cd.text
-      const goc = skip ? '' : cd.gocstory.trim()
+      const principle = skip ? '' : cd.lesson.trim()
+      const goc = (skip ? '' : cd.gocstory.trim()) || (cd.srcTitle ?? '')
       const apply = skip ? '' : cd.apply.trim()
-      const title = cd.text.length > 60 ? cd.text.slice(0, 57).trimEnd() + '…' : cd.text
+      // TÊN PAGE = viên kim cương (câu bài học). Chưa có → truy NGUỒN (Insight từ: bài X), KHÔNG lấy câu cảm thán.
+      const cut = (s: string, n: number) => s.length > n ? s.slice(0, n - 1).trimEnd() + '…' : s
+      const title = principle ? cut(principle, 64)
+        : cd.srcTitle ? `💡 Insight từ: ${cut(cd.srcTitle, 48)}`
+        : cut(cd.text, 60)
+      const insightBody = principle || cd.text   // nguyên lý nếu có, không thì giữ câu gốc làm hạt mầm
       const { error } = await supabase.from('nodes').insert({
         id, org_id: orgId, owner_id: user.id, layer: 'personal', kind: 'note', parent_id: parent,
         title, event_date: today, status: 'published', min_level: 1,
-        props: { page_type: 'bai-hoc', via: 'capture', ...(principle.trim() ? { principle: principle.trim() } : {}) },
-        md: `**Loại:** 🎓 Bài học · **Ngày sự kiện:** ${nowD.toLocaleDateString('vi')}\n\n**Tóm tắt 1 câu:** ${principle}\n\n**Nguồn:** ${cd.src.trim() || 'tự đúc rút'}\n\n## ⚡ Nguyên lý cốt lõi\n${cd.text}\n\n## 🌍 Trải nghiệm gốc nào sinh ra insight này?\n${goc ? '- ' + goc : '- (nối chiều 🌱 trải nghiệm về trang chuyện gốc)'}\n\n## 🎯 Áp dụng trong 7 ngày tới\n- ${apply || ''}`,
+        props: { page_type: 'bai-hoc', via: cd.srcId ? 'kol' : 'capture', ...(principle ? { principle } : {}), ...(cd.srcId ? { mirror_of: cd.srcId } : {}) },
+        md: `**Loại:** 🎓 Bài học · **Ngày sự kiện:** ${nowD.toLocaleDateString('vi')}\n\n**Tóm tắt 1 câu:** ${insightBody}\n\n**Nguồn:** ${cd.src.trim() || 'tự đúc rút'}\n\n## ⚡ Nguyên lý cốt lõi\n${insightBody}\n\n## 🌍 ${cd.srcTitle ? 'Từ bài' : 'Trải nghiệm gốc nào sinh ra insight này?'}\n${goc ? '- ' + goc : '- (nối chiều 🌱 trải nghiệm về trang chuyện gốc)'}\n\n## 🎯 Áp dụng trong 7 ngày tới\n- ${apply || ''}`,
       })
       if (error) { setErr(error.message); return }
-      logEvent('capture_deep', id, { kind: 'insight', goc: !!goc, apply: !!apply })
+      // insight từ bài nguồn (KOL) → nối chiều Tham chiếu về bài gốc
+      if (cd.srcId) await supabase.from('links').insert({ org_id: orgId, from_node: id, to_node: cd.srcId, dimension: 'reference', source: 'kol' })
+      logEvent('capture_deep', id, { kind: 'insight', src: !!cd.srcId, principle: !!principle, apply: !!apply })
       if (orgId) { await loadTree(orgId); loadGraph(orgId) }
       openNoteEditor({ id, title, kind: 'note', parent_id: parent }); setPage('know')
       return
@@ -1220,16 +1227,9 @@ function Workspace({ user }: { user: User }) {
             createPage(studio, 'personal', 'page', { title, md, props: { page_type: 'quy-trinh', via: 'engine' } })
             setPage('know')
           }} /></div>
-        : page === 'kol' ? <div className="flex-1 overflow-auto"><KolFeed canEdit={!!role?.can_edit} onOpenPage={(id) => { const t = nodeOf(id); if (t) { openNoteEditor(t); setPage('know') } }} onInsight={async (text, srcTitle, srcId) => {
-            // insight từ KOL → 💎 Kim cương bài học (tự tạo cây nếu thiếu) + nối chiều reference về bài gốc
-            const lessons = await ensureHub('lessons', 'Kim cương bài học', '💎')
-            const id = crypto.randomUUID()
-            await supabase.from('nodes').insert({ id, org_id: orgId, owner_id: user.id, layer: 'personal', kind: 'note', parent_id: lessons, title: text.slice(0, 80), event_date: new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10), md: `**Loại:** 🎓 Bài học · **Ngày sự kiện:** ${new Date().toLocaleDateString('vi')}\n\n**Tóm tắt 1 câu:** ${text}\n\n**Nguồn:** ${srcTitle} (KOL feed)\n\n## ⚡ Insight\n${text}\n\n## 🎯 Áp dụng vào đời tôi\n- [ ] `, props: { page_type: 'bai-hoc', via: 'kol' }, status: 'published', min_level: 1 })
-            await supabase.from('links').insert({ org_id: orgId, from_node: id, to_node: srcId, dimension: 'reference', source: 'kol' })
-            logEvent('create', id)
-            if (orgId) { loadTree(orgId); loadGraph(orgId) }
-            const t = { id, title: text.slice(0, 80), kind: 'note', parent_id: lessons }
-            openNoteEditor(t as Node); setPage('know')
+        : page === 'kol' ? <div className="flex-1 overflow-auto"><KolFeed canEdit={!!role?.can_edit} onOpenPage={(id) => { const t = nodeOf(id); if (t) { openNoteEditor(t); setPage('know') } }} onInsight={(text, srcTitle, srcId) => {
+            // GỘP với luồng insight ở Home: mở cùng "Đào sâu 30s" → tên page theo BÀI HỌC, nối Tham chiếu về bài gốc
+            setCapDeep({ kind: 'insight', text, emo: '', who: '', lesson: '', src: `${srcTitle} (KOL feed)`, srcId, srcTitle, gocstory: srcTitle, apply: '' })
           }} /></div>
         : page === 'board' ? <div className="flex-1 overflow-auto"><Board orgId={orgId} userId={user.id} onOpen={(id) => { const t = nodeOf(id); if (t) { openNoteEditor(t); setPage('know') } }} /></div>
         : page === 'review' ? <div className="flex-1 overflow-auto"><ReviewHub me={user.id} onOpen={(id) => { const t = nodeOf(id); if (t) { openNoteEditor(t); setPage('know') } }} onChanged={() => { if (orgId) { loadTree(orgId); loadGraph(orgId) } }} /></div>
