@@ -119,6 +119,7 @@ export default function Galaxy({ nodes, links, onOpen, onConnect, modeReq }: {
   const [mode, setMode] = useState<Mode>('galaxy')
   const [show3d, setShow3d] = useState(false)
   const [flow, setFlow] = useState(false)
+  const [maxLvl2D, setMaxLvl2D] = useState(5)   // 🪐 độ sâu hệ (galaxy 2D): 1=hành tinh · 2=+tiểu HT · 3=+vệ tinh · 4+=tất cả
   const [showIcons, setShowIcons] = useState(true)   // 🖼 icon trong node cho dễ nhìn
   const showIconsRef = useRef(true); showIconsRef.current = showIcons
   const [depthCol, setDepthCol] = useState(true)     // 🎨 màu theo độ sâu khi chọn node
@@ -391,6 +392,7 @@ export default function Galaxy({ nodes, links, onOpen, onConnect, modeReq }: {
           for (const lvStr in lvls) {
             const lv = +lvStr, arr = lvls[lv]
             if (lv === 0) { arr.forEach(n => m.set(n.id, { x: c.x, y: c.y, r: SIZE.kho, color: GAL_PAL[L]?.star ?? COLOR.kho, node: n, phase: rand() * Math.PI * 2 })); continue }
+            if (lv > maxLvl2D) continue   // độ sâu hệ: chỉ hiện tới tầng đã chọn
             const R = ringStep * (lv + 0.5)
             arr.forEach((n, i) => {
               const a = (i / arr.length) * Math.PI * 2 + lv * 0.6   // chia đều + lệch pha mỗi vòng cho so le đẹp
@@ -399,8 +401,8 @@ export default function Galaxy({ nodes, links, onOpen, onConnect, modeReq }: {
             })
           }
         }
-        // node lạc (không thuộc kho nào) → rải vành ngoài mờ
-        nodes.forEach(n => { if (!m.has(n.id)) { const a = rand() * Math.PI * 2; m.set(n.id, { x: cx + Math.cos(a) * S0 * 0.47, y: cy + Math.sin(a) * S0 * 0.47, r: SIZE[n.kind] ?? 4, color: COLOR[n.kind] ?? COLOR.note, node: n, phase: rand() * Math.PI * 2 }) } })
+        // node lạc (không thuộc kho nào) → rải vành ngoài mờ (vẫn tôn trọng độ sâu)
+        nodes.forEach(n => { if (!m.has(n.id) && levelOf(n.id) <= maxLvl2D) { const a = rand() * Math.PI * 2; m.set(n.id, { x: cx + Math.cos(a) * S0 * 0.47, y: cy + Math.sin(a) * S0 * 0.47, r: SIZE[n.kind] ?? 4, color: COLOR[n.kind] ?? COLOR.note, node: n, phase: rand() * Math.PI * 2 }) } })
       }
       // CHỐNG NODE ĐÈ NHAU (Obsidian-style collision): vài vòng đẩy tách bằng spatial hash — gọn gàng, chỉnh chu
       if (mode === 'galaxy' || mode === 'mandala') {
@@ -838,14 +840,25 @@ export default function Galaxy({ nodes, links, onOpen, onConnect, modeReq }: {
         })
       }
 
-      // CONTAINS = thẳng, mờ (trong mandala = cành cây)
+      // CHA → CON = đường THẲNG + MŨI TÊN hướng về page con (phân biệt rõ với liên kết 8-chiều cong)
+      const arrowCol = light ? 'rgba(80,80,110,.45)' : 'rgba(170,175,210,.5)'
+      const lineCol = light ? 'rgba(60,60,90,.22)' : (mode === 'mandala' ? 'rgba(52,211,153,.22)' : 'rgba(150,155,195,.22)')
       pts.current.forEach(p => {
         if (!p.node.parent_id) return
         const par = pts.current.get(p.node.parent_id); if (!par) return
         const a = wpos(par), b = wpos(p)
-        ctx.strokeStyle = mode === 'mandala' ? 'rgba(52,211,153,.22)' : 'rgba(150,150,185,.18)'
-        ctx.lineWidth = Math.max(0.5, 0.7 * cam.current.k) * dpr
-        ctx.beginPath(); ctx.moveTo(SX(a.x), SY(a.y)); ctx.lineTo(SX(b.x), SY(b.y)); ctx.stroke()
+        const ax = SX(a.x), ay = SY(a.y), bx = SX(b.x), by = SY(b.y)
+        ctx.strokeStyle = lineCol; ctx.lineWidth = Math.max(0.5, 0.7 * cam.current.k) * dpr
+        ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.stroke()
+        // mũi tên (tam giác nhỏ) đặt ngay trước node con, chỉ vẽ khi đủ to để thấy
+        const dd = Math.hypot(bx - ax, by - ay); if (dd < 24 * dpr) return
+        const ang = Math.atan2(by - ay, bx - ax), rr = SR(p.r) + 3 * dpr
+        const tx = bx - Math.cos(ang) * rr, ty = by - Math.sin(ang) * rr, s = 4.2 * dpr
+        ctx.fillStyle = arrowCol
+        ctx.beginPath(); ctx.moveTo(tx, ty)
+        ctx.lineTo(tx - Math.cos(ang - 0.45) * s, ty - Math.sin(ang - 0.45) * s)
+        ctx.lineTo(tx - Math.cos(ang + 0.45) * s, ty - Math.sin(ang + 0.45) * s)
+        ctx.closePath(); ctx.fill()
       })
 
       // LINKS cong màu theo chiều + DÒNG NĂNG LƯỢNG
@@ -1194,7 +1207,7 @@ export default function Galaxy({ nodes, links, onOpen, onConnect, modeReq }: {
     const onResize = () => layout()
     window.addEventListener('resize', onResize)
     return () => { cancelAnimationFrame(raf); window.removeEventListener('resize', onResize) }
-  }, [nodes, links, mode])
+  }, [nodes, links, mode, maxLvl2D]) // eslint-disable-line react-hooks/exhaustive-deps
 
   function zoomAt(mx: number, my: number, factor: number) {
     const c = cam.current
@@ -1382,7 +1395,7 @@ export default function Galaxy({ nodes, links, onOpen, onConnect, modeReq }: {
       {show3d && (
         <ErrorBoundary onError={() => setShow3d(false)} fallback={
           <div className="absolute inset-0 z-20 grid place-items-center bg-[#06060c] text-center px-8">
-            <div className="max-w-sm"><div className="text-4xl mb-3">🪐</div><div className="text-zinc-200 text-base font-semibold mb-1.5">Máy này chưa bật được 3D</div><p className="text-zinc-500 text-[13px] mb-4">Dùng các chế độ 2D: Galaxy · Dòng đời · 3 Vòng.</p><button onClick={() => setShow3d(false)} className="rounded-lg ak-cta px-5 py-2 text-sm font-bold">← Về 2D</button></div>
+            <div className="max-w-sm"><div className="text-4xl mb-3">🪐</div><div className="text-zinc-200 text-base font-semibold mb-1.5">Máy này chưa bật được 3D</div><p className="text-zinc-500 text-[13px] mb-4">Dùng các chế độ 2D: Galaxy · Cây sự sống · Dòng đời.</p><button onClick={() => setShow3d(false)} className="rounded-lg ak-cta px-5 py-2 text-sm font-bold">← Về 2D</button></div>
           </div>
         }>
           <Graph3D nodes={nodes} links={links} onOpen={onOpen} onClose={() => setShow3d(false)} />
@@ -1407,7 +1420,6 @@ export default function Galaxy({ nodes, links, onOpen, onConnect, modeReq }: {
           <button onClick={() => setMode('galaxy')} title="Cấu trúc kho — cái gì nằm trong cái gì" className={`px-2 py-1.5 rounded-lg ${mode === 'galaxy' ? 'bg-violet-500/40 text-white' : 'text-zinc-400 hover:bg-white/10'}`}>🌌 Galaxy</button>
           <button onClick={() => { setMode('mandala'); setFlow(true) }} title="Cây Sự Sống — gốc ở đáy, cành tri thức toả rộng lên trời; sâu hơn vươn xa hơn" className={`px-2 py-1.5 rounded-lg ${mode === 'mandala' ? 'bg-amber-500/35 text-amber-100 shadow-lg shadow-amber-500/30' : 'text-zinc-400 hover:bg-white/10'}`}>🌳 Cây sự sống</button>
           <button onClick={() => { setMode('timeline'); setMotion('still') }} title="Dòng đời — tri thức đan vào mốc thời gian thực; bật 🌈 Cảm xúc để thấy hành trình sáng dần" className={`px-2 py-1.5 rounded-lg ${mode === 'timeline' ? 'bg-blue-500/35 text-blue-100 shadow-lg shadow-blue-500/30' : 'text-zinc-400 hover:bg-white/10'}`}>📜 Dòng đời</button>
-          <button onClick={() => { setMode('rings'); setMotion('still') }} title="3 vòng đồng tâm — đời tôi ở lõi, QNET, nhân loại; đập theo nhịp tim" className={`px-2 py-1.5 rounded-lg ${mode === 'rings' ? 'bg-pink-500/30 text-pink-100 shadow-lg shadow-pink-500/30' : 'text-zinc-400 hover:bg-white/10'}`}>🪐 3 Vòng</button>
           <button onClick={() => setShow3d(true)} title="Bộ não 3D — xoay/zoom mọi chiều, tìm node sáng, lọc kho, chỉnh lực" className="px-2 py-1.5 rounded-lg text-zinc-400 hover:bg-white/10">🌐 3D</button>
           {/* mode NÂNG CAO — ẩn sau ⋯ cho đỡ rối */}
           {moreModes && <>
@@ -1433,6 +1445,12 @@ export default function Galaxy({ nodes, links, onOpen, onConnect, modeReq }: {
             <button key={k} onClick={() => setMotion(k)} title={tip2} className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg ${motion === k ? act : 'text-zinc-400 hover:bg-white/10'}`}>
               <span className={`dq-prev ${prev}`} />{label}
             </button>
+          ))}
+        </div>}
+        {mode === 'galaxy' && <div className="flex items-center gap-1 rounded-md bg-[#10101a]/85 backdrop-blur border border-[var(--hud-line)] p-1 text-[11px]">
+          <span className="hud-label pl-1.5 pr-0.5">tầng</span>
+          {([[1, 'hành tinh'], [2, 'tiểu HT'], [3, 'vệ tinh'], [5, 'tất cả']] as [number, string][]).map(([lv, lb]) => (
+            <button key={lv} onClick={() => setMaxLvl2D(lv)} title={`Hiện tới tầng ${lv === 5 ? '4+' : lv} — ${lb}`} className={`px-2 py-1.5 rounded-lg ${maxLvl2D === lv ? 'ak-cta text-white' : 'text-zinc-400 hover:bg-white/10'}`}>{lv === 5 ? '4+' : lv}</button>
           ))}
         </div>}
         <div className="flex items-center gap-1 rounded-md bg-[#10101a]/85 backdrop-blur border border-[var(--hud-line)] p-1 text-[11px]">

@@ -168,6 +168,9 @@ export default function Graph3D({ nodes, links, onOpen, onClose }: {
         .linkVisibility((l: object) => { const x = l as L3; const s = typeof x.source === 'object' ? (x.source as N3).id : x.source as string; const tg = typeof x.target === 'object' ? (x.target as N3).id : x.target as string; return vis(s) && vis(tg) })
         .linkOpacity(0.5)
         .linkWidth(0.5)
+        .linkDirectionalArrowLength(2.6)           // mũi tên hướng theo chiều liên kết (from → to)
+        .linkDirectionalArrowRelPos(0.92)
+        .linkDirectionalArrowColor((l: object) => DIM_COLOR[(l as L3).dimension ?? ''] ?? '#67e8f9')
         .linkDirectionalParticles((l: object) => { const x = l as L3; const s = typeof x.source === 'object' ? (x.source as N3).id : x.source as string; const tg = typeof x.target === 'object' ? (x.target as N3).id : x.target as string; const on = !activeRef.current || (activeRef.current.has(s) && activeRef.current.has(tg)); return particlesRef.current && on ? 3 : 0 })
         .linkDirectionalParticleColor((l: object) => DIM_COLOR[(l as L3).dimension ?? ''] ?? '#67e8f9')   // hạt mang màu CHIỀU liên kết
         .linkDirectionalParticleSpeed(0.005)
@@ -291,7 +294,7 @@ export default function Graph3D({ nodes, links, onOpen, onClose }: {
       <div className="max-w-sm">
         <div className="text-4xl mb-3">🪐</div>
         <div className="text-zinc-200 text-base font-semibold mb-1.5">Máy này chưa bật được 3D</div>
-        <p className="text-zinc-500 text-[13px] leading-relaxed mb-4">Trình duyệt không tạo được đồ hoạ 3D (WebGL) — thường do tăng tốc phần cứng bị tắt hoặc card yếu. Bạn vẫn xem được toàn bộ bằng các chế độ 2D: <b className="text-zinc-300">Galaxy · Dòng đời · 3 Vòng</b>.</p>
+        <p className="text-zinc-500 text-[13px] leading-relaxed mb-4">Trình duyệt không tạo được đồ hoạ 3D (WebGL) — thường do tăng tốc phần cứng bị tắt hoặc card yếu. Bạn vẫn xem được toàn bộ bằng các chế độ 2D: <b className="text-zinc-300">Galaxy · Cây sự sống · Dòng đời</b>.</p>
         <button onClick={onClose} className="rounded-lg ak-cta px-5 py-2 text-sm font-bold">← Về 2D</button>
         <p className="text-zinc-600 text-[11px] mt-3">Mẹo: bật “Use hardware acceleration” trong cài đặt trình duyệt rồi mở lại.</p>
       </div>

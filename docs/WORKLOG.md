@@ -2,6 +2,14 @@
 
 > Ghi lại mỗi đợt build để lần sau làm tốt hơn. Quy trình chuẩn: **đọc docs → sửa code → `npm run build` → test thật trên preview (đăng nhập, bấm từng nút) → cập nhật docs**.
 
+## 2026-06-16 (đợt 42) — 🧹 Bỏ view 3 Vòng · nút độ-sâu 2D · mũi tên cha→con (mọi view) · mũi tên 3D
+- **Bỏ "🪐 3 Vòng"** khỏi mode bar (founder muốn nhẹ); code rings để dormant. Sửa text fallback 2 chỗ (Galaxy·Cây sự sống·Dòng đời).
+- **Nút "TẦNG 1·2·3·4+" cho Galaxy 2D**: lọc node theo LEVEL (hệ mặt trời) — chỉ hiện tới tầng chọn, không phun hết. Lọc trong layout (levelOf ≤ maxLvl2D) + relayout khi đổi. Verify: tầng 1 chỉ còn 3 sao kho + page hành tinh.
+- **Đường CHA→CON = thẳng + MŨI TÊN** hướng về page con (mọi view 2D) — phân biệt rõ với liên kết 8-chiều (vẽ cong mềm, đã có). Màu mũi tên/đường theo theme (light = đậm hơn).
+- **3D: mũi tên hướng link** (linkDirectionalArrowLength + màu theo chiều) — thấy from→to.
+**Verify**: preview — 2D galaxy 3 hệ mặt trời, nút tầng lọc đúng, mũi tên cha-con hiện; 3 Vòng đã ẩn; 0 lỗi chặn (1 warning React deps non-fatal, không từ thay đổi này — deps thêm là size cố định); tsc xanh.
+**Còn (nhỏ, đợt sau)**: click thẳng vào sao/kho để tăng tầng (giờ qua nút TẦNG) · pivot xoay 3D đặt tâm vào kho (giờ click node = lookAt + nút Toàn cảnh).
+
 ## 2026-06-16 (đợt 41) — 🪐 2D Galaxy → 3 HỆ MẶT TRỜI (vòng tròn theo level) cho đỡ loạn
 Founder: 2D loạn quá, muốn node phân bổ kiểu hành tinh — bấm sao bắn ra page hành tinh quay vòng quanh, mở rộng vòng 2/3/4.
 - **Galaxy mode 2D viết lại**: bỏ cây-toả-tròn-chung-1-tâm (gây loạn). Giờ 3 kho = 3 TÂM (tam giác: cá nhân trên, QNET trái-dưới, nhân loại phải-dưới); node con xếp VÒNG TRÒN theo LEVEL quanh tâm kho nó (vòng 1 trong → sâu hơn ra ngoài), chia ĐỀU góc + lệch pha mỗi vòng cho so le.
