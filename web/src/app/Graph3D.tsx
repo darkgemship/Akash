@@ -22,6 +22,9 @@ const galaxyColor = (layer: string, level: number) => {
 }
 // bỏ dấu để search không-dấu vẫn trúng
 const vnorm = (s: string) => (s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase().trim()
+// theme: tone trắng → nền kem, tone tối → nền vũ trụ (3D đổi nền theo theme như 2D)
+const isLight = () => typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'light'
+const SCENE_BG = { dark: '#06060c', light: '#f4f1ea' }
 
 type FG = InstanceType<typeof ForceGraph3D> // instance API
 type N3 = { id: string; name: string; layer: string; kind: string; val: number }
@@ -120,6 +123,7 @@ export default function Graph3D({ nodes, links, onOpen, onClose }: {
     let onResize: (() => void) | null = null
     let canvas: HTMLCanvasElement | null = null
     let onLost: ((e: Event) => void) | null = null
+    let themeObs: MutationObserver | null = null
     const timers: ReturnType<typeof setTimeout>[] = []
 
     const initTimer = setTimeout(() => {
@@ -137,7 +141,7 @@ export default function Graph3D({ nodes, links, onOpen, onClose }: {
       } catch (e) { console.warn('3D init failed', e); setGlError(true); return }
       inst = fg
       fg
-        .backgroundColor('#06060c')
+        .backgroundColor(isLight() ? SCENE_BG.light : SCENE_BG.dark)
         .graphData({ nodes: N, links: L })
         .nodeVal('val')
         .nodeRelSize(4.2)
@@ -157,7 +161,7 @@ export default function Graph3D({ nodes, links, onOpen, onClose }: {
           return s as unknown as THREE.Object3D
         })
         // DÂY = sợi mờ trung tính (không tô 8 màu lên dây → hết loạn); MÀU 8 CHIỀU dồn lên HẠT sáng chạy theo wave
-        .linkColor((l: object) => { const x = l as L3; const s = typeof x.source === 'object' ? (x.source as N3).id : x.source as string; const tg = typeof x.target === 'object' ? (x.target as N3).id : x.target as string; const on = !activeRef.current || (activeRef.current.has(s) && activeRef.current.has(tg)); return on ? 'rgba(190,195,225,0.16)' : 'rgba(120,120,140,0.04)' })
+        .linkColor((l: object) => { const x = l as L3; const s = typeof x.source === 'object' ? (x.source as N3).id : x.source as string; const tg = typeof x.target === 'object' ? (x.target as N3).id : x.target as string; const on = !activeRef.current || (activeRef.current.has(s) && activeRef.current.has(tg)); const lt = isLight(); return on ? (lt ? 'rgba(60,55,90,0.22)' : 'rgba(190,195,225,0.16)') : (lt ? 'rgba(80,80,100,0.06)' : 'rgba(120,120,140,0.04)') })
         .linkVisibility((l: object) => { const x = l as L3; const s = typeof x.source === 'object' ? (x.source as N3).id : x.source as string; const tg = typeof x.target === 'object' ? (x.target as N3).id : x.target as string; return vis(s) && vis(tg) })
         .linkOpacity(0.5)
         .linkWidth(0.5)
@@ -242,6 +246,9 @@ export default function Graph3D({ nodes, links, onOpen, onClose }: {
       canvas = wrap.current.querySelector('canvas')
       onLost = (e: Event) => { e.preventDefault(); setGlError(true) }   // context mất → fallback gọn, không để three tự restore lỗi
       canvas?.addEventListener('webglcontextlost', onLost, false)
+      // đổi nền 3D LIVE khi user bật/tắt tone trắng
+      themeObs = new MutationObserver(() => { try { fg.backgroundColor(isLight() ? SCENE_BG.light : SCENE_BG.dark) } catch { /* */ } })
+      themeObs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] })
       let ang = 0
       const tick = () => { try { if (autoRotRef.current) { ang += 0.0016; const d = 380; fg.cameraPosition({ x: d * Math.sin(ang), z: d * Math.cos(ang) }) } } catch { /* context có thể mất giữa frame */ } raf = requestAnimationFrame(tick) }
       tick()
@@ -253,6 +260,7 @@ export default function Graph3D({ nodes, links, onOpen, onClose }: {
       cancelAnimationFrame(raf)
       if (onResize) window.removeEventListener('resize', onResize)
       if (canvas && onLost) canvas.removeEventListener('webglcontextlost', onLost)
+      themeObs?.disconnect()
       if (inst) {
         try { (inst as unknown as { pauseAnimation?: () => void }).pauseAnimation?.() } catch { /* bỏ qua */ }  // dừng vòng rAF nội bộ TRƯỚC
         try { inst._destructor?.() } catch { /* bỏ qua */ }                                                     // rồi dispose renderer + giải phóng context

@@ -45,6 +45,9 @@ const GAL_PAL: Record<string, { star: string; levels: string[] }> = {
   humanity:  { star: '#e879f9', levels: ['#f0abfc', '#a78bfa', '#60a5fa', '#67e8f9', '#fca5a5'] },
 }
 const galLevelColor = (layer: string, level: number) => { const p = GAL_PAL[layer] ?? GAL_PAL.personal; return p.levels[Math.min(level, p.levels.length - 1)] ?? p.levels[0] }
+// theme: tone trắng → nền kem cho map (2D & 3D), tone tối → nền vũ trụ
+const isLightTheme = () => typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'light'
+const CANVAS_BG = { dark: '#0a0b14', light: '#f4f1ea' }
 // thứ tự 8 trục radar theo framework
 const DIM_ORDER = ['knowledge', 'experience', 'emotion', 'values', 'people', 'time', 'reference', 'anchor']
 
@@ -460,8 +463,9 @@ export default function Galaxy({ nodes, links, onOpen, onConnect, modeReq }: {
       if (frame % 30 === 0 && emaDt > 26 && qual > 0.5) { qual -= 0.25; layout() }
       let nBeat = 0, nFireCl = -1, nFire = 0  // nhịp tim + vùng đang "firing"
       ctx.clearRect(0, 0, cv.width, cv.height)
-      // nền vũ trụ ĐẶC (mọi theme) — map là "cửa sổ không gian", không bao giờ lộ nền kem/trắng (fix blank light-mode)
-      ctx.fillStyle = '#0a0b14'; ctx.fillRect(0, 0, cv.width, cv.height)
+      // nền ĐẶC theo theme: tone tối = vũ trụ, tone trắng = nền kem (đổ đầy mỗi frame → không bao giờ blank)
+      const light = isLightTheme()
+      ctx.fillStyle = light ? CANVAS_BG.light : CANVAS_BG.dark; ctx.fillRect(0, 0, cv.width, cv.height)
       // ════════ 🪐 3 VÒNG ĐỒNG TÂM — entanglement rings, đập theo nhịp tim ════════
       if (mode === 'rings' && ringMetaRef.current) {
         const { cx: wcx, cy: wcy, RING, Rmax } = ringMetaRef.current
@@ -472,7 +476,8 @@ export default function Galaxy({ nodes, links, onOpen, onConnect, modeReq }: {
         const hash = (i: number, s: number) => { const x = Math.sin(i * 12.9898 + s * 78.233) * 43758.5453; return x - Math.floor(x) }
         // nền hư không + bụi sao mờ
         const bg = ctx.createRadialGradient(csx, csy, 0, csx, csy, Math.max(cv.width, cv.height) * 0.7)
-        bg.addColorStop(0, 'rgba(20,16,34,0.55)'); bg.addColorStop(1, 'rgba(6,6,12,0)')
+        if (light) { bg.addColorStop(0, 'rgba(167,139,250,0.10)'); bg.addColorStop(1, 'rgba(244,241,234,0)') }
+        else { bg.addColorStop(0, 'rgba(20,16,34,0.55)'); bg.addColorStop(1, 'rgba(6,6,12,0)') }
         ctx.fillStyle = bg; ctx.fillRect(0, 0, cv.width, cv.height)
         for (let i = 0; i < 90; i++) {
           const sx2 = hash(i, 1) * cv.width, sy2 = hash(i, 2) * cv.height
@@ -1376,7 +1381,7 @@ export default function Galaxy({ nodes, links, onOpen, onConnect, modeReq }: {
       )}
       <canvas ref={ref} onClick={onClick} onMouseDown={onDown} onMouseMove={onMove} onMouseUp={onUp}
         onMouseLeave={() => { hoverId.current = null; setTip(null); panning.current = null; nodeDrag.current = null }}
-        style={{ background: '#0a0b14' }}
+        style={{ background: isLightTheme() ? CANVAS_BG.light : CANVAS_BG.dark }}
         className={`w-full h-full block ${connect ? 'cursor-crosshair' : 'cursor-grab active:cursor-grabbing'}`} />
 
       {tip && (

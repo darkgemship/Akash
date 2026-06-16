@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { User } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabaseClient'
 import { depthScore } from './Digest'
@@ -10,6 +10,17 @@ type N = { id: string; title: string | null; kind: string; parent_id: string | n
 
 function Card({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return <div className={`hud-panel p-5 ${className}`}>{children}</div>
+}
+// ✨ HERO PARALLAX: di chuột → các lớp con [data-px] dịch theo độ sâu (xa âm, gần dương) cho cảm giác 3 chiều thú vị
+function Parallax({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const move = (e: React.MouseEvent) => {
+    const el = ref.current; if (!el) return
+    const r = el.getBoundingClientRect(); const dx = (e.clientX - r.left) / r.width - 0.5, dy = (e.clientY - r.top) / r.height - 0.5
+    el.querySelectorAll<HTMLElement>('[data-px]').forEach(c => { const d = +(c.dataset.px || '0'); c.style.transform = `translate3d(${(dx * d).toFixed(1)}px,${(dy * d).toFixed(1)}px,0)` })
+  }
+  const leave = () => ref.current?.querySelectorAll<HTMLElement>('[data-px]').forEach(c => { c.style.transform = '' })
+  return <div ref={ref} onMouseMove={move} onMouseLeave={leave} className={className} style={{ perspective: 600 }}>{children}</div>
 }
 function Lbl({ children }: { children: React.ReactNode }) {
   return <div className="hud-label mb-2">{children}</div>
@@ -699,35 +710,37 @@ export function Today({ user, role, stats, recent, pages, editorial = [], counts
         return (
           <Card className="mb-4 !p-6 relative overflow-hidden">
             <Corners />
-            <div className="absolute inset-0 opacity-60 pointer-events-none"><Constellation height={300} density={86} accent="var(--hud-accent)" /></div>
-            <div className="relative flex items-center gap-6 flex-wrap">
-              <div className="relative shrink-0">
-                <svg width="132" height="132" viewBox="0 0 132 132" className="-rotate-90">
-                  <circle cx="66" cy="66" r="56" fill="none" stroke="rgba(127,127,160,.12)" strokeWidth="11" />
-                  <circle cx="66" cy="66" r="56" fill="none" stroke="url(#aig)" strokeWidth="11" strokeLinecap="round" strokeDasharray={`${pctAI * 3.519} 999`} />
-                  <defs><linearGradient id="aig"><stop offset="0%" stopColor="#8b5cf6" /><stop offset="50%" stopColor="#3b82f6" /><stop offset="100%" stopColor="#22d3ee" /></linearGradient></defs>
-                </svg>
-                <div className="absolute inset-0 grid place-items-center -mt-1">
-                  <div className="text-center"><div className="text-3xl font-black ak-grad-text">{pctAI}%</div><div className="text-[9px] uppercase tracking-widest text-zinc-500">AI hiểu bạn</div></div>
+            <Parallax>
+              <div data-px="-34" className="absolute inset-[-8%] opacity-60 pointer-events-none transition-transform duration-150 ease-out"><Constellation height={340} density={86} accent="var(--hud-accent)" /></div>
+              <div data-px="10" className="relative flex items-center gap-6 flex-wrap transition-transform duration-150 ease-out">
+                <div className="relative shrink-0">
+                  <svg width="132" height="132" viewBox="0 0 132 132" className="-rotate-90">
+                    <circle cx="66" cy="66" r="56" fill="none" stroke="rgba(127,127,160,.12)" strokeWidth="11" />
+                    <circle cx="66" cy="66" r="56" fill="none" stroke="url(#aig)" strokeWidth="11" strokeLinecap="round" strokeDasharray={`${pctAI * 3.519} 999`} />
+                    <defs><linearGradient id="aig"><stop offset="0%" stopColor="#8b5cf6" /><stop offset="50%" stopColor="#3b82f6" /><stop offset="100%" stopColor="#22d3ee" /></linearGradient></defs>
+                  </svg>
+                  <div className="absolute inset-0 grid place-items-center -mt-1">
+                    <div className="text-center"><div className="text-3xl font-black ak-grad-text">{pctAI}%</div><div className="text-[9px] uppercase tracking-widest text-zinc-500">AI hiểu bạn</div></div>
+                  </div>
+                </div>
+                <div className="flex-1 min-w-[230px]">
+                  <div className="text-sm font-bold mb-0.5">🤖 AI đang hiểu bạn đến đâu?</div>
+                  <p className="text-[11px] text-zinc-500 mb-3">AI chỉ được viết content bằng giọng bạn từ vùng nó ĐÃ hiểu. Lấp đầy 6 vùng để mở khoá:</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 mb-3">
+                    {parts.map(([lb, v, max, hint]) => (
+                      <div key={lb} title={hint} className="rounded-lg bg-white/[0.04] border border-white/10 px-2 py-1.5">
+                        <div className="text-[10px] text-zinc-400 truncate">{lb}</div>
+                        <div className="h-1 rounded-full bg-white/10 mt-1 overflow-hidden"><div className={`h-full ${v >= max ? 'bg-emerald-400' : 'ak-grad'}`} style={{ width: `${(v / max) * 100}%` }} /></div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    <button onClick={() => { setQaSaved(null); setQaAns(['', '', '']); setQaOpen(true) }} className="text-[11px] rounded-lg ak-cta px-3 py-1.5 font-bold">💬 Trả lời 3 câu hôm nay</button>
+                    <button disabled title="Kết nối FB/Insta để AI đọc giọng content — khi cắm API" className="text-[11px] rounded-lg bg-white/5 border border-white/10 px-3 py-1.5 text-zinc-600">🔗 FB/Insta · soon</button>
+                  </div>
                 </div>
               </div>
-              <div className="flex-1 min-w-[230px]">
-                <div className="text-sm font-bold mb-0.5">🤖 AI đang hiểu bạn đến đâu?</div>
-                <p className="text-[11px] text-zinc-500 mb-3">AI chỉ được viết content bằng giọng bạn từ vùng nó ĐÃ hiểu. Lấp đầy 6 vùng để mở khoá:</p>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 mb-3">
-                  {parts.map(([lb, v, max, hint]) => (
-                    <div key={lb} title={hint} className="rounded-lg bg-white/[0.04] border border-white/10 px-2 py-1.5">
-                      <div className="text-[10px] text-zinc-400 truncate">{lb}</div>
-                      <div className="h-1 rounded-full bg-white/10 mt-1 overflow-hidden"><div className={`h-full ${v >= max ? 'bg-emerald-400' : 'ak-grad'}`} style={{ width: `${(v / max) * 100}%` }} /></div>
-                    </div>
-                  ))}
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                  <button onClick={() => { setQaSaved(null); setQaAns(['', '', '']); setQaOpen(true) }} className="text-[11px] rounded-lg ak-cta px-3 py-1.5 font-bold">💬 Trả lời 3 câu hôm nay</button>
-                  <button disabled title="Kết nối FB/Insta để AI đọc giọng content — khi cắm API" className="text-[11px] rounded-lg bg-white/5 border border-white/10 px-3 py-1.5 text-zinc-600">🔗 FB/Insta · soon</button>
-                </div>
-              </div>
-            </div>
+            </Parallax>
           </Card>
         )
       })()}

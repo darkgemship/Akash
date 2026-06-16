@@ -2,6 +2,13 @@
 
 > Ghi lại mỗi đợt build để lần sau làm tốt hơn. Quy trình chuẩn: **đọc docs → sửa code → `npm run build` → test thật trên preview (đăng nhập, bấm từng nút) → cập nhật docs**.
 
+## 2026-06-16 (đợt 38) — 🎨 Map đổi nền theo theme + ✨ Hero parallax
+- **2D & 3D đổi nền theo THEME**: tone trắng (light) → nền KEM (#f4f1ea), tone tối → vũ trụ. Galaxy 2D: fill mỗi frame theo `data-theme` + inline style canvas theo theme; rings radial nền sáng khi light. 3D: backgroundColor theo theme lúc tạo + MutationObserver đổi LIVE khi bật/tắt tone trắng; link sáng/đậm hơn trên nền kem. (Đáp yêu cầu "qua tone trắng thì 3d cũng trắng" + không còn nền-ép-tối lệch theme.)
+- **✨ Hero parallax** (Home, card "AI hiểu bạn"): component <Parallax> — di chuột, lớp Constellation (data-px -34, lùi xa) + lớp nội dung (data-px 10, theo nhẹ) dịch ngược chiều tạo chiều sâu, mượt (transition + translate3d).
+- Lesson: lưu file liên tục giữa lúc sửa JSX làm **cache Turbopack hỏng** → báo parse lỗi ảo dù tsc xanh; khắc phục: stop server → `rm -rf .next` → start lại.
+**Verify**: preview light — 2D canvas nền kem (rgb 244,241,234), 3D nền kem + 3 thiên hà sao, Hero parallax dịch lớp theo chuột; sau khi xoá .next: 0 lỗi compile, Home render sạch.
+**Chưa làm (lib-limited)**: dây 3D "đổi màu theo wave" — 3d-force-graph không animate màu link theo frame; hiện giữ hạt-màu-chiều chạy dọc dây (đã là "ánh sáng chạy qua"). Có thể làm sau bằng shader riêng nếu cần.
+
 ## 2026-06-16 (đợt 37) — 🌳 Cây sự sống = mảng quạt + 👁 3 Vòng võng mạc 5-màu + dây plasma
 (đợt 2-3 cho loạt redesign graph; dùng chung GAL_PAL 5-level + levelOf khớp thiên hà 3D)
 - **GAL_PAL + galLevelColor + levelOf** thêm vào Galaxy.tsx → màu node theo LEVEL trong kho (đồng bộ 3D): L0 sao → L1 xanh dương → 3 màu phối → giữ cuối.
