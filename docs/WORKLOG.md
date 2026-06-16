@@ -2,6 +2,14 @@
 
 > Ghi lại mỗi đợt build để lần sau làm tốt hơn. Quy trình chuẩn: **đọc docs → sửa code → `npm run build` → test thật trên preview (đăng nhập, bấm từng nút) → cập nhật docs**.
 
+## 2026-06-16 (đợt 37) — 🌳 Cây sự sống = mảng quạt + 👁 3 Vòng võng mạc 5-màu + dây plasma
+(đợt 2-3 cho loạt redesign graph; dùng chung GAL_PAL 5-level + levelOf khớp thiên hà 3D)
+- **GAL_PAL + galLevelColor + levelOf** thêm vào Galaxy.tsx → màu node theo LEVEL trong kho (đồng bộ 3D): L0 sao → L1 xanh dương → 3 màu phối → giữ cuối.
+- **CÂY SỰ SỐNG (mandala)**: 3 kho = 3 MẢNG QUẠT ĐỀU (mỗi kho 1/3 quạt ~230°); trong mỗi nhánh con CHIA ĐỀU góc tại trung điểm sub-wedge (cân đối, bỏ chia theo độ rậm cũ). Vẽ nền quạt tô mờ màu sao + NAN nối thiền giả↔tâm 3 kho (có hạt sáng chạy) — khắc phục "con người chưa nối tâm kho". Node màu theo level.
+- **3 VÒNG → VÕNG MẠC**: mỗi kho là 1 DẢI bán kính (personal 0.10-0.40 · QNET 0.46-0.70 · nhân loại 0.76-1.0 của Rmax); trong dải xếp node theo LEVEL (tầng sâu ra ngoài) + jitter → tán rộng như võng mạc. Node màu 5-level.
+- **Dây PLASMA**: link entanglement vẽ 2 lớp (quầng mờ rộng + lõi mảnh), 22 đoạn, 2 sóng sin lệch pha, cong về đồng tử, màu theo level 2 node → mềm uốn như tia plasma.
+**Verify**: preview — Cây sự sống 3 quạt + nan nối kho; 3 Vòng võng mạc nhiều màu + dây plasma cong; 0 lỗi console; tsc xanh.
+
 ## 2026-06-16 (đợt 36) — 🪐 3D: khắc phục fallback + gom tiểu hành tinh quanh sao (vành quỹ đạo theo level)
 Founder: máy lại hiện fallback "chưa bật 3D" + muốn node quây quanh sao tâm.
 - **Khắc phục fallback**: (1) BỎ probe WebGL riêng (nó chiếm thêm 1 context → dễ cạn slot ~16 → fail); (2) BỎ `powerPreference:'high-performance'` (máy chỉ có GPU tích hợp dễ fail khi bị ép) → để trình duyệt tự chọn. Giữ stencil off + failIfMajorPerformanceCaveat false + try/catch + fallback.

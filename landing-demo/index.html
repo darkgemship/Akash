@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>NEURA — AI Intelligence</title>
+<style>
+  :root{
+    --bg:#070d12;
+    --bg2:#0a1620;
+    --teal:#37e6c9;
+    --teal-soft:#5fd6c4;
+    --ink:#dfeef0;
+    --muted:#7d97a0;
+    --line:rgba(55,230,201,.18);
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    background:var(--bg);color:var(--ink);overflow-x:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:inherit;text-decoration:none}
+
+  /* ---------- animated neural background (full page) ---------- */
+  #neural{position:fixed;inset:0;z-index:0;display:block}
+  .veil{position:fixed;inset:0;z-index:1;pointer-events:none;
+    background:radial-gradient(120% 80% at 75% 10%,transparent 40%,rgba(7,13,18,.65) 100%);}
+
+  .wrap{position:relative;z-index:2}
+
+  /* ---------- nav ---------- */
+  nav{position:fixed;top:0;left:0;right:0;z-index:30;
+    display:flex;align-items:center;justify-content:space-between;
+    padding:18px 38px;backdrop-filter:blur(8px);
+    border-bottom:1px solid transparent;transition:.3s;}
+  nav.scrolled{background:rgba(7,13,18,.7);border-bottom:1px solid var(--line)}
+  .logo{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:2px;font-size:18px}
+  .logo .dot{width:11px;height:11px;border-radius:3px;
+    background:linear-gradient(135deg,var(--teal),#1aa1ff);box-shadow:0 0 16px var(--teal)}
+  .links{display:flex;gap:30px;font-size:13.5px;letter-spacing:.5px;color:var(--muted)}
+  .links a{position:relative;transition:.25s}
+  .links a:hover{color:var(--teal)}
+  .links a::after{content:"";position:absolute;left:0;bottom:-6px;height:2px;width:0;
+    background:var(--teal);transition:.3s}
+  .links a:hover::after{width:100%}
+  .nav-cta{padding:9px 20px;border:1px solid var(--line);border-radius:30px;
+    color:var(--teal);font-size:13px;transition:.25s;cursor:pointer}
+  .nav-cta:hover{background:var(--teal);color:#05222b;box-shadow:0 0 24px rgba(55,230,201,.5)}
+
+  /* ---------- hero ---------- */
+  .hero{min-height:100vh;display:grid;grid-template-columns:1fr 1fr;align-items:center;
+    padding:120px 60px 60px;gap:30px}
+  .hero-left{position:relative;height:70vh}
+  /* wireframe browser frame, like the mockup */
+  .frame{position:absolute;inset:0;border:1px solid var(--line);border-radius:14px;
+    background:linear-gradient(180deg,rgba(10,22,32,.35),rgba(10,22,32,.05));
+    overflow:hidden}
+  .frame .bar{display:flex;gap:7px;padding:12px 14px;border-bottom:1px solid var(--line)}
+  .frame .bar i{width:9px;height:9px;border-radius:50%;background:var(--line)}
+  .frame .ph{height:9px;border-radius:4px;background:var(--line);margin:14px}
+  .frame .ph.s{width:40%}.frame .ph.m{width:65%}.frame .ph.l{width:85%}
+
+  .hero-right{padding-left:10px}
+  .tag{display:inline-flex;align-items:center;gap:8px;font-size:12px;letter-spacing:3px;
+    color:var(--teal);text-transform:uppercase;margin-bottom:22px;opacity:.9}
+  .tag .pulse{width:7px;height:7px;border-radius:50%;background:var(--teal);
+    box-shadow:0 0 0 0 rgba(55,230,201,.7);animation:p 2s infinite}
+  @keyframes p{0%{box-shadow:0 0 0 0 rgba(55,230,201,.6)}70%{box-shadow:0 0 0 12px rgba(55,230,201,0)}100%{box-shadow:0 0 0 0 rgba(55,230,201,0)}}
+  h1{font-size:clamp(34px,5vw,62px);line-height:1.05;font-weight:800;letter-spacing:-1px}
+  h1 .grad{background:linear-gradient(120deg,var(--teal),#5aa9ff);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .sub{color:var(--muted);font-size:16px;line-height:1.7;margin:24px 0 34px;max-width:430px}
+  .btns{display:flex;gap:16px;align-items:center}
+  .btn{padding:15px 30px;border-radius:30px;font-weight:600;font-size:14px;cursor:pointer;transition:.25s;border:none}
+  .btn.primary{background:var(--teal);color:#05222b}
+  .btn.primary:hover{box-shadow:0 0 34px rgba(55,230,201,.55);transform:translateY(-2px)}
+  .btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+  .btn.ghost:hover{border-color:var(--teal);color:var(--teal)}
+
+  /* ---------- reveal sections ---------- */
+  section.block{position:relative;padding:110px 60px;max-width:1200px;margin:0 auto}
+  .reveal{opacity:0;transform:translateY(38px);transition:.8s cubic-bezier(.2,.7,.2,1)}
+  .reveal.in{opacity:1;transform:none}
+  .eyebrow{color:var(--teal);font-size:12px;letter-spacing:3px;text-transform:uppercase;margin-bottom:14px}
+  h2{font-size:clamp(26px,3.4vw,40px);font-weight:800;letter-spacing:-.5px;margin-bottom:16px}
+  .lead{color:var(--muted);max-width:560px;line-height:1.7;margin-bottom:50px}
+
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:22px}
+  .card{padding:30px;border:1px solid var(--line);border-radius:16px;
+    background:linear-gradient(180deg,rgba(10,22,32,.5),rgba(10,22,32,.15));
+    transition:.3s;cursor:default}
+  .card:hover{transform:translateY(-6px);border-color:var(--teal);
+    box-shadow:0 20px 50px -20px rgba(55,230,201,.4)}
+  .card .ic{width:46px;height:46px;border-radius:12px;display:grid;place-items:center;
+    background:rgba(55,230,201,.1);color:var(--teal);font-size:22px;margin-bottom:18px}
+  .card h3{font-size:18px;margin-bottom:10px}
+  .card p{color:var(--muted);font-size:14px;line-height:1.6}
+
+  /* stats */
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:20px;text-align:center;
+    border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:48px 0}
+  .stat .n{font-size:42px;font-weight:800;color:var(--teal);letter-spacing:-1px}
+  .stat .l{color:var(--muted);font-size:13px;letter-spacing:1px;margin-top:6px}
+
+  /* portfolio */
+  .pf{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+  .pf-item{aspect-ratio:4/3;border-radius:14px;border:1px solid var(--line);overflow:hidden;
+    position:relative;background:var(--bg2);cursor:pointer;transition:.3s}
+  .pf-item::before{content:"";position:absolute;inset:0;
+    background:radial-gradient(80% 80% at 30% 20%,rgba(55,230,201,.22),transparent 60%)}
+  .pf-item span{position:absolute;left:16px;bottom:14px;font-weight:600;z-index:2}
+  .pf-item small{position:absolute;left:16px;top:16px;color:var(--muted);font-size:11px;letter-spacing:2px}
+  .pf-item:hover{transform:scale(1.02);border-color:var(--teal)}
+
+  /* cta footer */
+  .cta{text-align:center;padding:120px 30px}
+  .cta h2{font-size:clamp(30px,4vw,52px)}
+  footer{border-top:1px solid var(--line);padding:30px 60px;display:flex;
+    justify-content:space-between;color:var(--muted);font-size:13px}
+
+  @media(max-width:820px){
+    .hero{grid-template-columns:1fr;padding-top:100px}
+    .hero-left{height:42vh;order:2}.hero-right{order:1}
+    .links{display:none}.grid,.pf{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}
+    nav,section.block,footer{padding-left:24px;padding-right:24px}
+  }
+</style>
+</head>
+<body>
+<canvas id="neural"></canvas>
+<div class="veil"></div>
+
+<div class="wrap">
+  <nav id="nav">
+    <div class="logo"><span class="dot"></span>NEURA</div>
+    <div class="links">
+      <a href="#home">Home</a><a href="#services">About</a>
+      <a href="#services">Services</a><a href="#portfolio">Portfolio</a>
+      <a href="#contact">Contact</a>
+    </div>
+    <div class="nav-cta" onclick="document.querySelector('#contact').scrollIntoView()">Get Started</div>
+  </nav>
+
+  <!-- HERO -->
+  <header class="hero" id="home">
+    <div class="hero-left" id="heroLeft">
+      <div class="frame">
+        <div class="bar"><i></i><i></i><i></i></div>
+        <div class="ph l"></div><div class="ph m"></div>
+        <div class="ph s"></div><div class="ph l"></div><div class="ph m"></div>
+      </div>
+    </div>
+    <div class="hero-right">
+      <div class="tag"><span class="pulse"></span>Artificial Intelligence Studio</div>
+      <h1>Trí tuệ <span class="grad">nhân tạo</span><br>cho thế giới thật.</h1>
+      <p class="sub">Chúng tôi biến dữ liệu phức tạp thành những trải nghiệm số mượt mà, sống động và có chiều sâu — đúng như một bộ não đang vận hành.</p>
+      <div class="btns">
+        <button class="btn primary" onclick="document.querySelector('#services').scrollIntoView()">Get Started</button>
+        <button class="btn ghost" onclick="document.querySelector('#portfolio').scrollIntoView()">Xem dự án →</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- SERVICES -->
+  <section class="block" id="services">
+    <div class="reveal">
+      <div class="eyebrow">Dịch vụ</div>
+      <h2>Năng lực cốt lõi</h2>
+      <p class="lead">Mỗi sản phẩm là sự kết hợp giữa khoa học dữ liệu, thiết kế chuyển động và kỹ thuật web hiệu năng cao.</p>
+    </div>
+    <div class="grid">
+      <div class="card reveal"><div class="ic">◉</div><h3>Neural Design</h3><p>Giao diện sống động mô phỏng mạng neuron, phản hồi theo từng thao tác của người dùng.</p></div>
+      <div class="card reveal"><div class="ic">⟁</div><h3>Data Visualization</h3><p>Biến hàng triệu điểm dữ liệu thành câu chuyện trực quan, dễ hiểu trong vài giây.</p></div>
+      <div class="card reveal"><div class="ic">✦</div><h3>Cinematic Web</h3><p>Hiệu ứng cuộn điện ảnh, parallax và chuyển cảnh mượt mà chuẩn Awwwards.</p></div>
+    </div>
+  </section>
+
+  <!-- STATS -->
+  <section class="block">
+    <div class="stats reveal">
+      <div class="stat"><div class="n" data-to="120">0</div><div class="l">DỰ ÁN</div></div>
+      <div class="stat"><div class="n" data-to="48">0</div><div class="l">KHÁCH HÀNG</div></div>
+      <div class="stat"><div class="n" data-to="99">0</div><div class="l">% HÀI LÒNG</div></div>
+      <div class="stat"><div class="n" data-to="15">0</div><div class="l">GIẢI THƯỞNG</div></div>
+    </div>
+  </section>
+
+  <!-- PORTFOLIO -->
+  <section class="block" id="portfolio">
+    <div class="reveal">
+      <div class="eyebrow">Portfolio</div>
+      <h2>Dự án tiêu biểu</h2>
+    </div>
+    <div class="pf">
+      <div class="pf-item reveal"><small>2026 · AI</small><span>Synapse Dashboard</span></div>
+      <div class="pf-item reveal"><small>2026 · WEB</small><span>Orbit Landing</span></div>
+      <div class="pf-item reveal"><small>2025 · DATA</small><span>Cortex Atlas</span></div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta reveal" id="contact">
+    <div class="eyebrow">Bắt đầu</div>
+    <h2>Sẵn sàng dựng sản phẩm tiếp theo?</h2>
+    <p class="lead" style="margin:18px auto 34px">Gửi ý tưởng — chúng tôi biến nó thành trải nghiệm web đáng nhớ.</p>
+    <button class="btn primary" onclick="alert('Cảm ơn! Đây là bản demo tương tác.')">Liên hệ ngay</button>
+  </section>
+
+  <footer>
+    <div class="logo" style="font-size:15px"><span class="dot"></span>NEURA</div>
+    <div>© 2026 — Demo dựng lại từ thiết kế của bạn</div>
+  </footer>
+</div>
+
+<script>
+/* ===== nav scroll state ===== */
+const nav=document.getElementById('nav');
+addEventListener('scroll',()=>nav.classList.toggle('scrolled',scrollY>40));
+
+/* ===== reveal on scroll ===== */
+const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}}),{threshold:.18});
+document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+
+/* ===== count-up stats ===== */
+const sio=new IntersectionObserver(es=>es.forEach(e=>{
+  if(!e.isIntersecting)return; sio.unobserve(e.target);
+  e.target.querySelectorAll('[data-to]').forEach(n=>{
+    const to=+n.dataset.to;let c=0;const step=Math.max(1,to/60);
+    const t=setInterval(()=>{c+=step;if(c>=to){c=to;clearInterval(t)}n.textContent=Math.round(c)},16);
+  });
+}),{threshold:.4});
+document.querySelector('.stats')&&sio.observe(document.querySelector('.stats'));
+
+/* ===== mouse parallax on hero frame ===== */
+const hl=document.getElementById('heroLeft');
+addEventListener('mousemove',e=>{
+  const x=(e.clientX/innerWidth-.5),y=(e.clientY/innerHeight-.5);
+  hl.style.transform=`rotateY(${x*8}deg) rotateX(${-y*8}deg) translateZ(0)`;
+  hl.style.transformStyle='preserve-3d';
+});
+
+/* ===== NEURAL NETWORK CANVAS (interactive, mouse-reactive) ===== */
+const cv=document.getElementById('neural'),ctx=cv.getContext('2d');
+let W,H,DPR=Math.min(devicePixelRatio||1,2),nodes=[],mouse={x:-1e3,y:-1e3};
+function resize(){W=cv.width=innerWidth*DPR;H=cv.height=innerHeight*DPR;cv.style.width=innerWidth+'px';cv.style.height=innerHeight+'px';init();}
+function init(){
+  nodes=[];const count=Math.round((innerWidth*innerHeight)/14000);
+  for(let i=0;i<count;i++)nodes.push({
+    x:Math.random()*W,y:Math.random()*H,
+    vx:(Math.random()-.5)*.25*DPR,vy:(Math.random()-.5)*.25*DPR,
+    r:(Math.random()*1.6+.6)*DPR
+  });
+}
+addEventListener('mousemove',e=>{mouse.x=e.clientX*DPR;mouse.y=e.clientY*DPR});
+addEventListener('mouseleave',()=>{mouse.x=mouse.y=-1e4});
+addEventListener('resize',resize);
+const LINK=130*DPR,MOUSE_R=180*DPR;
+function frame(){
+  ctx.clearRect(0,0,W,H);
+  for(const n of nodes){
+    n.x+=n.vx;n.y+=n.vy;
+    if(n.x<0||n.x>W)n.vx*=-1; if(n.y<0||n.y>H)n.vy*=-1;
+    // gentle pull toward mouse
+    const dx=mouse.x-n.x,dy=mouse.y-n.y,d=Math.hypot(dx,dy);
+    if(d<MOUSE_R){n.x+=dx/d*.6;n.y+=dy/d*.6}
+  }
+  // links
+  for(let i=0;i<nodes.length;i++)for(let j=i+1;j<nodes.length;j++){
+    const a=nodes[i],b=nodes[j],dx=a.x-b.x,dy=a.y-b.y,d=Math.hypot(dx,dy);
+    if(d<LINK){
+      ctx.strokeStyle=`rgba(55,230,201,${(1-d/LINK)*.22})`;
+      ctx.lineWidth=DPR*.6;ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();
+    }
+  }
+  // nodes
+  for(const n of nodes){
+    const md=Math.hypot(mouse.x-n.x,mouse.y-n.y);
+    const glow=md<MOUSE_R?1:.45;
+    ctx.fillStyle=`rgba(95,214,196,${glow})`;
+    ctx.beginPath();ctx.arc(n.x,n.y,n.r,0,7);ctx.fill();
+  }
+  requestAnimationFrame(frame);
+}
+resize();frame();
+</script>
+</body>
+</html>

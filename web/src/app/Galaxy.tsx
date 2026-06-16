@@ -38,6 +38,13 @@ type Mode = 'galaxy' | 'mandala' | 'radar' | 'timeline' | 'neuro' | 'rings'
 const RING_HUE: Record<string, number> = { personal: 188, corporate: 266, humanity: 312 }
 const RING_TINT: Record<string, string> = { personal: '#22d3ee', corporate: '#a78bfa', humanity: '#e879f9' }
 const RING_NAME: Record<string, string> = { personal: 'ĐỜI TÔI', corporate: 'QNET', humanity: 'NHÂN LOẠI' }
+// 🌈 5 MÀU theo LEVEL trong mỗi kho (đồng bộ thiên hà 3D): L0 sao tâm → L1 "trái đất" → 3 màu phối → giữ màu cuối
+const GAL_PAL: Record<string, { star: string; levels: string[] }> = {
+  personal:  { star: '#ff5a36', levels: ['#ff7a4d', '#3b82f6', '#22d3ee', '#a78bfa', '#fde68a'] },
+  corporate: { star: '#f5b942', levels: ['#ffd166', '#34d399', '#22d3ee', '#818cf8', '#f0abfc'] },
+  humanity:  { star: '#e879f9', levels: ['#f0abfc', '#a78bfa', '#60a5fa', '#67e8f9', '#fca5a5'] },
+}
+const galLevelColor = (layer: string, level: number) => { const p = GAL_PAL[layer] ?? GAL_PAL.personal; return p.levels[Math.min(level, p.levels.length - 1)] ?? p.levels[0] }
 // thứ tự 8 trục radar theo framework
 const DIM_ORDER = ['knowledge', 'experience', 'emotion', 'values', 'people', 'time', 'reference', 'anchor']
 
@@ -173,6 +180,15 @@ export default function Galaxy({ nodes, links, onOpen, onConnect, modeReq }: {
       const m = new Map<string, P>()
       const ids = new Set(nodes.map(n => n.id))
       const kidsOf = (id: string) => nodes.filter(n => n.parent_id === id)
+      // LEVEL trong kho = số bước parent_id tới gốc kho (kho=0) → tô màu 5-tầng
+      const byIdLoc = new Map(nodes.map(n => [n.id, n]))
+      const levelMemo = new Map<string, number>()
+      const levelOf = (id: string, seen = new Set<string>()): number => {
+        if (levelMemo.has(id)) return levelMemo.get(id)!
+        const n = byIdLoc.get(id); if (!n) return 0
+        if (n.kind === 'kho' || !n.parent_id || !byIdLoc.has(n.parent_id) || seen.has(n.parent_id)) { levelMemo.set(id, 0); return 0 }
+        seen.add(id); const v = Math.min(5, levelOf(n.parent_id, seen) + 1); levelMemo.set(id, v); return v
+      }
       let seed = 7
       const rand = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647 }
 
@@ -183,32 +199,26 @@ export default function Galaxy({ nodes, links, onOpen, onConnect, modeReq }: {
         const up = -Math.PI / 2                             // hướng vươn lên trời
         const FULL = Math.PI * 1.28                          // tổng quạt ~230° (xoè rộng thay vì 1 cung hẹp)
         const maxR = Math.min(W * 0.47, fy - 28)
-        const leafMemo = new Map<string, number>()
-        const leaves = (id: string, layer: string): number => {   // số lá của 1 nhánh (parent_id là cây → không lặp)
-          if (leafMemo.has(id)) return leafMemo.get(id)!
-          const ks = kidsOf(id).filter(k => (k.layer ?? 'personal') === layer)
-          const v = ks.length ? ks.reduce((s, k) => s + leaves(k.id, layer), 0) : 1
-          leafMemo.set(id, v); return v
-        }
         const placed = new Set<string>()
+        // mỗi node CHIA ĐỀU góc cho các con tại TRUNG ĐIỂM sub-wedge của nó (cân đối, không dồn theo độ rậm)
         const place = (n: GNode, layer: string, a0: number, a1: number, depth: number) => {
           if (placed.has(n.id)) return; placed.add(n.id)
           const a = (a0 + a1) / 2
-          const R = n.kind === 'kho' ? maxR * 0.13 : maxR * Math.min(1, 0.2 + depth * 0.16)   // sâu hơn = xa gốc hơn
-          m.set(n.id, { x: fx + Math.cos(a) * R, y: fy + Math.sin(a) * R, r: n.kind === 'kho' ? SIZE.kho : (SIZE[n.kind] ?? 4), color: n.kind === 'kho' ? COLOR.kho : (COLOR[n.kind] ?? COLOR.note), node: n, phase: rand() * Math.PI * 2 })
+          const R = n.kind === 'kho' ? maxR * 0.12 : maxR * Math.min(1, 0.22 + depth * 0.17)   // sâu hơn = xa gốc hơn
+          const col = n.kind === 'kho' ? (GAL_PAL[layer]?.star ?? COLOR.kho) : galLevelColor(layer, levelOf(n.id))
+          m.set(n.id, { x: fx + Math.cos(a) * R, y: fy + Math.sin(a) * R, r: n.kind === 'kho' ? SIZE.kho : (SIZE[n.kind] ?? 4), color: col, node: n, phase: rand() * Math.PI * 2 })
           const ks = kidsOf(n.id).filter(k => (k.layer ?? 'personal') === layer && !placed.has(k.id))
           if (!ks.length) return
-          const ws = ks.map(k => leaves(k.id, layer)); const tot = ws.reduce((s, w) => s + w, 0) || 1
-          // con chiếm sub-wedge của cha (thu hẹp nhẹ để cành không chạm nhau) → toả như cành thật
-          const pad = (a1 - a0) * 0.06; let cur = a0 + pad; const usable = (a1 - a0) - pad * 2
-          ks.forEach((k, i) => { const w = (ws[i] / tot) * usable; place(k, layer, cur, cur + w, depth + 1); cur += w })
+          const pad = (a1 - a0) * 0.08; const usable = (a1 - a0) - pad * 2; const a00 = a0 + pad
+          const step = usable / ks.length   // CHIA ĐỀU mỗi con 1 lát bằng nhau → toả cân
+          ks.forEach((k, i) => place(k, layer, a00 + i * step, a00 + (i + 1) * step, depth + 1))
         }
         const layerRoots = (['personal', 'corporate', 'humanity'] as const)
           .map(L => ({ L: L as string, kho: nodes.find(n => n.kind === 'kho' && (n.layer ?? 'personal') === L) }))
           .filter((x): x is { L: string; kho: GNode } => !!x.kho)
-        const lw = layerRoots.map(x => leaves(x.kho.id, x.L)); const ltot = lw.reduce((s, w) => s + w, 0) || 1
-        let cur = up - FULL / 2
-        layerRoots.forEach((x, i) => { const w = (lw[i] / ltot) * FULL; place(x.kho, x.L, cur, cur + w, 1); cur += w })
+        // 3 kho = 3 MẢNG QUẠT ĐỀU NHAU (mỗi kho 1/3 tổng quạt) cho cân đối
+        const wedge = FULL / layerRoots.length
+        layerRoots.forEach((x, i) => { const a0 = up - FULL / 2 + i * wedge; place(x.kho, x.L, a0 + wedge * 0.05, a0 + wedge * 0.95, 1) })
         // node lạc (không nằm trong cây kho) → rải mờ ở rìa tán
         nodes.forEach(n => { if (!m.has(n.id)) { const a = up - FULL / 2 + rand() * FULL; m.set(n.id, { x: fx + Math.cos(a) * maxR * 1.04, y: fy + Math.sin(a) * maxR * 1.04, r: SIZE[n.kind] ?? 4, color: COLOR[n.kind] ?? COLOR.note, node: n, phase: rand() * Math.PI * 2 }) } })
       } else if (mode === 'radar') {
@@ -288,21 +298,25 @@ export default function Galaxy({ nodes, links, onOpen, onConnect, modeReq }: {
           }
         } else tlMetaRef.current = null
       } else if (mode === 'rings') {
-        // 🪐 3 VÒNG ĐỒNG TÂM (entanglement): cá nhân ở LÕI → QNET → nhân loại ngoài cùng
-        const Rmax = Math.min(W, H) * 0.43
-        const RING: Record<string, number> = { personal: Rmax * 0.42, corporate: Rmax * 0.70, humanity: Rmax * 0.99 }
+        // 👁 VÕNG MẠC 3 LỚP: mỗi kho là 1 DẢI bán kính, trong dải xếp node theo LEVEL (tầng) + tán rộng → giống võng mạc con mắt
+        const Rmax = Math.min(W, H) * 0.46
+        const ZONE: Record<string, [number, number]> = { personal: [0.10, 0.40], corporate: [0.46, 0.70], humanity: [0.76, 1.0] }
+        const RING: Record<string, number> = { personal: Rmax * 0.40, corporate: Rmax * 0.70, humanity: Rmax * 0.99 }  // biên ngoài mỗi dải (cho draw + camera)
         ringMetaRef.current = { cx, cy, RING, Rmax }
         const offset: Record<string, number> = { personal: 0, corporate: 0.8, humanity: 1.7 }
         for (const layer of ['personal', 'corporate', 'humanity']) {
           const ns = nodes.filter(n => (n.layer ?? 'personal') === layer && n.kind !== 'kho')
-          const R = RING[layer]
+          const [zi, zo] = ZONE[layer]
           ns.forEach((n, i) => {
             const a = offset[layer] + (i / Math.max(1, ns.length)) * Math.PI * 2
-            const jit = (rand() - 0.5) * Rmax * 0.05
+            const lvl = levelOf(n.id)                                  // 0..5 → bán kính trong dải (tầng sâu ra ngoài)
+            const fr = zi + (zo - zi) * Math.min(1, lvl / 5)
+            const jit = (rand() - 0.5) * Rmax * 0.04
+            const R = Rmax * fr + jit
             m.set(n.id, {
-              x: cx + Math.cos(a) * (R + jit), y: cy + Math.sin(a) * (R + jit),
+              x: cx + Math.cos(a) * R, y: cy + Math.sin(a) * R,
               r: Math.min(11, (SIZE[n.kind] ?? 5) + (degRef.current.get(n.id) ?? 0) * 0.5),
-              color: RING_TINT[layer], node: n, phase: rand() * Math.PI * 2,
+              color: galLevelColor(layer, lvl), node: n, phase: rand() * Math.PI * 2,
             })
           })
         }
@@ -499,23 +513,27 @@ export default function Galaxy({ nodes, links, onOpen, onConnect, modeReq }: {
           if (!a || !b || (a.node.layer ?? 'personal') === (b.node.layer ?? 'personal')) return
           const ax = SX(a.x), ay = SY(a.y), bx = SX(b.x), by = SY(b.y)
           // GRADIENT theo màu 2 kho → sợi mống mắt giao thoa, sáng ở giữa (con mắt thứ 3)
-          const ca = RING_TINT[a.node.layer ?? 'personal'] ?? '#c4b5fd', cb = RING_TINT[b.node.layer ?? 'personal'] ?? '#c4b5fd'
+          const ca = a.color, cb = b.color   // theo MÀU LEVEL của 2 node (đồng bộ võng mạc)
           const grad = ctx.createLinearGradient(ax, ay, bx, by)
-          grad.addColorStop(0, withAlpha(ca, 0.10 + 0.40 * beat)); grad.addColorStop(0.5, withAlpha('#f6f8ff', 0.05 + 0.14 * beat)); grad.addColorStop(1, withAlpha(cb, 0.10 + 0.40 * beat))
-          ctx.strokeStyle = grad; ctx.lineWidth = (0.55 + 0.6 * beat) * dpr
-          // uốn lượn: cong về ĐỒNG TỬ + sóng sin chậm dọc sợi
+          grad.addColorStop(0, withAlpha(ca, 0.12 + 0.42 * beat)); grad.addColorStop(0.5, withAlpha('#f6f8ff', 0.06 + 0.16 * beat)); grad.addColorStop(1, withAlpha(cb, 0.12 + 0.42 * beat))
+          // uốn lượn MỀM như tia PLASMA: cong về đồng tử + 2 sóng sin lệch pha, nhiều đoạn cho mượt
           const dd = Math.hypot(bx - ax, by - ay) || 1, nx = -(by - ay) / dd, ny = (bx - ax) / dd
           const seed = l.from_node.charCodeAt(0) + l.to_node.charCodeAt(1 % l.to_node.length)
-          ctx.beginPath(); ctx.moveTo(ax, ay)
-          const SEG = 10
-          for (let si = 1; si <= SEG; si++) {
-            const f = si / SEG, pull = Math.sin(f * Math.PI)
-            const lx = ax + (bx - ax) * f, ly = ay + (by - ay) * f
-            const tx = lx + (csx - lx) * 0.26 * pull, ty = ly + (csy - ly) * 0.26 * pull
-            const wave = Math.sin(f * Math.PI * 2 + t * 0.009 + seed) * 9 * dpr * pull
-            ctx.lineTo(tx + nx * wave, ty + ny * wave)
+          const SEG = 22
+          const plasma = (lw: number, col: string | CanvasGradient, amp: number) => {
+            ctx.strokeStyle = col; ctx.lineWidth = lw * dpr; ctx.lineCap = 'round'
+            ctx.beginPath(); ctx.moveTo(ax, ay)
+            for (let si = 1; si <= SEG; si++) {
+              const f = si / SEG, pull = Math.sin(f * Math.PI)
+              const lx = ax + (bx - ax) * f, ly = ay + (by - ay) * f
+              const tx = lx + (csx - lx) * 0.3 * pull, ty = ly + (csy - ly) * 0.3 * pull
+              const wave = (Math.sin(f * Math.PI * 2 + t * 0.008 + seed) + 0.5 * Math.sin(f * Math.PI * 4 - t * 0.012 + seed)) * amp * dpr * pull
+              ctx.lineTo(tx + nx * wave, ty + ny * wave)
+            }
+            ctx.stroke()
           }
-          ctx.stroke()
+          plasma(2.6 + 1.4 * beat, withAlpha(ca, 0.05 + 0.08 * beat), 11)   // quầng plasma mờ rộng lót dưới
+          plasma(0.5 + 0.5 * beat, grad, 11)                                  // lõi sáng mảnh
           // hạt sáng chạy theo nhịp (tại điểm cong giữa)
           const tt = (t * 0.004 + (seed % 9) * 0.11) % 1, pf = Math.sin(tt * Math.PI)
           const lxm = ax + (bx - ax) * tt, lym = ay + (by - ay) * tt
@@ -639,54 +657,42 @@ export default function Galaxy({ nodes, links, onOpen, onConnect, modeReq }: {
         ctx.fillStyle = g; ctx.fillRect(0, 0, cv.width, cv.height)
       }
 
-      // 🌳 CÂY SỰ SỐNG: thiền giả dưới gốc, 3 cung quạt mở lên trời + thân cây sáng
+      // 🌳 CÂY SỰ SỐNG: thiền giả dưới gốc, 3 MẢNG QUẠT đều mở lên trời, nan nối thiền giả↔tâm 3 kho
       if (mode === 'mandala') {
-        const fx = W / 2, fy = H * 0.76
-        const Rmax = Math.min(W * 0.46, fy - 36)
-        const span = Math.PI * 0.82, aMid = -Math.PI / 2
-        // cung quạt 3 tầng kho (chỉ vẽ phần quạt, không vẽ vòng kín)
-        for (const [f, col] of [[0.36, 'rgba(167,139,250,.20)'], [0.66, 'rgba(34,211,238,.16)'], [0.96, 'rgba(232,121,249,.13)']] as [number, string][]) {
-          ctx.strokeStyle = col; ctx.lineWidth = 1 * dpr
-          ctx.beginPath()
-          ctx.arc(SX(fx), SY(fy), S(Rmax * f), aMid - span / 2, aMid + span / 2)
-          ctx.stroke()
-        }
-        // THÂN CÂY: cột sáng từ đỉnh đầu thiền giả xuyên 3 kho
-        const topY = fy - Rmax * 0.96
-        const lg = ctx.createLinearGradient(SX(fx), SY(fy - 18), SX(fx), SY(topY))
-        lg.addColorStop(0, 'rgba(52,211,153,.55)'); lg.addColorStop(0.5, 'rgba(34,211,238,.4)'); lg.addColorStop(1, 'rgba(232,121,249,.3)')
-        // quầng sáng thân cây = nét rộng mờ lót dưới (thay shadowBlur)
-        ctx.strokeStyle = 'rgba(52,211,153,.16)'; ctx.lineWidth = 9 * Math.max(0.6, cam.current.k) * dpr
-        ctx.beginPath(); ctx.moveTo(SX(fx), SY(fy - 18)); ctx.lineTo(SX(fx), SY(topY)); ctx.stroke()
-        ctx.strokeStyle = lg; ctx.lineWidth = 2.2 * Math.max(0.6, cam.current.k) * dpr
-        ctx.beginPath(); ctx.moveTo(SX(fx), SY(fy - 18)); ctx.lineTo(SX(fx), SY(topY)); ctx.stroke()
-        // nhựa cây chảy dọc thân (hạt sáng đi lên)
-        const sapGlow = glowSprite('#67e8f9')
-        for (let i = 0; i < 3; i++) {
-          const tt = ((t * 0.005) + i / 3) % 1
-          const y = (fy - 18) + (topY - (fy - 18)) * tt
-          ctx.drawImage(sapGlow, SX(fx) - 8 * dpr, SY(y) - 8 * dpr, 16 * dpr, 16 * dpr)
-          ctx.fillStyle = 'rgba(255,255,255,.85)'
-          ctx.beginPath(); ctx.arc(SX(fx), SY(y), 2 * dpr, 0, 6.28); ctx.fill()
-        }
-        // cánh sen quanh thiền giả (gốc cây)
-        for (let i = 0; i < 10; i++) {
-          const a = (i / 10) * Math.PI * 2 + t * 0.0015
-          const r1 = Rmax * 0.07, r2 = Rmax * 0.12
-          ctx.strokeStyle = `hsla(${(265 + i * 9) % 360},70%,70%,.25)`
-          ctx.lineWidth = 1 * dpr
-          ctx.beginPath()
-          ctx.moveTo(SX(fx + Math.cos(a) * r1), SY(fy + Math.sin(a) * r1))
-          ctx.quadraticCurveTo(SX(fx + Math.cos(a + 0.31) * r2 * 1.2), SY(fy + Math.sin(a + 0.31) * r2 * 1.2), SX(fx + Math.cos(a + 0.62) * r1), SY(fy + Math.sin(a + 0.62) * r1))
-          ctx.stroke()
-        }
+        const fx = W / 2, fy = H * 0.95            // gốc sát đáy (KHỚP layout)
+        const Rmax = Math.min(W * 0.47, fy - 28)
+        const FULL = Math.PI * 1.28, up = -Math.PI / 2
+        const wedge = FULL / 3
+        const layerOrder = ['personal', 'corporate', 'humanity'] as const
+        // 3 mảng quạt: nền tô mờ theo màu sao kho + 2 nan biên
+        layerOrder.forEach((L, i) => {
+          const a0 = up - FULL / 2 + i * wedge, a1 = a0 + wedge
+          const star = GAL_PAL[L].star
+          const grad = ctx.createRadialGradient(SX(fx), SY(fy), 0, SX(fx), SY(fy), S(Rmax))
+          grad.addColorStop(0, withAlpha(star, 0.12)); grad.addColorStop(1, withAlpha(star, 0))
+          ctx.fillStyle = grad
+          ctx.beginPath(); ctx.moveTo(SX(fx), SY(fy)); ctx.arc(SX(fx), SY(fy), S(Rmax), a0, a1); ctx.closePath(); ctx.fill()
+          ctx.strokeStyle = withAlpha(star, 0.18); ctx.lineWidth = 1 * dpr
+          ctx.beginPath(); ctx.arc(SX(fx), SY(fy), S(Rmax * 0.99), a0, a1); ctx.stroke()
+        })
+        // NAN nối thiền giả → tâm mỗi kho (đường sáng có hạt chạy lên), khắc phục "con người chưa nối tâm kho"
+        layerOrder.forEach(L => {
+          const kho = nodes.find(n => n.kind === 'kho' && (n.layer ?? 'personal') === L); if (!kho) return
+          const p = pts.current.get(kho.id); if (!p) return
+          const star = GAL_PAL[L].star
+          ctx.strokeStyle = withAlpha(star, 0.5); ctx.lineWidth = 1.6 * dpr
+          ctx.beginPath(); ctx.moveTo(SX(fx), SY(fy)); ctx.lineTo(SX(p.x), SY(p.y)); ctx.stroke()
+          const tt = (t * 0.006) % 1
+          const gx2 = fx + (p.x - fx) * tt, gy2 = fy + (p.y - fy) * tt
+          ctx.drawImage(glowSprite(star), SX(gx2) - 7 * dpr, SY(gy2) - 7 * dpr, 14 * dpr, 14 * dpr)
+        })
         // hào quang + thiền giả thở
         const breathe = 1 + Math.sin(t * 0.02) * 0.06
-        const halo = ctx.createRadialGradient(SX(fx), SY(fy), 0, SX(fx), SY(fy), S(Rmax * 0.16))
-        halo.addColorStop(0, 'rgba(251,191,36,.18)'); halo.addColorStop(1, 'rgba(251,191,36,0)')
+        const halo = ctx.createRadialGradient(SX(fx), SY(fy), 0, SX(fx), SY(fy), S(Rmax * 0.14))
+        halo.addColorStop(0, 'rgba(251,191,36,.2)'); halo.addColorStop(1, 'rgba(251,191,36,0)')
         ctx.fillStyle = halo
-        ctx.beginPath(); ctx.arc(SX(fx), SY(fy), S(Rmax * 0.16), 0, 6.28); ctx.fill()
-        ctx.font = `${40 * cam.current.k * breathe * dpr}px serif`
+        ctx.beginPath(); ctx.arc(SX(fx), SY(fy), S(Rmax * 0.14), 0, 6.28); ctx.fill()
+        ctx.font = `${38 * cam.current.k * breathe * dpr}px serif`
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle'
         ctx.fillText('🧘', SX(fx), SY(fy))
         ctx.textBaseline = 'alphabetic'

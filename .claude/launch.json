@@ -8,6 +8,14 @@
       "port": 3000,
       "autoPort": false,
       "cwd": "web"
+    },
+    {
+      "name": "landing-demo",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["server.js"],
+      "port": 4321,
+      "autoPort": false,
+      "cwd": "landing-demo"
     }
   ]
 }
