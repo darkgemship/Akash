@@ -2,6 +2,14 @@
 
 > Ghi lại mỗi đợt build để lần sau làm tốt hơn. Quy trình chuẩn: **đọc docs → sửa code → `npm run build` → test thật trên preview (đăng nhập, bấm từng nút) → cập nhật docs**.
 
+## 2026-06-16 (đợt 33) — 🩹 Diệt TẬN GỐC crash 3D "reading 'tick'" (StrictMode mount 2 lần)
+Bản vá đợt 31 chưa đủ: founder vẫn `Cannot read 'tick'` ở comp._animationCycle → tickFrame → layoutTick, 3D đen (hardware-accel đã BẬT → không phải WebGL).
+Truy nguồn: layoutTick đọc `state.d3ForceLayout` đã bị `_destructor` null → frame MỒ CÔI. Gốc rễ = **React StrictMode (dev) mount component 2 lần**: instance A tạo rồi huỷ ngay, frame rAF đã xếp hàng của A chạy sau khi state null → throw async (try/catch & ErrorBoundary KHÔNG bắt được).
+- **Hoãn tạo graph 1 tick + cờ `cancelled`**: mount NHÁP của StrictMode bị cleanup huỷ (clearTimeout) trước khi timer chạy → KHÔNG tạo instance A nào → hết frame mồ côi. Chỉ còn 1 instance sạch.
+- **Dọn triệt để**: gom mọi setTimeout(frameCam) + rAF + listener vào cleanup; `pauseAnimation()` (cancelAnimationFrame nội bộ) TRƯỚC `_destructor()`.
+- **Lưới an toàn**: window 'error'/'unhandledrejection' nuốt đúng lỗi "reading 'tick'" của 3d-force-graph (phòng mọi race còn sót) — không che lỗi khác.
+**Verify**: reload → mở 3D → Về 2D → mở 3D lần 2 → render cụm cầu, KHÔNG đen, 0 lỗi console; tsc xanh. (đã xác nhận _destructor + pauseAnimation tồn tại trong 3d-force-graph 1.80)
+
 ## 2026-06-16 (đợt 32) — 🔦 3D depth theo level: tăng level hiện thêm nhánh, ngoài nhánh chỉ MỜ
 Founder: ở chỗ Depth (3D Inspector) cho thể hiện theo số level — càng sâu nhánh mới tăng, còn lại ẩn MỜ bớt cho đỡ nặng + trực quan (thay vì ẩn hẳn).
 - Tách 2 chế độ tập-sáng: **TÌM** (gõ ô search) → node ngoài tập ẩn hẳn (như cũ); **CHỌN NODE + Depth 1/2/3** → node trong nhánh tới độ sâu `depth` sáng rõ, node ngoài nhánh VẪN hiện nhưng làm mờ (màu xám nhạt 0.12, link 0.05) → thấy bối cảnh mà không rối.

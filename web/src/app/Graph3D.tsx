@@ -47,6 +47,19 @@ export default function Graph3D({ nodes, links, onOpen, onClose }: {
   const [autoRot, setAutoRot] = useState(false)
   const [glError, setGlError] = useState(false)   // WebGL không tạo được context (GPU yếu/cạn) → hiện fallback thay vì sập app
 
+  // 🛡️ LƯỚI AN TOÀN: 3d-force-graph chạy vòng rAF nội bộ; khi component bị huỷ (StrictMode dev mount 2 lần,
+  // hoặc đổi view) còn 1 frame "mồ côi" đọc state đã null → throw "reading 'tick'" trong requestAnimationFrame.
+  // Lỗi async này KHÔNG try/catch / ErrorBoundary nào bắt được → phải nuốt ở tầng window (đúng lỗi vô hại này thôi).
+  useEffect(() => {
+    const isStaleTick = (msg: string, stack: string) =>
+      /reading '?tick'?/.test(msg) || (/tick/.test(msg + stack) && /tickFrame|_animationCycle|layoutTick|ForceGraph/.test(stack))
+    const onErr = (e: ErrorEvent) => { if (isStaleTick(e.message || '', String(e.error?.stack || ''))) { e.preventDefault(); e.stopImmediatePropagation() } }
+    const onRej = (e: PromiseRejectionEvent) => { const r = e.reason; if (isStaleTick(String(r?.message || r || ''), String(r?.stack || ''))) e.preventDefault() }
+    window.addEventListener('error', onErr, true)
+    window.addEventListener('unhandledrejection', onRej, true)
+    return () => { window.removeEventListener('error', onErr, true); window.removeEventListener('unhandledrejection', onRej, true) }
+  }, [])
+
   // mở rộng tập "sáng" theo độ sâu (BFS) từ 1 node
   const expand = (rootIds: string[], d: number): Set<string> => {
     const set = new Set(rootIds)
@@ -74,11 +87,11 @@ export default function Graph3D({ nodes, links, onOpen, onClose }: {
   }
   useEffect(recompute, [q, sel, depth]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // dựng đồ thị 1 lần
+  // dựng đồ thị — HOÃN 1 tick + cờ huỷ để né StrictMode (dev mount 2 lần): mount NHÁP bị cleanup huỷ
+  // trước khi timer chạy → KHÔNG tạo instance mồ côi → hết lỗi "reading 'tick'" của frame mồ côi + hết đen màn.
   useEffect(() => {
     if (!wrap.current) return
-    // 0) kiểm tra WebGL trước — máy không hỗ trợ thì hiện fallback, KHÔNG để three throw làm sập app.
-    //    Giải phóng context probe NGAY (tránh chiếm 1 slot trong ~16 context của trình duyệt).
+    // 0) kiểm tra WebGL trước — máy không hỗ trợ thì hiện fallback. Giải phóng probe NGAY (không chiếm slot context).
     try {
       const probe = document.createElement('canvas')
       const gl = (probe.getContext('webgl2') || probe.getContext('webgl')) as WebGLRenderingContext | null
@@ -86,81 +99,92 @@ export default function Graph3D({ nodes, links, onOpen, onClose }: {
       gl.getExtension('WEBGL_lose_context')?.loseContext()
     } catch { setGlError(true); return }
 
-    const N: N3[] = nodes.filter(n => n.kind !== 'block').map(n => ({ id: n.id, name: n.title ?? 'Trang', layer: n.layer ?? 'personal', kind: n.kind, val: 1 + Math.min(10, (deg.get(n.id) ?? 0)) * 0.7 }))
-    const present = new Set(N.map(n => n.id))
-    const L: L3[] = links.filter(l => present.has(l.from_node) && present.has(l.to_node)).map(l => ({ source: l.from_node, target: l.to_node, dimension: l.dimension, weight: 1 }))
-    // ẩn theo bộ lọc kho LUÔN; chỉ khi đang TÌM mới ẩn node ngoài tập — còn chọn-node-theo-level thì node ngoài tập VẪN hiện (làm mờ qua màu)
-    const vis = (id: string) => !hiddenRef.current.has(byId.get(id)?.layer ?? 'personal') && (!searchModeRef.current || !activeRef.current || activeRef.current.has(id))
+    let inst: FG | null = null
+    let raf = 0, cancelled = false
+    let onResize: (() => void) | null = null
+    let canvas: HTMLCanvasElement | null = null
+    let onLost: ((e: Event) => void) | null = null
+    const timers: ReturnType<typeof setTimeout>[] = []
 
-    let fg: FG
-    try {
-      // stencil:false → tránh lỗi "OES_packed_depth_stencil required"; antialias off nhẹ máy; cho phép GPU yếu (no perf-caveat).
-      // dùng high-performance để chắc chắn lấy GPU rời (low-power có máy rơi vào đường integrated lỗi).
-      fg = new ForceGraph3D(wrap.current, { rendererConfig: { antialias: false, alpha: true, stencil: false, powerPreference: 'high-performance', failIfMajorPerformanceCaveat: false } })
-    } catch (e) { console.warn('3D init failed', e); setGlError(true); return }
-    fg
-      .backgroundColor('#06060c')
-      .graphData({ nodes: N, links: L })
-      .nodeVal('val')
-      .nodeRelSize(4)
-      .nodeColor((n: object) => { const x = n as N3; const on = !activeRef.current || activeRef.current.has(x.id); return on ? (LAYER_TINT[x.layer] ?? '#94a3b8') : 'rgba(120,120,140,0.12)' })
-      .nodeVisibility((n: object) => vis((n as N3).id))
-      .nodeLabel((n: object) => `<div style="font:600 12px sans-serif;color:#fff">${(n as N3).name}</div><div style="font:11px sans-serif;color:#a78bfa">${LAYER_NAME[(n as N3).layer] ?? ''} · ${deg.get((n as N3).id) ?? 0} liên kết</div>`)
-      .nodeThreeObjectExtend(true)
-      .nodeThreeObject((n: object) => {
-        const x = n as N3
-        if (!labelsRef.current || (deg.get(x.id) ?? 0) < 6) return undefined as unknown as THREE.Object3D
-        const s = new SpriteText(x.name.length > 22 ? x.name.slice(0, 21) + '…' : x.name)
-        s.color = '#e8e6f0'; s.textHeight = 4
-        ;(s as unknown as THREE.Object3D).position.set(0, x.val + 4, 0)
-        ;(s as unknown as { material: { depthWrite: boolean } }).material.depthWrite = false
-        return s as unknown as THREE.Object3D
-      })
-      .linkColor((l: object) => { const x = l as L3; const s = typeof x.source === 'object' ? (x.source as N3).id : x.source as string; const tg = typeof x.target === 'object' ? (x.target as N3).id : x.target as string; const on = !activeRef.current || (activeRef.current.has(s) && activeRef.current.has(tg)); return on ? (DIM_COLOR[x.dimension ?? ''] ?? '#3a8') : 'rgba(120,120,140,0.05)' })
-      .linkVisibility((l: object) => { const x = l as L3; const s = typeof x.source === 'object' ? (x.source as N3).id : x.source as string; const tg = typeof x.target === 'object' ? (x.target as N3).id : x.target as string; return vis(s) && vis(tg) })
-      .linkOpacity(0.55)
-      .linkWidth(0.6)
-      .linkDirectionalParticles((): number => particlesRef.current ? 2 : 0)
-      .linkDirectionalParticleSpeed(0.006)
-      .linkDirectionalParticleWidth(1.4)
-      .onNodeClick((n: object) => { const g = byId.get((n as N3).id); if (g) { setSel(g); fg.cameraPosition({ x: (n as { x: number }).x, y: (n as { y: number }).y, z: (n as { z: number }).z + 120 }, n as { x: number; y: number; z: number }, 700) } })
-      .onBackgroundClick(() => { setSel(null); setQ('') })
-    fgRef.current = fg
-    fg.d3Force('charge')?.strength(repelRef.current)
-    fg.d3Force('link')?.distance(linkRef.current)
-    // FRAME: nhìn thẳng vào tâm cụm, lùi xa theo bán kính (zoomToFit hay đặt camera lệch ra ngoài)
-    const frameCam = () => {
-      const ns = (fg.graphData().nodes as { x?: number; y?: number; z?: number }[])
-      let r = 0; for (const n of ns) r = Math.max(r, Math.hypot(n.x ?? 0, n.y ?? 0, n.z ?? 0))
-      fg.cameraPosition({ x: 0, y: 0, z: Math.max(220, r * 1.9 + 120) }, { x: 0, y: 0, z: 0 }, 900)
-    }
-    fg.onEngineStop(frameCam)
-    setTimeout(frameCam, 2500); setTimeout(frameCam, 5200) // sim cần thời gian ổn định
-    // ✨ trường sao nền
-    const stars = new THREE.BufferGeometry()
-    const arr = new Float32Array(600 * 3)
-    for (let i = 0; i < arr.length; i++) arr[i] = (Math.sin(i * 99.13) * 0.5) * 4200
-    stars.setAttribute('position', new THREE.BufferAttribute(arr, 3))
-    fg.scene().add(new THREE.Points(stars, new THREE.PointsMaterial({ color: 0x8b86b0, size: 1.6, transparent: true, opacity: 0.6 })))
+    const initTimer = setTimeout(() => {
+      if (cancelled || !wrap.current) return
+      const N: N3[] = nodes.filter(n => n.kind !== 'block').map(n => ({ id: n.id, name: n.title ?? 'Trang', layer: n.layer ?? 'personal', kind: n.kind, val: 1 + Math.min(10, (deg.get(n.id) ?? 0)) * 0.7 }))
+      const present = new Set(N.map(n => n.id))
+      const L: L3[] = links.filter(l => present.has(l.from_node) && present.has(l.to_node)).map(l => ({ source: l.from_node, target: l.to_node, dimension: l.dimension, weight: 1 }))
+      const vis = (id: string) => !hiddenRef.current.has(byId.get(id)?.layer ?? 'personal') && (!searchModeRef.current || !activeRef.current || activeRef.current.has(id))
 
-    const onResize = () => { if (wrap.current) { fg.width(wrap.current.clientWidth); fg.height(wrap.current.clientHeight) } }
-    onResize(); window.addEventListener('resize', onResize)
-    // CHẶN vòng restore lỗi của three (bug "Cannot access 'info' before initialization") khi context bị mất:
-    // preventDefault để trình duyệt KHÔNG tự restore; báo fallback gọn thay vì sập.
-    const canvas = wrap.current.querySelector('canvas')
-    const onLost = (e: Event) => { e.preventDefault(); setGlError(true) }
-    canvas?.addEventListener('webglcontextlost', onLost, false)
-    // auto-rotate đơn giản: quay camera quanh tâm
-    let raf = 0, ang = 0
-    const tick = () => { try { if (autoRotRef.current) { ang += 0.0016; const d = 380; fg.cameraPosition({ x: d * Math.sin(ang), z: d * Math.cos(ang) }) } } catch { /* context có thể mất giữa frame */ } raf = requestAnimationFrame(tick) }
-    tick()
+      let fg: FG
+      try {
+        // stencil:false → tránh "OES_packed_depth_stencil required"; antialias off nhẹ máy; high-performance lấy GPU rời; cho phép GPU yếu.
+        fg = new ForceGraph3D(wrap.current, { rendererConfig: { antialias: false, alpha: true, stencil: false, powerPreference: 'high-performance', failIfMajorPerformanceCaveat: false } })
+      } catch (e) { console.warn('3D init failed', e); setGlError(true); return }
+      inst = fg
+      fg
+        .backgroundColor('#06060c')
+        .graphData({ nodes: N, links: L })
+        .nodeVal('val')
+        .nodeRelSize(4)
+        .nodeColor((n: object) => { const x = n as N3; const on = !activeRef.current || activeRef.current.has(x.id); return on ? (LAYER_TINT[x.layer] ?? '#94a3b8') : 'rgba(120,120,140,0.12)' })
+        .nodeVisibility((n: object) => vis((n as N3).id))
+        .nodeLabel((n: object) => `<div style="font:600 12px sans-serif;color:#fff">${(n as N3).name}</div><div style="font:11px sans-serif;color:#a78bfa">${LAYER_NAME[(n as N3).layer] ?? ''} · ${deg.get((n as N3).id) ?? 0} liên kết</div>`)
+        .nodeThreeObjectExtend(true)
+        .nodeThreeObject((n: object) => {
+          const x = n as N3
+          if (!labelsRef.current || (deg.get(x.id) ?? 0) < 6) return undefined as unknown as THREE.Object3D
+          const s = new SpriteText(x.name.length > 22 ? x.name.slice(0, 21) + '…' : x.name)
+          s.color = '#e8e6f0'; s.textHeight = 4
+          ;(s as unknown as THREE.Object3D).position.set(0, x.val + 4, 0)
+          ;(s as unknown as { material: { depthWrite: boolean } }).material.depthWrite = false
+          return s as unknown as THREE.Object3D
+        })
+        .linkColor((l: object) => { const x = l as L3; const s = typeof x.source === 'object' ? (x.source as N3).id : x.source as string; const tg = typeof x.target === 'object' ? (x.target as N3).id : x.target as string; const on = !activeRef.current || (activeRef.current.has(s) && activeRef.current.has(tg)); return on ? (DIM_COLOR[x.dimension ?? ''] ?? '#3a8') : 'rgba(120,120,140,0.05)' })
+        .linkVisibility((l: object) => { const x = l as L3; const s = typeof x.source === 'object' ? (x.source as N3).id : x.source as string; const tg = typeof x.target === 'object' ? (x.target as N3).id : x.target as string; return vis(s) && vis(tg) })
+        .linkOpacity(0.55)
+        .linkWidth(0.6)
+        .linkDirectionalParticles((): number => particlesRef.current ? 2 : 0)
+        .linkDirectionalParticleSpeed(0.006)
+        .linkDirectionalParticleWidth(1.4)
+        .onNodeClick((n: object) => { const g = byId.get((n as N3).id); if (g) { setSel(g); fg.cameraPosition({ x: (n as { x: number }).x, y: (n as { y: number }).y, z: (n as { z: number }).z + 120 }, n as { x: number; y: number; z: number }, 700) } })
+        .onBackgroundClick(() => { setSel(null); setQ('') })
+      fgRef.current = fg
+      fg.d3Force('charge')?.strength(repelRef.current)
+      fg.d3Force('link')?.distance(linkRef.current)
+      // FRAME: nhìn thẳng vào tâm cụm, lùi xa theo bán kính
+      const frameCam = () => {
+        if (cancelled) return
+        const ns = (fg.graphData().nodes as { x?: number; y?: number; z?: number }[])
+        let r = 0; for (const n of ns) r = Math.max(r, Math.hypot(n.x ?? 0, n.y ?? 0, n.z ?? 0))
+        fg.cameraPosition({ x: 0, y: 0, z: Math.max(220, r * 1.9 + 120) }, { x: 0, y: 0, z: 0 }, 900)
+      }
+      fg.onEngineStop(frameCam)
+      timers.push(setTimeout(frameCam, 2500), setTimeout(frameCam, 5200)) // sim cần thời gian ổn định (đã gom để cleanup huỷ)
+      // ✨ trường sao nền
+      const stars = new THREE.BufferGeometry()
+      const arr = new Float32Array(600 * 3)
+      for (let i = 0; i < arr.length; i++) arr[i] = (Math.sin(i * 99.13) * 0.5) * 4200
+      stars.setAttribute('position', new THREE.BufferAttribute(arr, 3))
+      fg.scene().add(new THREE.Points(stars, new THREE.PointsMaterial({ color: 0x8b86b0, size: 1.6, transparent: true, opacity: 0.6 })))
+
+      onResize = () => { if (wrap.current) { fg.width(wrap.current.clientWidth); fg.height(wrap.current.clientHeight) } }
+      onResize(); window.addEventListener('resize', onResize)
+      canvas = wrap.current.querySelector('canvas')
+      onLost = (e: Event) => { e.preventDefault(); setGlError(true) }   // context mất → fallback gọn, không để three tự restore lỗi
+      canvas?.addEventListener('webglcontextlost', onLost, false)
+      let ang = 0
+      const tick = () => { try { if (autoRotRef.current) { ang += 0.0016; const d = 380; fg.cameraPosition({ x: d * Math.sin(ang), z: d * Math.cos(ang) }) } } catch { /* context có thể mất giữa frame */ } raf = requestAnimationFrame(tick) }
+      tick()
+    }, 0)
+
     return () => {
-      cancelAnimationFrame(raf); window.removeEventListener('resize', onResize)
-      canvas?.removeEventListener('webglcontextlost', onLost)
-      // THỨ TỰ QUAN TRỌNG: dừng vòng animation nội bộ của thư viện TRƯỚC, rồi mới huỷ.
-      // (nếu huỷ/forceContextLoss khi loop còn chạy → frame kế tiếp đọc state đã null → "Cannot read 'tick'" → sập app)
-      try { (fg as unknown as { pauseAnimation?: () => void }).pauseAnimation?.() } catch { /* bỏ qua */ }
-      try { fg._destructor?.() } catch { /* bỏ qua */ }  // _destructor tự dispose renderer + giải phóng context
+      cancelled = true
+      clearTimeout(initTimer); timers.forEach(clearTimeout)
+      cancelAnimationFrame(raf)
+      if (onResize) window.removeEventListener('resize', onResize)
+      if (canvas && onLost) canvas.removeEventListener('webglcontextlost', onLost)
+      if (inst) {
+        try { (inst as unknown as { pauseAnimation?: () => void }).pauseAnimation?.() } catch { /* bỏ qua */ }  // dừng vòng rAF nội bộ TRƯỚC
+        try { inst._destructor?.() } catch { /* bỏ qua */ }                                                     // rồi dispose renderer + giải phóng context
+      }
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
