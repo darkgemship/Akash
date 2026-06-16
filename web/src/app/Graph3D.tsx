@@ -41,6 +41,7 @@ export default function Graph3D({ nodes, links, onOpen, onClose }: {
   const activeRef = useRef<Set<string> | null>(null)   // id node đang "sáng"; null = tất cả
   const searchModeRef = useRef(false)   // true = đang TÌM (node ngoài tập → ẩn hẳn); false = chọn node theo level (ngoài tập → chỉ MỜ)
   const frameCamRef = useRef<(() => void) | null>(null)   // đưa camera về TOÀN CẢNH (nút + click nền) → đỡ bị lost sau khi zoom vào node
+  const focusKhoRef = useRef<((L: string) => void) | null>(null)   // bay + đặt TÂM XOAY vào 1 thiên hà (kho) → xoay tự do quanh kho đó
   const byId = useMemo(() => new Map(nodes.map(n => [n.id, n])), [nodes])
   // LEVEL trong kho = số bước parent_id tới gốc kho (kho=0, con=1, cháu=2…) → tô màu theo tầng
   const levelOf = useMemo(() => {
@@ -220,6 +221,8 @@ export default function Graph3D({ nodes, links, onOpen, onClose }: {
       const settle = () => { layoutGalaxies(); frameCam() }   // dời 3 thiên hà rồi đóng khung
       fg.onEngineStop(settle)
       frameCamRef.current = frameCam
+      // bay tới + đặt TÂM XOAY vào 1 kho (cameraPosition lookAt = tâm orbit → xoay quanh kho đó)
+      focusKhoRef.current = (L: string) => { const g = GAL[L]; if (g) fg.cameraPosition({ x: g.x, y: g.y, z: 360 }, { x: g.x, y: g.y, z: 0 }, 800) }
       timers.push(setTimeout(settle, 2600), setTimeout(settle, 5200)) // dự phòng nếu onEngineStop trễ
       // ✨ trường sao nền
       const stars = new THREE.BufferGeometry()
@@ -369,10 +372,11 @@ export default function Graph3D({ nodes, links, onOpen, onClose }: {
       <div className="absolute right-3 top-3 w-[180px] hud-panel bg-[#0b0b14]/85 backdrop-blur p-2.5 z-10">
         <div className="hud-label mb-1.5">3 thiên hà (kho)</div>
         {Object.entries(layers).map(([L, c]) => (
-          <button key={L} onClick={() => toggleLayer(L)} className={`w-full flex items-center justify-between text-left rounded-md px-2 py-1 text-xs ${hidden.has(L) ? 'opacity-35' : 'hover:bg-white/5'}`}>
-            <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full" style={{ background: LAYER_TINT[L] }} />{LAYER_NAME[L] ?? L}</span>
+          <div key={L} className={`w-full flex items-center gap-1 rounded-md px-1 py-1 text-xs ${hidden.has(L) ? 'opacity-35' : 'hover:bg-white/5'}`}>
+            <button onClick={() => toggleLayer(L)} title="Ẩn/hiện kho" className="flex items-center gap-1.5 flex-1 text-left min-w-0"><span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: LAYER_TINT[L] }} /><span className="truncate">{LAYER_NAME[L] ?? L}</span></button>
+            <button onClick={() => focusKhoRef.current?.(L)} title="Xoay quanh kho này (đặt tâm)" className="text-zinc-500 hover:text-white px-1">◎</button>
             <span className="text-zinc-600 tabular-nums">{c}</span>
-          </button>
+          </div>
         ))}
         <div className="hud-label mt-2 mb-1" style={{ fontSize: 8.5 }}>8 chiều · sóng sáng chạy</div>
         <div className="grid grid-cols-2 gap-0.5">

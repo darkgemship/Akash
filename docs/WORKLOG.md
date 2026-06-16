@@ -2,6 +2,12 @@
 
 > Ghi lại mỗi đợt build để lần sau làm tốt hơn. Quy trình chuẩn: **đọc docs → sửa code → `npm run build` → test thật trên preview (đăng nhập, bấm từng nút) → cập nhật docs**.
 
+## 2026-06-16 (đợt 43) — 🎯 Pivot xoay 3D quanh kho + 📁 ghi nhận đổi tên thư mục Data Qi → Akash
+- **Pivot 3D tự do**: panel "3 thiên hà (kho)" thêm nút **◎** mỗi kho → bay camera + đặt TÂM XOAY vào tâm thiên hà đó (cameraPosition lookAt = orbit center) → xoay quanh kho thay vì cố định gốc. (đáp "muốn tâm là điểm trung tâm các kho"). Toggle ẩn/hiện tách riêng nút tên kho.
+- **📁 ĐỔI TÊN THƯ MỤC**: founder đổi `~/Desktop/Data Qi` → `~/Desktop/Akash` (khớp rebrand). Git + toàn bộ source theo nguyên vẹn sang Akash; `Data Qi` cũ chỉ còn stub `.next`. KHÔNG mất dữ liệu. Từ giờ làm việc ở `~/Desktop/Akash/`. (Lưu ý: session harness vẫn cấu hình path cũ → preview/dev cần mở lại project ở Akash.)
+**Verify**: tsc xanh (Akash). Pivot dùng API cameraPosition như onNodeClick (đã chạy ổn).
+**Đã xong loạt yêu cầu graph của founder**: màu 5 tầng · độ sâu 3D+2D · 2D 3 hệ mặt trời · bỏ 3 Vòng · mũi tên cha-con + cong 8-chiều · pivot kho. Còn nicety: click thẳng vào sao bung tầng (giờ qua nút TẦNG/◎).
+
 ## 2026-06-16 (đợt 42) — 🧹 Bỏ view 3 Vòng · nút độ-sâu 2D · mũi tên cha→con (mọi view) · mũi tên 3D
 - **Bỏ "🪐 3 Vòng"** khỏi mode bar (founder muốn nhẹ); code rings để dormant. Sửa text fallback 2 chỗ (Galaxy·Cây sự sống·Dòng đời).
 - **Nút "TẦNG 1·2·3·4+" cho Galaxy 2D**: lọc node theo LEVEL (hệ mặt trời) — chỉ hiện tới tầng chọn, không phun hết. Lọc trong layout (levelOf ≤ maxLvl2D) + relayout khi đổi. Verify: tầng 1 chỉ còn 3 sao kho + page hành tinh.
@@ -411,7 +417,7 @@ Phản hồi founder sau khi duyệt HUD:
 - **Login warp** ([Warp.tsx](../web/src/app/Warp.tsx)): canvas 420 sao bay xuyên màn hình (streak theo chiều sâu, 4 màu tím/cyan/hồng/trắng); đang xác thực → **speed ×16 = nhảy hyperspace** ("Đang nhảy hyperspace…", nút "⌁ Khởi động warp drive"). Trải nghiệm như game vũ trụ.
 
 ## 2026-06-10 — Đợt 4: Rebrand Akash + auth/onboarding high-tech
-- **Rebrand**: Data Qi → **Akash** (akasha = hư không lưu trữ tri thức). Logo chữ "A" gradient glow (component `AkashMark`), đổi ở login/rail/header/onboarding/title tab + tên org trong DB.
+- **Rebrand**: Akash → **Akash** (akasha = hư không lưu trữ tri thức). Logo chữ "A" gradient glow (component `AkashMark`), đổi ở login/rail/header/onboarding/title tab + tên org trong DB.
 - **Login mới**: hero 2 cột (trái: brand + 3 feature cards + tagline; phải: card viền gradient) — tab Đăng nhập/Tạo tài khoản, nhãn field, nút 👁️ hiện mật khẩu, spinner "Đang xác thực…", hint Enter.
 - **Onboarding mới**: nền starfield + card viền gradient, progress bar + 3 dots bấm được, animation trượt từng bước; b1: 3 kho dạng card màu; b2: lưới 4 phím tắt (/, @, ⌘K, kéo-thả); b3: vòng lặp 🎓→🎯→📣→💰 + badge vai của user.
 - **Chặn lỗi extension Talisman mạnh hơn**: thêm listener `error` (capture + stopImmediatePropagation) bên cạnh `unhandledrejection` — overlay đỏ của ví crypto không đè app nữa (chỉ xảy ra ở dev; bản production không bao giờ hiện).
