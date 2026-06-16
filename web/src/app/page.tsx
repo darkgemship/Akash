@@ -10,7 +10,7 @@ import { Profile, Today, Board, Studio, LifeChaptersWizard } from './Pages'
 import { KolFeed, ContentEngine, ReviewHub, MembersHub } from './Hubs'
 import Warp from './Warp'
 import { IVault, IHome, IPen, IBoard, ICheck, IUsers, IUser, ISearch, IPlus, IDots, IChevron, ILogout, IDoc, IOrbit, IUpload, ICode, ITarget, IRefresh, IMegaphone, IGrad, IX, IExpand, IEye, IEyeOff } from './Icons'
-import { DIMS, PropsPanel, PageFooter, Dim8Bars } from './PageFrame'
+import { DIMS, PropsPanel, PageFooter, Dim8Bars, EMO_SCALE } from './PageFrame'
 import { dimSignals, transformScore } from '@/lib/transformScore'
 import { Wordmark, StatusLine, Corners } from './Hud'
 
@@ -1252,10 +1252,10 @@ function Workspace({ user }: { user: User }) {
             ) : (
               <>
                 <div className="mb-3">
-                  <div className="hud-label mb-1.5">🧡 Lúc đó bạn cảm thấy gì?</div>
+                  <div className="hud-label mb-1.5">🧡 Lúc đó bạn cảm thấy gì? <span className="normal-case tracking-normal text-[var(--hud-dim)]">— thang năng lượng: đỏ (thấp) → trắng (tỉnh thức)</span></div>
                   <div className="flex flex-wrap gap-1.5">
-                    {[['😮', 'vỡ òa'], ['💗', 'chạm'], ['🔥', 'thôi thúc'], ['😣', 'nhói'], ['😤', 'ức'], ['😌', 'nhẹ nhõm'], ['🌫️', 'hoài nghi']].map(([ic, l]) => (
-                      <button key={l} onClick={() => setCapDeep(c => c && ({ ...c, emo: c.emo === l ? '' : l }))} className={`px-2.5 py-1.5 rounded-lg text-xs border ${capDeep.emo === l ? 'bg-amber-500/20 border-amber-400/50 text-amber-100' : 'bg-white/5 border-[var(--hud-line)] text-zinc-400'}`}>{ic} {l}</button>
+                    {EMO_SCALE.map(({ v, c }) => (
+                      <button key={v} onClick={() => setCapDeep(cd => cd && ({ ...cd, emo: cd.emo === v ? '' : v }))} className="px-2.5 py-1.5 rounded-lg text-xs border flex items-center gap-1.5" style={capDeep.emo === v ? { background: c + '33', borderColor: c, color: '#fff' } : { borderColor: 'var(--hud-line)', color: '#a1a1aa' }}><span className="w-2 h-2 rounded-full" style={{ background: c }} />{v}</button>
                     ))}
                   </div>
                 </div>

@@ -1,6 +1,20 @@
 'use client'
 import { useMemo, useState } from 'react'
 
+// 🌈 THANG NĂNG LƯỢNG RUNG (Hawkins — Map of Consciousness): thấp ĐỎ → cao TÍM → TỈNH THỨC trắng/vàng (KHÔNG đen).
+// Akash dìu user đi LÊN thang này; node được nhuộm theo màu cảm xúc để thấy hành trình sáng dần. Xem AKASH.md §4.
+export const EMO_SCALE: { v: string; c: string }[] = [
+  { v: '😣 đau/sợ', c: '#e23b3b' },      // ~ sợ hãi/đau khổ (Alpha, đỏ)
+  { v: '😤 tức', c: '#f0673a' },          // ~ tức giận (đỏ-cam)
+  { v: '🌫️ hoài nghi', c: '#c08a3a' },   // ~ kiêu hãnh/hoài nghi (nâu vàng)
+  { v: '🔥 thôi thúc', c: '#f5b942' },    // ~ ham muốn/can đảm (vàng)
+  { v: '😌 nhẹ nhõm', c: '#5fbf6b' },     // ~ ôn hoà/chấp nhận (xanh lá)
+  { v: '💗 yêu thương', c: '#34d399' },   // ~ yêu thương (xanh ngọc)
+  { v: '😮 vỡ oà', c: '#60a5fa' },        // ~ vui sướng (xanh dương)
+  { v: '🙏 thanh thản', c: '#a78bfa' },   // ~ thanh thản (tím)
+  { v: '✨ tỉnh thức', c: '#f6f8ff' },    // ~ giác ngộ/Omega (trắng-vàng, KHÔNG đen)
+]
+
 /* =====================================================================
    PageFrame — bộ khung chuẩn của MỌI trang (xem docs/STANDARD-TEMPLATE.md)
    ┌──────────────────────────────────────────────┐
@@ -94,7 +108,6 @@ export function PropsPanel({ node, canE, isEditor, hubLabel, onSetProp, onSaveDa
   // kho cá nhân: chính chủ là "ban biên tập" của trang mình; kho chung: cần quyền biên tập
   const canFix = node.layer === 'personal' ? canE : isEditor
   const isShared = node.layer === 'corporate' || node.layer === 'humanity'  // QNET / Nhân loại = tài liệu tham chiếu cho AI
-  const EMOS = ['😮 vỡ òa', '💗 chạm', '🔥 thôi thúc', '😣 nhói', '😤 ức', '😌 nhẹ nhõm', '🌫️ hoài nghi']
 
   const setField = (key: 'fixed_fields' | 'custom_fields', arr: Field[], i: number, v: string) =>
     onSetProp(key, arr.map((f, j) => j === i ? { ...f, value: v } : f))
@@ -140,8 +153,8 @@ export function PropsPanel({ node, canE, isEditor, hubLabel, onSetProp, onSaveDa
           {!isShared && onSetEmotion && (
             <Row label="Cảm xúc" hint="cảm xúc THẬT của bạn — HOOK của content, AI đọc để bắt đúng giọng">
               <div className="flex flex-wrap gap-1 py-0.5">
-                {EMOS.map(e => { const on = (node.emotion ?? '') === e; return (
-                  <button key={e} disabled={!canE} onClick={() => onSetEmotion(on ? '' : e)} className={`text-[11px] rounded-md px-1.5 py-0.5 border transition ${on ? 'bg-amber-500/20 border-amber-400/50 text-amber-100' : 'bg-white/5 border-[var(--hud-line)] text-zinc-500 hover:text-zinc-300'}`}>{e}</button>
+                {EMO_SCALE.map(({ v, c }) => { const on = (node.emotion ?? '') === v; return (
+                  <button key={v} disabled={!canE} onClick={() => onSetEmotion(on ? '' : v)} title="thang năng lượng rung — thấp (đỏ) → cao (trắng/tỉnh thức)" className="text-[11px] rounded-md px-1.5 py-0.5 border transition flex items-center gap-1" style={on ? { background: c + '33', borderColor: c, color: '#fff' } : { borderColor: 'var(--hud-line)' }}><span className="w-1.5 h-1.5 rounded-full" style={{ background: c }} />{v}</button>
                 )})}
               </div>
             </Row>

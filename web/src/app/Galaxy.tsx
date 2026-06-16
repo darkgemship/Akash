@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
 // 3D dùng Three.js → chỉ tải khi mở (ssr:false), không phình app chính
-const Graph3D = dynamic(() => import('./Graph3D'), { ssr: false })
+const Graph3D = dynamic(() => import('./Graph3D'), { ssr: false, loading: () => <div className="absolute inset-0 z-20 grid place-items-center bg-[#06060c] text-zinc-500 text-sm">Đang dựng bộ não 3D…</div> })
 
 export type GNode = { id: string; title: string | null; kind: string; parent_id: string | null; layer?: string; event_date?: string | null; subtype?: string | null; icon?: string | null }
 // icon hiển thị trong node (ưu tiên icon riêng → suy theo loại)
@@ -454,7 +454,7 @@ export default function Galaxy({ nodes, links, onOpen, onConnect, modeReq }: {
         LAYERS3.forEach((layer, ri) => {
           const R = RING[layer]; if (!R) return
           const Rs = R * k
-          const N = Math.round((340 + ri * 300) * qual)   // dày → vành mịn như mây hạt (ảnh tham chiếu)
+          const N = Math.round((170 + ri * 150) * qual)   // mật độ vừa — mịn nhưng nhẹ (chống lag/crash)
           const baseHue = RING_HUE[layer]
           const rot = t * 0.00035 * (ri % 2 ? -1 : 1)
           const bandPx = R * 0.13 * k
@@ -491,7 +491,7 @@ export default function Galaxy({ nodes, links, onOpen, onConnect, modeReq }: {
           const dd = Math.hypot(bx - ax, by - ay) || 1, nx = -(by - ay) / dd, ny = (bx - ax) / dd
           const seed = l.from_node.charCodeAt(0) + l.to_node.charCodeAt(1 % l.to_node.length)
           ctx.beginPath(); ctx.moveTo(ax, ay)
-          const SEG = 16
+          const SEG = 10
           for (let si = 1; si <= SEG; si++) {
             const f = si / SEG, pull = Math.sin(f * Math.PI)
             const lx = ax + (bx - ax) * f, ly = ay + (by - ay) * f
@@ -1345,6 +1345,7 @@ export default function Galaxy({ nodes, links, onOpen, onConnect, modeReq }: {
       {show3d && <Graph3D nodes={nodes} links={links} onOpen={onOpen} onClose={() => setShow3d(false)} />}
       <canvas ref={ref} onClick={onClick} onMouseDown={onDown} onMouseMove={onMove} onMouseUp={onUp}
         onMouseLeave={() => { hoverId.current = null; setTip(null); panning.current = null; nodeDrag.current = null }}
+        style={{ background: '#0a0b14' }}
         className={`w-full h-full block ${connect ? 'cursor-crosshair' : 'cursor-grab active:cursor-grabbing'}`} />
 
       {tip && (

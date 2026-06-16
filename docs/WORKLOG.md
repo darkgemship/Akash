@@ -2,6 +2,14 @@
 
 > Ghi lại mỗi đợt build để lần sau làm tốt hơn. Quy trình chuẩn: **đọc docs → sửa code → `npm run build` → test thật trên preview (đăng nhập, bấm từng nút) → cập nhật docs**.
 
+## 2026-06-16 (đợt 25) — 🩹 Chống trắng-màn/crash khi load 3D+rings + 🌈 thang màu Hawkins
+Founder: load view mắt/3D vẫn trắng màn + lag/crash; đổi màu theo bảng năng lượng rung (Hawkins) — tỉnh thức TRẮNG/VÀNG không phải đen.
+- **Hết trắng khi load**: (1) Graph3D dynamic import có `loading` nền tối "#06060c" (trước đó suspense render null → light mode lộ nền kem trắng); (2) `<canvas>` 2D thêm inline `background:#0a0b14` → dark ngay cả trước frame vẽ đầu.
+- **Giảm lag/crash**: rings hạt 340+ri*300 → 170+ri*150 (~nửa); link entanglement SEG 16→10; sao nền 3D 1500→600 điểm.
+- **🌈 EMO_SCALE (Hawkins)** export ở PageFrame, dùng chung capDeep + PropsPanel: 9 mức thấp→cao gắn màu — 😣 đau/sợ #e23b3b (đỏ) · 😤 tức · 🌫️ hoài nghi · 🔥 thôi thúc · 😌 nhẹ nhõm (xanh lá) · 💗 yêu thương · 😮 vỡ oà (xanh dương) · 🙏 thanh thản (tím) · ✨ **tỉnh thức trắng-vàng #f6f8ff (KHÔNG đen)**. Chip hiện chấm màu + tô màu mức khi chọn. AKASH.md §4 = bản đồ ý thức này.
+**Verify**: 3D load nền tối (hết trắng) ở light mode, không crash; chip cảm xúc theo thang màu. tsc + build xanh.
+**Còn lại (làm tiếp theo thứ tự A→B→C)**: A) dọn cognitive-load Properties theo-loại + mood/energy + hồ sơ giọng; B) graph "AI hiểu bạn"; C) nhuộm node theo màu cảm xúc trên Dòng đời + ẩn mode nâng cao + sửa nút chết.
+
 ## 2026-06-16 (đợt 24) — 📜 ĐẠI HỢP NHẤT: file tổng AKASH.md + sơ đồ + dọn mâu thuẫn docs
 Founder: rà toàn bộ project, liệt kê thừa thải, đọc lại mọi doc tìm điểm chưa logic, viết file tóm tắt tổng (ý nghĩa/tầm nhìn/giá trị/sứ mệnh/cấp tổ chức/phân bố kho/trường/page) tập trung AI-hiểu-user + content + trải nghiệm clean; nghiên cứu online; vẽ sơ đồ.
 - **2 agent song song**: kiểm kê tính năng/luồng (tìm thừa thải, cognitive-load hotspot) + audit 29 doc (tìm 11 mâu thuẫn). + 2 web search (second-brain×LLM 2026, RAG emotional context).

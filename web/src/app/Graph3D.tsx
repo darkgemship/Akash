@@ -119,7 +119,7 @@ export default function Graph3D({ nodes, links, onOpen, onClose }: {
     setTimeout(frameCam, 2500); setTimeout(frameCam, 5200) // sim cần thời gian ổn định
     // ✨ trường sao nền
     const stars = new THREE.BufferGeometry()
-    const arr = new Float32Array(1500 * 3)
+    const arr = new Float32Array(600 * 3)
     for (let i = 0; i < arr.length; i++) arr[i] = (Math.sin(i * 99.13) * 0.5) * 4200
     stars.setAttribute('position', new THREE.BufferAttribute(arr, 3))
     fg.scene().add(new THREE.Points(stars, new THREE.PointsMaterial({ color: 0x8b86b0, size: 1.6, transparent: true, opacity: 0.6 })))
