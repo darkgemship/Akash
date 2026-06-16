@@ -2,6 +2,12 @@
 
 > Ghi lại mỗi đợt build để lần sau làm tốt hơn. Quy trình chuẩn: **đọc docs → sửa code → `npm run build` → test thật trên preview (đăng nhập, bấm từng nút) → cập nhật docs**.
 
+## 2026-06-16 (đợt 36) — 🪐 3D: khắc phục fallback + gom tiểu hành tinh quanh sao (vành quỹ đạo theo level)
+Founder: máy lại hiện fallback "chưa bật 3D" + muốn node quây quanh sao tâm.
+- **Khắc phục fallback**: (1) BỎ probe WebGL riêng (nó chiếm thêm 1 context → dễ cạn slot ~16 → fail); (2) BỎ `powerPreference:'high-performance'` (máy chỉ có GPU tích hợp dễ fail khi bị ép) → để trình duyệt tự chọn. Giữ stencil off + failIfMajorPerformanceCaveat false + try/catch + fallback.
+- **Hệ mặt trời mỗi thiên hà**: layoutGalaxies xếp node thành VÀNH QUỸ ĐẠO quanh sao tâm — bán kính theo LEVEL (kho ~r30 sát sao → mỗi tầng sâu +52, lệch nhẹ chống chồng), hướng giữ theo lúc settle (node liên quan vẫn gần nhau), toả 3D (z*0.7).
+**Verify**: preview mở 3D → KHÔNG fallback, 3 hệ mặt trời (sao đỏ/vàng/tím + tiểu hành tinh quay quanh theo tầng), 0 lỗi console; tsc xanh.
+
 ## 2026-06-16 (đợt 35) — 🌟 3D thiên hà v2: sao tâm + 5 màu theo level + tách cụm + reset/search
 (đợt 1/3 cho loạt yêu cầu redesign graph của founder)
 - **3 THIÊN HÀ tách rõ** xếp TAM GIÁC (cá nhân đỉnh · QNET trái-dưới · nhân loại phải-dưới). Cách làm: để sim chạy thành 1 cụm rồi DỜI deterministic mỗi cụm-kho về tâm thiên hà sau khi engine nguội (cooldownTicks 90 + onEngineStop) — vì lực d3 (forceX/custom) bị engine nguội/decay vô hiệu (đã debug: node kẹt ±58).

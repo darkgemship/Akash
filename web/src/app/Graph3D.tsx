@@ -114,14 +114,7 @@ export default function Graph3D({ nodes, links, onOpen, onClose }: {
   // trước khi timer chạy → KHÔNG tạo instance mồ côi → hết lỗi "reading 'tick'" của frame mồ côi + hết đen màn.
   useEffect(() => {
     if (!wrap.current) return
-    // 0) kiểm tra WebGL trước — máy không hỗ trợ thì hiện fallback. Giải phóng probe NGAY (không chiếm slot context).
-    try {
-      const probe = document.createElement('canvas')
-      const gl = (probe.getContext('webgl2') || probe.getContext('webgl')) as WebGLRenderingContext | null
-      if (!gl) { setGlError(true); return }
-      gl.getExtension('WEBGL_lose_context')?.loseContext()
-    } catch { setGlError(true); return }
-
+    // (bỏ probe WebGL riêng — nó chiếm thêm 1 context, dễ làm cạn slot. Dựa thẳng vào try/catch quanh ForceGraph3D bên dưới.)
     let inst: FG | null = null
     let raf = 0, cancelled = false
     let onResize: (() => void) | null = null
@@ -138,8 +131,9 @@ export default function Graph3D({ nodes, links, onOpen, onClose }: {
 
       let fg: FG
       try {
-        // stencil:false → tránh "OES_packed_depth_stencil required"; antialias off nhẹ máy; high-performance lấy GPU rời; cho phép GPU yếu.
-        fg = new ForceGraph3D(wrap.current, { rendererConfig: { antialias: false, alpha: true, stencil: false, powerPreference: 'high-performance', failIfMajorPerformanceCaveat: false } })
+        // attrs tối giản cho TƯƠNG THÍCH cao nhất: KHÔNG ép powerPreference (máy chỉ có GPU tích hợp dễ fail nếu ép high-performance);
+        // stencil off (tránh OES_packed_depth_stencil) + cho phép GPU yếu (failIfMajorPerformanceCaveat:false).
+        fg = new ForceGraph3D(wrap.current, { rendererConfig: { antialias: false, alpha: true, stencil: false, failIfMajorPerformanceCaveat: false } })
       } catch (e) { console.warn('3D init failed', e); setGlError(true); return }
       inst = fg
       fg
@@ -182,17 +176,25 @@ export default function Graph3D({ nodes, links, onOpen, onClose }: {
       // 🌌 TÁCH 3 THIÊN HÀ kiểu DETERMINISTIC: để sim chạy tự nhiên thành 1 cụm, RỒI sau khi nguội dời nguyên cụm
       // con của mỗi kho về tâm thiên hà của nó (giữ cấu trúc nội bộ, chỉ tịnh tiến + nén nhẹ). Chắc ăn, không phụ thuộc lực.
       fg.cooldownTicks(90)   // engine dừng sớm (~2s) để bố trí thiên hà rồi đứng yên
-      type Pos = { layer?: string; x: number; y: number; z: number; __gal?: boolean }
+      type Pos = { id?: string; layer?: string; x: number; y: number; z: number; __gal?: boolean }
+      // gom node thành VÀNH QUỸ ĐẠO quanh SAO tâm: bán kính theo LEVEL (kho gần sao, page sâu ra xa) — như hệ mặt trời
       const layoutGalaxies = () => {
         const ns = fg.graphData().nodes as Pos[]
         if (!ns.length || ns[0].__gal) return   // chỉ làm 1 lần
-        const cen: Record<string, { x: number; y: number; n: number }> = {}
-        for (const n of ns) { const L = n.layer ?? 'corporate'; (cen[L] ??= { x: 0, y: 0, n: 0 }); cen[L].x += n.x ?? 0; cen[L].y += n.y ?? 0; cen[L].n++ }
-        for (const L in cen) { cen[L].x /= cen[L].n || 1; cen[L].y /= cen[L].n || 1 }
+        const cen: Record<string, { x: number; y: number; z: number; n: number }> = {}
+        for (const n of ns) { const L = n.layer ?? 'corporate'; (cen[L] ??= { x: 0, y: 0, z: 0, n: 0 }); cen[L].x += n.x ?? 0; cen[L].y += n.y ?? 0; cen[L].z += n.z ?? 0; cen[L].n++ }
+        for (const L in cen) { cen[L].x /= cen[L].n || 1; cen[L].y /= cen[L].n || 1; cen[L].z /= cen[L].n || 1 }
         for (const n of ns) {
           const L = n.layer ?? 'corporate', g = GAL[L] ?? GAL.corporate, c = cen[L]
-          n.x = g.x + ((n.x ?? 0) - c.x) * 0.8   // dời cụm về tâm thiên hà + nén 0.8 cho gọn
-          n.y = g.y + ((n.y ?? 0) - c.y) * 0.8
+          // hướng quỹ đạo = hướng node toả ra từ tâm cụm lúc settle (giữ node liên quan gần nhau)
+          let dx = (n.x ?? 0) - c.x, dy = (n.y ?? 0) - c.y, dz = (n.z ?? 0) - c.z
+          let len = Math.hypot(dx, dy, dz)
+          if (len < 1) { const a = Math.random() * 6.28, b = Math.random() * 3.14; dx = Math.sin(b) * Math.cos(a); dy = Math.sin(b) * Math.sin(a); dz = Math.cos(b); len = 1 }
+          const lvl = levelOf.get(n.id ?? '') ?? 1
+          const r = 30 + lvl * 52 + (len % 18)   // shell theo level + chút lệch để khỏi chồng khít
+          n.x = g.x + dx / len * r
+          n.y = g.y + dy / len * r
+          n.z = dz / len * r * 0.7
           n.__gal = true
         }
       }
