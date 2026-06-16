@@ -40,9 +40,9 @@ const RING_TINT: Record<string, string> = { personal: '#22d3ee', corporate: '#a7
 const RING_NAME: Record<string, string> = { personal: 'ĐỜI TÔI', corporate: 'QNET', humanity: 'NHÂN LOẠI' }
 // 🌈 5 MÀU theo LEVEL trong mỗi kho (đồng bộ thiên hà 3D): L0 sao tâm → L1 "trái đất" → 3 màu phối → giữ màu cuối
 const GAL_PAL: Record<string, { star: string; levels: string[] }> = {
-  personal:  { star: '#ff5a36', levels: ['#ff7a4d', '#3b82f6', '#22d3ee', '#a78bfa', '#fde68a'] },
-  corporate: { star: '#f5b942', levels: ['#ffd166', '#34d399', '#22d3ee', '#818cf8', '#f0abfc'] },
-  humanity:  { star: '#e879f9', levels: ['#f0abfc', '#a78bfa', '#60a5fa', '#67e8f9', '#fca5a5'] },
+  personal:  { star: '#ff5a36', levels: ['#ff5a36', '#ffb37a', '#3b82f6', '#93c5fd', '#4b5563'] }, // đỏ→cam nhạt→xanh dương→xanh nhạt→đen xạm
+  corporate: { star: '#f5b942', levels: ['#f5b942', '#a855f7', '#fde68a', '#2dd4bf', '#4b5563'] }, // vàng→tím→vàng nhạt→xanh ngọc→đen xạm
+  humanity:  { star: '#e879f9', levels: ['#e879f9', '#fb7185', '#818cf8', '#c4b5fd', '#4b5563'] }, // hồng→hồng đào→chàm→tím nhạt→đen xạm
 }
 const galLevelColor = (layer: string, level: number) => { const p = GAL_PAL[layer] ?? GAL_PAL.personal; return p.levels[Math.min(level, p.levels.length - 1)] ?? p.levels[0] }
 // theme: tone trắng → nền kem cho map (2D & 3D), tone tối → nền vũ trụ
@@ -1120,7 +1120,7 @@ export default function Galaxy({ nodes, links, onOpen, onConnect, modeReq }: {
           : p.node.kind === 'note' ? cam.current.k > 1.7
           : (mode === 'mandala' || mode === 'timeline') ? (cam.current.k > 1.15 || hot) : true
         if (showLabel) {
-          ctx.fillStyle = hot ? '#fff' : '#cbd5e1'
+          ctx.fillStyle = hot ? (light ? '#111' : '#fff') : (light ? '#3a3935' : '#cbd5e1')   // light theme = chữ ĐEN cho dễ đọc trên nền kem
           ctx.font = `${(p.node.kind === 'kho' ? 13 : 10.5) * dpr}px var(--font-geist-mono), monospace`
           const lab = (p.node.title || '').slice(0, 20)
           if (mode === 'neuro' && p.node.kind !== 'note') {
@@ -1433,7 +1433,6 @@ export default function Galaxy({ nodes, links, onOpen, onConnect, modeReq }: {
         <div className="flex items-center gap-1 rounded-md bg-[#10101a]/85 backdrop-blur border border-[var(--hud-line)] p-1 text-[11px]">
           <button onClick={() => setShowIcons(v => !v)} title="Bật/tắt icon trong node cho dễ nhìn" className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg ${showIcons ? 'bg-white/15 text-white' : 'text-zinc-400 hover:bg-white/10'}`}>🖼 Icon</button>
           <button onClick={() => setDepthCol(v => !v)} title="Chọn 1 node → tô màu các node theo độ sâu (gần sáng, xa mờ)" className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg ${depthCol ? 'bg-violet-500/30 text-violet-100' : 'text-zinc-400 hover:bg-white/10'}`}>🎨 Depth</button>
-          <button onClick={() => setEmoCol(v => !v)} title="Nhuộm node theo cảm xúc (thang năng lượng Hawkins) — thấy hành trình sáng dần: đỏ (đau) → … → trắng (tỉnh thức)" className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg ${emoCol ? 'bg-amber-500/25 text-amber-100' : 'text-zinc-400 hover:bg-white/10'}`}>🌈 Cảm xúc</button>
           {(mode === 'galaxy' || mode === 'mandala') && <button onClick={() => setFlow(f => !f)} title="Hạt năng lượng chạy dọc mọi liên kết — thấy tri thức đang truyền" className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg ${flow ? 'bg-cyan-500/30 text-cyan-100' : 'text-zinc-400 hover:bg-white/10'}`}><span className="dq-prev-flow" />Dòng chảy</button>}
           {onConnect && <button onClick={() => { setConnect(c => !c); pickRef.current = null; setPicked(null) }} title="Bấm 2 node để tạo liên kết mới — có vụ nổ ăn mừng" className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg ${connect ? 'bg-amber-500/30 text-amber-100' : 'text-zinc-400 hover:bg-white/10'}`}><span className="dq-prev-link" />Nối</button>}
           <button onClick={() => setSugOpen(s => !s)} title="Máy soi cặp trang nên nối mà chưa nối" className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg ${sugOpen ? 'bg-violet-500/30 text-violet-100' : 'text-zinc-400 hover:bg-white/10'}`}><span className="dq-prev-sug">✨</span>Gợi ý</button>

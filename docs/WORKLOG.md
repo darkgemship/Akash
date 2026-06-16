@@ -2,6 +2,15 @@
 
 > Ghi lại mỗi đợt build để lần sau làm tốt hơn. Quy trình chuẩn: **đọc docs → sửa code → `npm run build` → test thật trên preview (đăng nhập, bấm từng nút) → cập nhật docs**.
 
+## 2026-06-16 (đợt 40) — 🪐 3D tầng-màu hệ mặt trời + nút độ sâu · bỏ view cảm xúc · light chữ đen · 📄 đề xuất RAG
+- **Bảng màu 5 TẦNG đúng spec founder** (GALAXY_PALETTE 3D + GAL_PAL 2D đồng bộ): cá nhân ĐỎ(tâm)→cam nhạt(hành tinh)→xanh dương(tiểu HT)→xanh nhạt(vệ tinh)→đen xạm(thiên thạch); QNET vàng→tím→vàng nhạt→xanh ngọc→đen xạm; nhân loại hồng→hồng đào→chàm→tím nhạt→đen xạm.
+- **Nút "Độ sâu hệ" 3D** (1 Hành tinh · 2 Tiểu HT · 3 Vệ tinh · 4+ Tất cả): lọc node theo LEVEL — chỉ hiện tới tầng chọn (vis += levelOf ≤ maxLevel). Verify: depth=1 chỉ còn sao + hành tinh.
+- **Bỏ nút "🌈 Cảm xúc"** ở 2D (founder thấy không cần) — giữ logic ngầm cho nút "Xem graph chân dung".
+- **Light mode chữ node ĐEN** (#3a3935) thay vì xám sáng → đọc được trên nền kem.
+- 📄 **docs/RAG-CHUNKING.md**: đề xuất kiến trúc Akash tự băm chunk cho RAG — semantic chunk theo heading + metadata (kho/loại/level/8-chiều) → hybrid retrieve (lọc metadata trước + vector + keyword) trên pgvector/ai_jobs; lộ trình 0→4. Tận dụng dữ liệu-đã-cấu-trúc của Akash để RAG chuẩn hơn "Obsidian + chunk mù".
+**Verify**: preview — depth 3D lọc đúng tầng, màu tầng đúng, 0 lỗi console; tsc xanh; Home light chữ đen đọc tốt.
+**Còn (đợt sau)**: 2D = nút độ sâu lọc level + phân bổ node kiểu hành-tinh/cánh-quạt cho đỡ loạn; 3D click thẳng vào sao để bung tầng; node 2D to-nhỏ theo bậc.
+
 ## 2026-06-16 (đợt 39) — 🩹 Sửa Galaxy 2D dồn-góc/trống khi mở (auto-fit bắt sai lúc layout còn giãn)
 Founder: mở Galaxy ra map trống/lệch góc (dark thì văng hẳn). Nguyên nhân: layout lực còn đang GIÃN ở mốc fit 140/600/1300ms → fitView khung theo bbox đang phình → cụm dồn góc/zoom bé; reset tay (lúc đã settle) thì đúng.
 - **fitView dùng bbox PHÂN VỊ 4%–96%** (bỏ node văng lẻ) → khung sát cụm chính, không bị 1-2 outlier kéo lệch.

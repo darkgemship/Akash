@@ -11,10 +11,11 @@ const LAYER_TINT: Record<string, string> = { personal: '#22d3ee', corporate: '#a
 const LAYER_NAME: Record<string, string> = { personal: '🧠 Cá nhân', corporate: '🌐 QNET', humanity: '♾️ Nhân loại' }
 // 🌟 mỗi kho = 1 THIÊN HÀ có SAO ở tâm + dải màu 5 LEVEL (sâu dần) phối hài hoà:
 //   L0 = sao tâm · L1 = "trái đất" · L2-L4 = 3 màu phối · L5+ giữ màu cuối. Sao mỗi kho 1 màu riêng.
+// 5 TẦNG hệ mặt trời: L0 SAO tâm · L1 hành tinh · L2 tiểu hành tinh · L3 vệ tinh · L4+ thiên thạch (đen xạm)
 const GALAXY_PALETTE: Record<string, { star: string; levels: string[] }> = {
-  personal:  { star: '#ff5a36', levels: ['#ff7a4d', '#3b82f6', '#22d3ee', '#a78bfa', '#fde68a'] }, // mặt trời ĐỎ → trái đất xanh dương → phối
-  corporate: { star: '#f5b942', levels: ['#ffd166', '#34d399', '#22d3ee', '#818cf8', '#f0abfc'] }, // sao VÀNG → ngọc lục bảo → phối
-  humanity:  { star: '#e879f9', levels: ['#f0abfc', '#a78bfa', '#60a5fa', '#67e8f9', '#fca5a5'] }, // sao HỒNG TÍM → tím → phối
+  personal:  { star: '#ff5a36', levels: ['#ff5a36', '#ffb37a', '#3b82f6', '#93c5fd', '#4b5563'] }, // đỏ → cam nhạt → xanh dương → xanh nhạt → đen xạm
+  corporate: { star: '#f5b942', levels: ['#f5b942', '#a855f7', '#fde68a', '#2dd4bf', '#4b5563'] }, // vàng → tím → vàng nhạt → xanh ngọc → đen xạm
+  humanity:  { star: '#e879f9', levels: ['#e879f9', '#fb7185', '#818cf8', '#c4b5fd', '#4b5563'] }, // hồng → hồng đào → chàm → tím nhạt → đen xạm
 }
 const galaxyColor = (layer: string, level: number) => {
   const p = GALAXY_PALETTE[layer] ?? GALAXY_PALETTE.personal
@@ -71,6 +72,8 @@ export default function Graph3D({ nodes, links, onOpen, onClose }: {
   const [particles, setParticles] = useState(true)
   const [labels, setLabels] = useState(true)
   const [autoRot, setAutoRot] = useState(false)
+  const [maxLevel, setMaxLevel] = useState(5)   // độ sâu HỆ MẶT TRỜI: 1=hành tinh · 2=+tiểu hành tinh · 3=+vệ tinh · 4+=tất cả
+  const maxLevelRef = useRef(5); maxLevelRef.current = maxLevel
   const [glError, setGlError] = useState(false)   // WebGL không tạo được context (GPU yếu/cạn) → hiện fallback thay vì sập app
 
   // 🛡️ LƯỚI AN TOÀN: 3d-force-graph chạy vòng rAF nội bộ; khi component bị huỷ (StrictMode dev mount 2 lần,
@@ -131,7 +134,7 @@ export default function Graph3D({ nodes, links, onOpen, onClose }: {
       const N: N3[] = nodes.filter(n => n.kind !== 'block').map(n => ({ id: n.id, name: n.title ?? 'Trang', layer: n.layer ?? 'personal', kind: n.kind, val: 1.6 + Math.min(11, (deg.get(n.id) ?? 0)) * 0.6 }))
       const present = new Set(N.map(n => n.id))
       const L: L3[] = links.filter(l => present.has(l.from_node) && present.has(l.to_node)).map(l => ({ source: l.from_node, target: l.to_node, dimension: l.dimension, weight: 1 }))
-      const vis = (id: string) => !hiddenRef.current.has(byId.get(id)?.layer ?? 'personal') && (!searchModeRef.current || !activeRef.current || activeRef.current.has(id))
+      const vis = (id: string) => !hiddenRef.current.has(byId.get(id)?.layer ?? 'personal') && (levelOf.get(id) ?? 0) <= maxLevelRef.current && (!searchModeRef.current || !activeRef.current || activeRef.current.has(id))
 
       let fg: FG
       try {
@@ -276,7 +279,7 @@ export default function Graph3D({ nodes, links, onOpen, onClose }: {
   const repelRef = useRef(repel); repelRef.current = repel
   const linkRef = useRef(linkDist); linkRef.current = linkDist
 
-  useEffect(() => { const fg = fgRef.current; if (fg) { fg.nodeVisibility(fg.nodeVisibility()).linkVisibility(fg.linkVisibility()).nodeThreeObject(fg.nodeThreeObject()) } }, [hidden, labels])
+  useEffect(() => { const fg = fgRef.current; if (fg) { fg.nodeVisibility(fg.nodeVisibility()).linkVisibility(fg.linkVisibility()).nodeThreeObject(fg.nodeThreeObject()) } }, [hidden, labels, maxLevel])
   useEffect(() => { fgRef.current?.linkDirectionalParticles(() => particles ? 2 : 0) }, [particles])
   useEffect(() => { const fg = fgRef.current; if (fg) { fg.d3Force('charge')?.strength(repel); fg.d3Force('link')?.distance(linkDist); fg.d3ReheatSimulation() } }, [repel, linkDist])
 
@@ -327,6 +330,15 @@ export default function Graph3D({ nodes, links, onOpen, onClose }: {
                 <span className="flex items-center gap-1.5 min-w-0"><span className="w-2 h-2 rounded-full shrink-0" style={{ background: LAYER_TINT[n!.layer ?? 'personal'] }} /><span className="truncate text-zinc-300">{n!.title}</span></span>
                 <span className="text-zinc-600 tabular-nums">{d}</span>
               </button>
+            ))}
+          </div>
+        </div>
+        {/* ĐỘ SÂU HỆ MẶT TRỜI — chỉ hiện tới tầng chọn */}
+        <div>
+          <div className="hud-label mb-1.5">Độ sâu hệ</div>
+          <div className="flex items-center gap-1">
+            {([[1, 'Hành tinh'], [2, 'Tiểu HT'], [3, 'Vệ tinh'], [5, 'Tất cả']] as [number, string][]).map(([lv, lb]) => (
+              <button key={lv} onClick={() => setMaxLevel(lv)} title={`Hiện tới tầng ${lv === 5 ? '4+' : lv}`} className={`flex-1 rounded-md px-1 py-1 text-[10px] ${maxLevel === lv ? 'ak-cta text-white' : 'bg-white/5 border border-white/10 text-zinc-400'}`}>{lv === 5 ? '4+' : lv}<div className="text-[7px] opacity-70 leading-none mt-0.5">{lb}</div></button>
             ))}
           </div>
         </div>
