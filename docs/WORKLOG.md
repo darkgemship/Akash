@@ -2,6 +2,16 @@
 
 > Ghi lại mỗi đợt build để lần sau làm tốt hơn. Quy trình chuẩn: **đọc docs → sửa code → `npm run build` → test thật trên preview (đăng nhập, bấm từng nút) → cập nhật docs**.
 
+## 2026-06-16 (đợt 34) — 🌌 3D redesign: 3 thiên hà + sóng màu chạy (hết loạn màu, node dễ bấm)
+Founder: 3 chạy rồi nhưng loạn màu (màu node + tầng + 8 màu chiều chồng nhau), node nhỏ khó chọn. Ý tưởng founder: mỗi kho = 1 thiên hà, chiều liên kết = sợi sáng màu chạy theo wave.
+- **1 hệ màu duy nhất cho node = theo KHO**: cyan (Cá nhân) · tím (QNET) · hồng (Nhân loại). Bỏ mọi hệ màu cạnh tranh.
+- **Dây nối = sợi MỜ trung tính** (rgba xám ~0.16); **màu 8 chiều dồn lên HẠT sáng chạy theo dây** (linkDirectionalParticleColor = màu chiều, 3 hạt, to 2.2) → "sóng radiant" đúng ý founder, không còn rối.
+- **3 cụm THIÊN HÀ** tách bằng lực kéo theo layer (d3-force-3d forceX/Y/Z), xếp TAM GIÁC (đời tôi đỉnh · QNET trái-dưới · nhân loại phải-dưới) cho gọn khung.
+- **Node to & dễ bấm**: val 1.6+deg*0.6, nodeRelSize 4.2, nodeResolution 12, nodeOpacity .95; đẩy mặc định -90 (cụm chặt).
+- **Camera frame thông minh**: bán kính phân vị 85% (bỏ node văng lẻ) → khung sát, node không bé tí.
+- Chú giải đổi: "3 thiên hà (kho)" + "8 chiều · sóng sáng chạy". Khai báo types tối thiểu cho d3-force-3d.
+**Verify**: tsc xanh; preview xác nhận node theo màu kho + hạt màu chiều chạy trên dây mờ (HMR chunk động cần hard-reload để thấy layout tam giác mới).
+
 ## 2026-06-16 (đợt 33) — 🩹 Diệt TẬN GỐC crash 3D "reading 'tick'" (StrictMode mount 2 lần)
 Bản vá đợt 31 chưa đủ: founder vẫn `Cannot read 'tick'` ở comp._animationCycle → tickFrame → layoutTick, 3D đen (hardware-accel đã BẬT → không phải WebGL).
 Truy nguồn: layoutTick đọc `state.d3ForceLayout` đã bị `_destructor` null → frame MỒ CÔI. Gốc rễ = **React StrictMode (dev) mount component 2 lần**: instance A tạo rồi huỷ ngay, frame rAF đã xếp hàng của A chạy sau khi state null → throw async (try/catch & ErrorBoundary KHÔNG bắt được).

@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import ForceGraph3D from '3d-force-graph'
+import { forceX, forceY, forceZ } from 'd3-force-3d'
 import * as THREE from 'three'
 import SpriteText from 'three-spritetext'
 import type { GNode, GLink } from './Galaxy'
@@ -40,7 +41,7 @@ export default function Graph3D({ nodes, links, onOpen, onClose }: {
   const [q, setQ] = useState('')
   const [depth, setDepth] = useState(1)
   const [hidden, setHidden] = useState<Set<string>>(new Set())  // layer bị tắt
-  const [repel, setRepel] = useState(-130)
+  const [repel, setRepel] = useState(-90)
   const [linkDist, setLinkDist] = useState(42)
   const [particles, setParticles] = useState(true)
   const [labels, setLabels] = useState(true)
@@ -108,7 +109,7 @@ export default function Graph3D({ nodes, links, onOpen, onClose }: {
 
     const initTimer = setTimeout(() => {
       if (cancelled || !wrap.current) return
-      const N: N3[] = nodes.filter(n => n.kind !== 'block').map(n => ({ id: n.id, name: n.title ?? 'Trang', layer: n.layer ?? 'personal', kind: n.kind, val: 1 + Math.min(10, (deg.get(n.id) ?? 0)) * 0.7 }))
+      const N: N3[] = nodes.filter(n => n.kind !== 'block').map(n => ({ id: n.id, name: n.title ?? 'Trang', layer: n.layer ?? 'personal', kind: n.kind, val: 1.6 + Math.min(11, (deg.get(n.id) ?? 0)) * 0.6 }))
       const present = new Set(N.map(n => n.id))
       const L: L3[] = links.filter(l => present.has(l.from_node) && present.has(l.to_node)).map(l => ({ source: l.from_node, target: l.to_node, dimension: l.dimension, weight: 1 }))
       const vis = (id: string) => !hiddenRef.current.has(byId.get(id)?.layer ?? 'personal') && (!searchModeRef.current || !activeRef.current || activeRef.current.has(id))
@@ -123,7 +124,9 @@ export default function Graph3D({ nodes, links, onOpen, onClose }: {
         .backgroundColor('#06060c')
         .graphData({ nodes: N, links: L })
         .nodeVal('val')
-        .nodeRelSize(4)
+        .nodeRelSize(4.2)
+        .nodeResolution(12)
+        .nodeOpacity(0.95)
         .nodeColor((n: object) => { const x = n as N3; const on = !activeRef.current || activeRef.current.has(x.id); return on ? (LAYER_TINT[x.layer] ?? '#94a3b8') : 'rgba(120,120,140,0.12)' })
         .nodeVisibility((n: object) => vis((n as N3).id))
         .nodeLabel((n: object) => `<div style="font:600 12px sans-serif;color:#fff">${(n as N3).name}</div><div style="font:11px sans-serif;color:#a78bfa">${LAYER_NAME[(n as N3).layer] ?? ''} · ${deg.get((n as N3).id) ?? 0} liên kết</div>`)
@@ -137,24 +140,36 @@ export default function Graph3D({ nodes, links, onOpen, onClose }: {
           ;(s as unknown as { material: { depthWrite: boolean } }).material.depthWrite = false
           return s as unknown as THREE.Object3D
         })
-        .linkColor((l: object) => { const x = l as L3; const s = typeof x.source === 'object' ? (x.source as N3).id : x.source as string; const tg = typeof x.target === 'object' ? (x.target as N3).id : x.target as string; const on = !activeRef.current || (activeRef.current.has(s) && activeRef.current.has(tg)); return on ? (DIM_COLOR[x.dimension ?? ''] ?? '#3a8') : 'rgba(120,120,140,0.05)' })
+        // DÂY = sợi mờ trung tính (không tô 8 màu lên dây → hết loạn); MÀU 8 CHIỀU dồn lên HẠT sáng chạy theo wave
+        .linkColor((l: object) => { const x = l as L3; const s = typeof x.source === 'object' ? (x.source as N3).id : x.source as string; const tg = typeof x.target === 'object' ? (x.target as N3).id : x.target as string; const on = !activeRef.current || (activeRef.current.has(s) && activeRef.current.has(tg)); return on ? 'rgba(190,195,225,0.16)' : 'rgba(120,120,140,0.04)' })
         .linkVisibility((l: object) => { const x = l as L3; const s = typeof x.source === 'object' ? (x.source as N3).id : x.source as string; const tg = typeof x.target === 'object' ? (x.target as N3).id : x.target as string; return vis(s) && vis(tg) })
-        .linkOpacity(0.55)
-        .linkWidth(0.6)
-        .linkDirectionalParticles((): number => particlesRef.current ? 2 : 0)
-        .linkDirectionalParticleSpeed(0.006)
-        .linkDirectionalParticleWidth(1.4)
+        .linkOpacity(0.5)
+        .linkWidth(0.5)
+        .linkDirectionalParticles((l: object) => { const x = l as L3; const s = typeof x.source === 'object' ? (x.source as N3).id : x.source as string; const tg = typeof x.target === 'object' ? (x.target as N3).id : x.target as string; const on = !activeRef.current || (activeRef.current.has(s) && activeRef.current.has(tg)); return particlesRef.current && on ? 3 : 0 })
+        .linkDirectionalParticleColor((l: object) => DIM_COLOR[(l as L3).dimension ?? ''] ?? '#67e8f9')   // hạt mang màu CHIỀU liên kết
+        .linkDirectionalParticleSpeed(0.005)
+        .linkDirectionalParticleWidth(2.2)
         .onNodeClick((n: object) => { const g = byId.get((n as N3).id); if (g) { setSel(g); fg.cameraPosition({ x: (n as { x: number }).x, y: (n as { y: number }).y, z: (n as { z: number }).z + 120 }, n as { x: number; y: number; z: number }, 700) } })
         .onBackgroundClick(() => { setSel(null); setQ('') })
       fgRef.current = fg
       fg.d3Force('charge')?.strength(repelRef.current)
       fg.d3Force('link')?.distance(linkRef.current)
+      // 🌌 3 THIÊN HÀ: kéo mỗi kho về 1 tâm riêng trên trục X → tách thành 3 cụm rõ rệt (đời tôi · QNET · nhân loại)
+      // 3 thiên hà xếp TAM GIÁC (gọn khung hơn xếp hàng ngang → node to, vẫn thấy đủ 3 cụm)
+      const GAL: Record<string, { x: number; y: number }> = { personal: { x: 0, y: 360 }, corporate: { x: -430, y: -250 }, humanity: { x: 430, y: -250 } }
+      const gx = (n: unknown) => (GAL[(n as N3).layer] ?? GAL.corporate).x
+      const gy = (n: unknown) => (GAL[(n as N3).layer] ?? GAL.corporate).y
+      fg.d3Force('galaxyX', forceX(gx).strength(0.34))
+      fg.d3Force('galaxyY', forceY(gy).strength(0.34))
+      fg.d3Force('galaxyZ', forceZ(0).strength(0.06))
       // FRAME: nhìn thẳng vào tâm cụm, lùi xa theo bán kính
       const frameCam = () => {
         if (cancelled) return
         const ns = (fg.graphData().nodes as { x?: number; y?: number; z?: number }[])
-        let r = 0; for (const n of ns) r = Math.max(r, Math.hypot(n.x ?? 0, n.y ?? 0, n.z ?? 0))
-        fg.cameraPosition({ x: 0, y: 0, z: Math.max(220, r * 1.9 + 120) }, { x: 0, y: 0, z: 0 }, 900)
+        // bán kính PHÂN VỊ 85% (bỏ vài node văng lẻ) → khung sát, node không bị bé tí
+        const ds = ns.map(n => Math.hypot(n.x ?? 0, n.y ?? 0, n.z ?? 0)).sort((a, b) => a - b)
+        const r = ds.length ? ds[Math.floor(ds.length * 0.85)] : 300
+        fg.cameraPosition({ x: 0, y: 0, z: Math.max(260, r * 1.7 + 120) }, { x: 0, y: 0, z: 0 }, 900)
       }
       fg.onEngineStop(frameCam)
       timers.push(setTimeout(frameCam, 2500), setTimeout(frameCam, 5200)) // sim cần thời gian ổn định (đã gom để cleanup huỷ)
@@ -269,14 +284,14 @@ export default function Graph3D({ nodes, links, onOpen, onClose }: {
 
       {/* PANEL PHẢI — FILTER theo kho */}
       <div className="absolute right-3 top-3 w-[180px] hud-panel bg-[#0b0b14]/85 backdrop-blur p-2.5 z-10">
-        <div className="hud-label mb-1.5">Lọc kho</div>
+        <div className="hud-label mb-1.5">3 thiên hà (kho)</div>
         {Object.entries(layers).map(([L, c]) => (
           <button key={L} onClick={() => toggleLayer(L)} className={`w-full flex items-center justify-between text-left rounded-md px-2 py-1 text-xs ${hidden.has(L) ? 'opacity-35' : 'hover:bg-white/5'}`}>
             <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full" style={{ background: LAYER_TINT[L] }} />{LAYER_NAME[L] ?? L}</span>
             <span className="text-zinc-600 tabular-nums">{c}</span>
           </button>
         ))}
-        <div className="hud-label mt-2 mb-1" style={{ fontSize: 8.5 }}>8 chiều (màu link)</div>
+        <div className="hud-label mt-2 mb-1" style={{ fontSize: 8.5 }}>8 chiều · sóng sáng chạy</div>
         <div className="grid grid-cols-2 gap-0.5">
           {Object.entries(DIM_COLOR).map(([d, c]) => <span key={d} className="flex items-center gap-1 text-[9px] text-zinc-500"><span className="w-2 h-2 rounded-full" style={{ background: c }} />{d}</span>)}
         </div>
