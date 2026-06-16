@@ -2,6 +2,16 @@
 
 > Ghi lại mỗi đợt build để lần sau làm tốt hơn. Quy trình chuẩn: **đọc docs → sửa code → `npm run build` → test thật trên preview (đăng nhập, bấm từng nút) → cập nhật docs**.
 
+## 2026-06-16 (đợt 31) — 🛠 Sửa ĐÚNG crash 3D/3 Vòng + khôi phục "Cây sự sống" xoè rộng
+Founder vẫn đen màn 3D + 3 Vòng crash (lỗi mới `Cannot read 'tick'` ở comp.tickFrame). Phát hiện: chính bản vá trước GÂY ra — gọi `forceContextLoss()` khi vòng animation thư viện còn chạy → frame kế đọc state đã huỷ → throw → sập React → 3 Vòng (2D) trắng theo.
+- **Teardown đúng**: `pauseAnimation()` DỪNG vòng rAF nội bộ TRƯỚC, rồi mới `_destructor()` (tự dispose renderer). Bỏ forceContextLoss/dispose thủ công (thủ phạm).
+- **Probe WebGL không rò**: kiểm tra context rồi `WEBGL_lose_context.loseContext()` ngay → không chiếm slot trong ~16 context.
+- **rendererConfig**: `powerPreference high-performance` (chắc lấy GPU rời; low-power có máy rơi vào integrated lỗi) + stencil off (tránh OES_packed_depth_stencil) + antialias off + failIfMajorPerformanceCaveat false.
+- Verify: mở 3D (render cụm cầu, KHÔNG đen) → Về 2D → 3 Vòng (render 3 vành, KHÔNG crash) → 0 lỗi console.
+- **Khôi phục Mandala** (bị ẩn sau ⋯ ở đợt 28) → đưa lại thanh chính, đổi tên **"🌳 Cây sự sống"**. ⋯ giờ chỉ còn Radar/Neuro.
+- **Cây sự sống xoè RỘNG**: layout đệ quy mới — gốc ở đáy, 3 kho chia quạt ~230° theo số lá; con chiếm sub-wedge của cha; sâu hơn = bán kính xa hơn → tán vươn rộng cả hai bên thay vì 1 cung hẹp.
+**Còn**: depth theo level (sâu hơn hiện thêm nhánh / xa thì mờ bớt) — làm tiếp.
+
 ## 2026-06-16 (đợt 30) — 🛡️ Sửa CRASH WebGL: 3D + view mắt không còn kéo sập app
 Founder báo: mở view mắt (3 Vòng) & 3D crash hoàn toàn. Lỗi gốc (từ stack): `THREE.WebGLRenderer: A WebGL context could not be created (OES_packed_depth_stencil required)` + `Error creating WebGL context` + bug three `Cannot access 'info' before initialization` ở onContextRestore. Các throw này KHÔNG được bắt → sập cả React → overlay lỗi che luôn view mắt 2D (và GPU process crash kéo theo canvas 2D).
 **Nguyên nhân**: (1) GPU yếu / hardware-accel tắt → không tạo nổi WebGL context; (2) mở/đóng 3D nhiều lần KHÔNG giải phóng context → cạn (~16) → trình duyệt từ chối; (3) three tự "restore" context lỗi → throw lần 2.

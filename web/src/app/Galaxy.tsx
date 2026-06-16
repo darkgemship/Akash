@@ -177,34 +177,40 @@ export default function Galaxy({ nodes, links, onOpen, onConnect, modeReq }: {
       const rand = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647 }
 
       if (mode === 'mandala') {
-        // 🌳 CÂY SỰ SỐNG: thiền giả ngồi dưới — kho cá nhân ngay đỉnh đầu,
-        // QNET rồi nhân loại mở rộng lên trên như cây quạt / tán cây
-        const fx = cx, fy = H * 0.76                       // vị trí thiền giả
-        const Rmax = Math.min(W * 0.46, fy - 36)           // tán ngoài cùng vừa khung
-        const RING: Record<string, number> = { personal: Rmax * 0.36, corporate: Rmax * 0.66, humanity: Rmax * 0.96 }
-        const span = Math.PI * 0.82                        // quạt ~148° mở lên trời
-        const aMid = -Math.PI / 2
-        for (const layer of ['personal', 'corporate', 'humanity']) {
-          const layerNodes = nodes.filter(n => (n.layer ?? 'personal') === layer)
-          if (!layerNodes.length) continue
-          const kho = layerNodes.find(n => n.kind === 'kho')
-          // kho = mắt cây trên trục thân, ngay "đỉnh đầu" của vòng trong nó
-          if (kho) m.set(kho.id, { x: fx, y: fy - RING[layer] + Rmax * 0.05, r: SIZE.kho, color: COLOR.kho, node: kho, phase: rand() * Math.PI * 2 })
-          // DFS để con đứng cạnh cha → cành toả đều
-          const rest: GNode[] = []
-          const roots = layerNodes.filter(n => n.id !== kho?.id && (!n.parent_id || !ids.has(n.parent_id) || n.parent_id === kho?.id || nodes.find(p => p.id === n.parent_id)?.layer !== layer))
-          const walk = (n: GNode) => { rest.push(n); kidsOf(n.id).filter(k => (k.layer ?? '') === layer).forEach(walk) }
-          roots.forEach(walk)
-          layerNodes.forEach(n => { if (n.id !== kho?.id && !rest.includes(n)) rest.push(n) })
-          const R = RING[layer]
-          rest.forEach((n, i) => {
-            // trải đều trên cung quạt, chừa khoảng giữa cho trục thân cây
-            const f = rest.length === 1 ? 0.5 : i / (rest.length - 1)
-            let a = aMid - span / 2 + f * span
-            if (Math.abs(a - aMid) < 0.06) a += a < aMid ? -0.06 : 0.06
-            m.set(n.id, { x: fx + Math.cos(a) * R, y: fy + Math.sin(a) * R, r: SIZE[n.kind] ?? 4, color: COLOR[n.kind] ?? COLOR.note, node: n, phase: rand() * Math.PI * 2 })
-          })
+        // 🌳 CÂY SỰ SỐNG: gốc ở ĐÁY, cành toả QUẠT RỘNG lên & sang hai bên; càng sâu càng vươn xa.
+        // 3 kho = 3 cành lớn từ gốc, chia góc theo độ rậm (số lá) → tán cây cân, không dồn một cung.
+        const fx = cx, fy = H * 0.95                        // gốc cây sát đáy khung
+        const up = -Math.PI / 2                             // hướng vươn lên trời
+        const FULL = Math.PI * 1.28                          // tổng quạt ~230° (xoè rộng thay vì 1 cung hẹp)
+        const maxR = Math.min(W * 0.47, fy - 28)
+        const leafMemo = new Map<string, number>()
+        const leaves = (id: string, layer: string): number => {   // số lá của 1 nhánh (parent_id là cây → không lặp)
+          if (leafMemo.has(id)) return leafMemo.get(id)!
+          const ks = kidsOf(id).filter(k => (k.layer ?? 'personal') === layer)
+          const v = ks.length ? ks.reduce((s, k) => s + leaves(k.id, layer), 0) : 1
+          leafMemo.set(id, v); return v
         }
+        const placed = new Set<string>()
+        const place = (n: GNode, layer: string, a0: number, a1: number, depth: number) => {
+          if (placed.has(n.id)) return; placed.add(n.id)
+          const a = (a0 + a1) / 2
+          const R = n.kind === 'kho' ? maxR * 0.13 : maxR * Math.min(1, 0.2 + depth * 0.16)   // sâu hơn = xa gốc hơn
+          m.set(n.id, { x: fx + Math.cos(a) * R, y: fy + Math.sin(a) * R, r: n.kind === 'kho' ? SIZE.kho : (SIZE[n.kind] ?? 4), color: n.kind === 'kho' ? COLOR.kho : (COLOR[n.kind] ?? COLOR.note), node: n, phase: rand() * Math.PI * 2 })
+          const ks = kidsOf(n.id).filter(k => (k.layer ?? 'personal') === layer && !placed.has(k.id))
+          if (!ks.length) return
+          const ws = ks.map(k => leaves(k.id, layer)); const tot = ws.reduce((s, w) => s + w, 0) || 1
+          // con chiếm sub-wedge của cha (thu hẹp nhẹ để cành không chạm nhau) → toả như cành thật
+          const pad = (a1 - a0) * 0.06; let cur = a0 + pad; const usable = (a1 - a0) - pad * 2
+          ks.forEach((k, i) => { const w = (ws[i] / tot) * usable; place(k, layer, cur, cur + w, depth + 1); cur += w })
+        }
+        const layerRoots = (['personal', 'corporate', 'humanity'] as const)
+          .map(L => ({ L: L as string, kho: nodes.find(n => n.kind === 'kho' && (n.layer ?? 'personal') === L) }))
+          .filter((x): x is { L: string; kho: GNode } => !!x.kho)
+        const lw = layerRoots.map(x => leaves(x.kho.id, x.L)); const ltot = lw.reduce((s, w) => s + w, 0) || 1
+        let cur = up - FULL / 2
+        layerRoots.forEach((x, i) => { const w = (lw[i] / ltot) * FULL; place(x.kho, x.L, cur, cur + w, 1); cur += w })
+        // node lạc (không nằm trong cây kho) → rải mờ ở rìa tán
+        nodes.forEach(n => { if (!m.has(n.id)) { const a = up - FULL / 2 + rand() * FULL; m.set(n.id, { x: fx + Math.cos(a) * maxR * 1.04, y: fy + Math.sin(a) * maxR * 1.04, r: SIZE[n.kind] ?? 4, color: COLOR[n.kind] ?? COLOR.note, node: n, phase: rand() * Math.PI * 2 }) } })
       } else if (mode === 'radar') {
         // 🎯 RADAR 8 CHIỀU: node đậu trên trục của chiều mạnh nhất nó tham gia
         const Rmax = Math.min(W, H) * 0.40
@@ -1379,13 +1385,13 @@ export default function Galaxy({ nodes, links, onOpen, onConnect, modeReq }: {
         <div className="flex items-center gap-1 rounded-md bg-[#10101a]/85 backdrop-blur border border-[var(--hud-line)] p-1 text-[11px]">
           {/* mode CHÍNH — luôn hiện */}
           <button onClick={() => setMode('galaxy')} title="Cấu trúc kho — cái gì nằm trong cái gì" className={`px-2 py-1.5 rounded-lg ${mode === 'galaxy' ? 'bg-violet-500/40 text-white' : 'text-zinc-400 hover:bg-white/10'}`}>🌌 Galaxy</button>
+          <button onClick={() => { setMode('mandala'); setFlow(true) }} title="Cây Sự Sống — gốc ở đáy, cành tri thức toả rộng lên trời; sâu hơn vươn xa hơn" className={`px-2 py-1.5 rounded-lg ${mode === 'mandala' ? 'bg-amber-500/35 text-amber-100 shadow-lg shadow-amber-500/30' : 'text-zinc-400 hover:bg-white/10'}`}>🌳 Cây sự sống</button>
           <button onClick={() => { setMode('timeline'); setMotion('still') }} title="Dòng đời — tri thức đan vào mốc thời gian thực; bật 🌈 Cảm xúc để thấy hành trình sáng dần" className={`px-2 py-1.5 rounded-lg ${mode === 'timeline' ? 'bg-blue-500/35 text-blue-100 shadow-lg shadow-blue-500/30' : 'text-zinc-400 hover:bg-white/10'}`}>📜 Dòng đời</button>
           <button onClick={() => { setMode('rings'); setMotion('still') }} title="3 vòng đồng tâm — đời tôi ở lõi, QNET, nhân loại; đập theo nhịp tim" className={`px-2 py-1.5 rounded-lg ${mode === 'rings' ? 'bg-pink-500/30 text-pink-100 shadow-lg shadow-pink-500/30' : 'text-zinc-400 hover:bg-white/10'}`}>🪐 3 Vòng</button>
           <button onClick={() => setShow3d(true)} title="Bộ não 3D — xoay/zoom mọi chiều, tìm node sáng, lọc kho, chỉnh lực" className="px-2 py-1.5 rounded-lg text-zinc-400 hover:bg-white/10">🌐 3D</button>
           {/* mode NÂNG CAO — ẩn sau ⋯ cho đỡ rối */}
           {moreModes && <>
             <span className="w-px self-stretch bg-[var(--hud-line)] mx-0.5" />
-            <button onClick={() => { setMode('mandala'); setFlow(true) }} title="Cây Sự Sống — tri thức nở trên đỉnh đầu" className={`px-2 py-1.5 rounded-lg ${mode === 'mandala' ? 'bg-amber-500/35 text-amber-100 shadow-lg shadow-amber-500/30' : 'text-zinc-400 hover:bg-white/10'}`}>🧘 Mandala</button>
             <button onClick={() => { setMode('radar'); setMotion('still'); setFlow(false); setDimOff(new Set()) }} title="8 chiều liên kết cân hay lệch — bấm trục để soi riêng" className={`px-2 py-1.5 rounded-lg ${mode === 'radar' ? 'bg-violet-500/35 text-violet-100' : 'text-zinc-400 hover:bg-white/10'}`}>🎯 Radar</button>
             <button onClick={() => { setMode('neuro'); setMotion('still'); setFlow(true) }} title="Bộ não tự xoay — kéo nền để xoay, mỗi nhánh một vùng não" className={`px-2 py-1.5 rounded-lg ${mode === 'neuro' ? 'bg-emerald-500/35 text-emerald-100 shadow-lg shadow-emerald-500/30' : 'text-zinc-400 hover:bg-white/10'}`}>🧠 Neuro</button>
           </>}

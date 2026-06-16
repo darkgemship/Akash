@@ -75,11 +75,13 @@ export default function Graph3D({ nodes, links, onOpen, onClose }: {
   // dựng đồ thị 1 lần
   useEffect(() => {
     if (!wrap.current) return
-    // 0) kiểm tra WebGL trước — máy không hỗ trợ thì hiện fallback, KHÔNG để three throw làm sập app
+    // 0) kiểm tra WebGL trước — máy không hỗ trợ thì hiện fallback, KHÔNG để three throw làm sập app.
+    //    Giải phóng context probe NGAY (tránh chiếm 1 slot trong ~16 context của trình duyệt).
     try {
       const probe = document.createElement('canvas')
-      const gl = probe.getContext('webgl2') || probe.getContext('webgl') || probe.getContext('experimental-webgl')
+      const gl = (probe.getContext('webgl2') || probe.getContext('webgl')) as WebGLRenderingContext | null
       if (!gl) { setGlError(true); return }
+      gl.getExtension('WEBGL_lose_context')?.loseContext()
     } catch { setGlError(true); return }
 
     const N: N3[] = nodes.filter(n => n.kind !== 'block').map(n => ({ id: n.id, name: n.title ?? 'Trang', layer: n.layer ?? 'personal', kind: n.kind, val: 1 + Math.min(10, (deg.get(n.id) ?? 0)) * 0.7 }))
@@ -89,8 +91,9 @@ export default function Graph3D({ nodes, links, onOpen, onClose }: {
 
     let fg: FG
     try {
-      // attrs nhẹ cho GPU yếu: tắt antialias/stencil, ưu tiên tiết kiệm điện, không bỏ cuộc nếu GPU chậm
-      fg = new ForceGraph3D(wrap.current, { rendererConfig: { antialias: false, alpha: true, stencil: false, powerPreference: 'low-power', failIfMajorPerformanceCaveat: false } })
+      // stencil:false → tránh lỗi "OES_packed_depth_stencil required"; antialias off nhẹ máy; cho phép GPU yếu (no perf-caveat).
+      // dùng high-performance để chắc chắn lấy GPU rời (low-power có máy rơi vào đường integrated lỗi).
+      fg = new ForceGraph3D(wrap.current, { rendererConfig: { antialias: false, alpha: true, stencil: false, powerPreference: 'high-performance', failIfMajorPerformanceCaveat: false } })
     } catch (e) { console.warn('3D init failed', e); setGlError(true); return }
     fg
       .backgroundColor('#06060c')
@@ -151,12 +154,10 @@ export default function Graph3D({ nodes, links, onOpen, onClose }: {
     return () => {
       cancelAnimationFrame(raf); window.removeEventListener('resize', onResize)
       canvas?.removeEventListener('webglcontextlost', onLost)
-      // GIẢI PHÓNG context triệt để (tránh cạn ~16 context của trình duyệt khi mở/đóng 3D nhiều lần)
-      try {
-        const r = (fg as unknown as { renderer?: () => { dispose?: () => void; forceContextLoss?: () => void } }).renderer?.()
-        r?.forceContextLoss?.(); r?.dispose?.()
-      } catch { /* bỏ qua */ }
-      try { fg._destructor?.() } catch { /* bỏ qua */ }
+      // THỨ TỰ QUAN TRỌNG: dừng vòng animation nội bộ của thư viện TRƯỚC, rồi mới huỷ.
+      // (nếu huỷ/forceContextLoss khi loop còn chạy → frame kế tiếp đọc state đã null → "Cannot read 'tick'" → sập app)
+      try { (fg as unknown as { pauseAnimation?: () => void }).pauseAnimation?.() } catch { /* bỏ qua */ }
+      try { fg._destructor?.() } catch { /* bỏ qua */ }  // _destructor tự dispose renderer + giải phóng context
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
