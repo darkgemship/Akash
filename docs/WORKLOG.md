@@ -2,6 +2,17 @@
 
 > Ghi lại mỗi đợt build để lần sau làm tốt hơn. Quy trình chuẩn: **đọc docs → sửa code → `npm run build` → test thật trên preview (đăng nhập, bấm từng nút) → cập nhật docs**.
 
+## 2026-06-16 (đợt 35) — 🌟 3D thiên hà v2: sao tâm + 5 màu theo level + tách cụm + reset/search
+(đợt 1/3 cho loạt yêu cầu redesign graph của founder)
+- **3 THIÊN HÀ tách rõ** xếp TAM GIÁC (cá nhân đỉnh · QNET trái-dưới · nhân loại phải-dưới). Cách làm: để sim chạy thành 1 cụm rồi DỜI deterministic mỗi cụm-kho về tâm thiên hà sau khi engine nguội (cooldownTicks 90 + onEngineStop) — vì lực d3 (forceX/custom) bị engine nguội/decay vô hiệu (đã debug: node kẹt ±58).
+- **SAO TÂM mỗi kho**: cầu phát sáng + QUẦNG TRÒN mềm (texture radial) + tên kho. Cá nhân = mặt trời ĐỎ #ff5a36 · QNET = sao VÀNG · Nhân loại = sao HỒNG-TÍM.
+- **Node 5 MÀU theo LEVEL trong kho** (GALAXY_PALETTE): L0 sao → L1 "trái đất" xanh dương → L2-L4 3 màu phối → L5+ giữ màu cuối. levelOf = số bước parent_id tới gốc kho. Hết loạn: node chỉ mang nghĩa kho+tầng.
+- **Reset view**: nút "⌖ Toàn cảnh" + bấm nền → camera về toàn cảnh 3 thiên hà (đỡ lost sau khi zoom node).
+- **Search**: gõ → page khớp + hàng xóm sáng, còn lại ẩn (đã có, xác nhận chạy).
+- Camera frame theo phân vị 85% (bỏ node văng lẻ).
+**Verify**: preview — 3 thiên hà tam giác, sao tâm quầng tròn + label, node màu theo level, dây bắc cầu; 0 lỗi console; tsc xanh.
+**Còn (đợt 2-3)**: Cây sự sống = mảng quạt chia trung điểm; 3 Vòng = 5 màu/level + tán võng mạc + dây plasma uốn; link 3D wave đổi màu mềm hơn.
+
 ## 2026-06-16 (đợt 34) — 🌌 3D redesign: 3 thiên hà + sóng màu chạy (hết loạn màu, node dễ bấm)
 Founder: 3 chạy rồi nhưng loạn màu (màu node + tầng + 8 màu chiều chồng nhau), node nhỏ khó chọn. Ý tưởng founder: mỗi kho = 1 thiên hà, chiều liên kết = sợi sáng màu chạy theo wave.
 - **1 hệ màu duy nhất cho node = theo KHO**: cyan (Cá nhân) · tím (QNET) · hồng (Nhân loại). Bỏ mọi hệ màu cạnh tranh.

@@ -1,7 +1,6 @@
 'use client'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import ForceGraph3D from '3d-force-graph'
-import { forceX, forceY, forceZ } from 'd3-force-3d'
 import * as THREE from 'three'
 import SpriteText from 'three-spritetext'
 import type { GNode, GLink } from './Galaxy'
@@ -10,6 +9,17 @@ import { DIM_COLOR } from './Galaxy'
 // màu theo KHO (đồng bộ mode 3 Vòng): đời tôi cyan · QNET tím · nhân loại hồng
 const LAYER_TINT: Record<string, string> = { personal: '#22d3ee', corporate: '#a78bfa', humanity: '#e879f9' }
 const LAYER_NAME: Record<string, string> = { personal: '🧠 Cá nhân', corporate: '🌐 QNET', humanity: '♾️ Nhân loại' }
+// 🌟 mỗi kho = 1 THIÊN HÀ có SAO ở tâm + dải màu 5 LEVEL (sâu dần) phối hài hoà:
+//   L0 = sao tâm · L1 = "trái đất" · L2-L4 = 3 màu phối · L5+ giữ màu cuối. Sao mỗi kho 1 màu riêng.
+const GALAXY_PALETTE: Record<string, { star: string; levels: string[] }> = {
+  personal:  { star: '#ff5a36', levels: ['#ff7a4d', '#3b82f6', '#22d3ee', '#a78bfa', '#fde68a'] }, // mặt trời ĐỎ → trái đất xanh dương → phối
+  corporate: { star: '#f5b942', levels: ['#ffd166', '#34d399', '#22d3ee', '#818cf8', '#f0abfc'] }, // sao VÀNG → ngọc lục bảo → phối
+  humanity:  { star: '#e879f9', levels: ['#f0abfc', '#a78bfa', '#60a5fa', '#67e8f9', '#fca5a5'] }, // sao HỒNG TÍM → tím → phối
+}
+const galaxyColor = (layer: string, level: number) => {
+  const p = GALAXY_PALETTE[layer] ?? GALAXY_PALETTE.personal
+  return p.levels[Math.min(level, p.levels.length - 1)] ?? p.levels[0]
+}
 // bỏ dấu để search không-dấu vẫn trúng
 const vnorm = (s: string) => (s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase().trim()
 
@@ -26,7 +36,19 @@ export default function Graph3D({ nodes, links, onOpen, onClose }: {
   const fgRef = useRef<FG | null>(null)
   const activeRef = useRef<Set<string> | null>(null)   // id node đang "sáng"; null = tất cả
   const searchModeRef = useRef(false)   // true = đang TÌM (node ngoài tập → ẩn hẳn); false = chọn node theo level (ngoài tập → chỉ MỜ)
+  const frameCamRef = useRef<(() => void) | null>(null)   // đưa camera về TOÀN CẢNH (nút + click nền) → đỡ bị lost sau khi zoom vào node
   const byId = useMemo(() => new Map(nodes.map(n => [n.id, n])), [nodes])
+  // LEVEL trong kho = số bước parent_id tới gốc kho (kho=0, con=1, cháu=2…) → tô màu theo tầng
+  const levelOf = useMemo(() => {
+    const m = new Map<string, number>(); const idmap = new Map(nodes.map(n => [n.id, n]))
+    const calc = (id: string, seen: Set<string>): number => {
+      if (m.has(id)) return m.get(id)!
+      const n = idmap.get(id); if (!n) return 0
+      if (n.kind === 'kho' || !n.parent_id || !idmap.has(n.parent_id) || seen.has(n.parent_id)) { m.set(id, 0); return 0 }
+      seen.add(id); const v = Math.min(5, calc(n.parent_id, seen) + 1); m.set(id, v); return v
+    }
+    nodes.forEach(n => calc(n.id, new Set())); return m
+  }, [nodes])
   const deg = useMemo(() => { const m = new Map<string, number>(); links.forEach(l => { m.set(l.from_node, (m.get(l.from_node) ?? 0) + 1); m.set(l.to_node, (m.get(l.to_node) ?? 0) + 1) }); return m }, [links])
   const adj = useMemo(() => { const m = new Map<string, Set<string>>(); links.forEach(l => { (m.get(l.from_node) ?? m.set(l.from_node, new Set()).get(l.from_node)!).add(l.to_node); (m.get(l.to_node) ?? m.set(l.to_node, new Set()).get(l.to_node)!).add(l.from_node) }); return m }, [links])
 
@@ -127,7 +149,7 @@ export default function Graph3D({ nodes, links, onOpen, onClose }: {
         .nodeRelSize(4.2)
         .nodeResolution(12)
         .nodeOpacity(0.95)
-        .nodeColor((n: object) => { const x = n as N3; const on = !activeRef.current || activeRef.current.has(x.id); return on ? (LAYER_TINT[x.layer] ?? '#94a3b8') : 'rgba(120,120,140,0.12)' })
+        .nodeColor((n: object) => { const x = n as N3; const on = !activeRef.current || activeRef.current.has(x.id); return on ? galaxyColor(x.layer, levelOf.get(x.id) ?? 1) : 'rgba(120,120,140,0.1)' })
         .nodeVisibility((n: object) => vis((n as N3).id))
         .nodeLabel((n: object) => `<div style="font:600 12px sans-serif;color:#fff">${(n as N3).name}</div><div style="font:11px sans-serif;color:#a78bfa">${LAYER_NAME[(n as N3).layer] ?? ''} · ${deg.get((n as N3).id) ?? 0} liên kết</div>`)
         .nodeThreeObjectExtend(true)
@@ -150,18 +172,30 @@ export default function Graph3D({ nodes, links, onOpen, onClose }: {
         .linkDirectionalParticleSpeed(0.005)
         .linkDirectionalParticleWidth(2.2)
         .onNodeClick((n: object) => { const g = byId.get((n as N3).id); if (g) { setSel(g); fg.cameraPosition({ x: (n as { x: number }).x, y: (n as { y: number }).y, z: (n as { z: number }).z + 120 }, n as { x: number; y: number; z: number }, 700) } })
-        .onBackgroundClick(() => { setSel(null); setQ('') })
+        .onBackgroundClick(() => { setSel(null); setQ(''); frameCamRef.current?.() })   // bấm nền = bỏ chọn + VỀ TOÀN CẢNH
       fgRef.current = fg
       fg.d3Force('charge')?.strength(repelRef.current)
       fg.d3Force('link')?.distance(linkRef.current)
       // 🌌 3 THIÊN HÀ: kéo mỗi kho về 1 tâm riêng trên trục X → tách thành 3 cụm rõ rệt (đời tôi · QNET · nhân loại)
       // 3 thiên hà xếp TAM GIÁC (gọn khung hơn xếp hàng ngang → node to, vẫn thấy đủ 3 cụm)
       const GAL: Record<string, { x: number; y: number }> = { personal: { x: 0, y: 360 }, corporate: { x: -430, y: -250 }, humanity: { x: 430, y: -250 } }
-      const gx = (n: unknown) => (GAL[(n as N3).layer] ?? GAL.corporate).x
-      const gy = (n: unknown) => (GAL[(n as N3).layer] ?? GAL.corporate).y
-      fg.d3Force('galaxyX', forceX(gx).strength(0.34))
-      fg.d3Force('galaxyY', forceY(gy).strength(0.34))
-      fg.d3Force('galaxyZ', forceZ(0).strength(0.06))
+      // 🌌 TÁCH 3 THIÊN HÀ kiểu DETERMINISTIC: để sim chạy tự nhiên thành 1 cụm, RỒI sau khi nguội dời nguyên cụm
+      // con của mỗi kho về tâm thiên hà của nó (giữ cấu trúc nội bộ, chỉ tịnh tiến + nén nhẹ). Chắc ăn, không phụ thuộc lực.
+      fg.cooldownTicks(90)   // engine dừng sớm (~2s) để bố trí thiên hà rồi đứng yên
+      type Pos = { layer?: string; x: number; y: number; z: number; __gal?: boolean }
+      const layoutGalaxies = () => {
+        const ns = fg.graphData().nodes as Pos[]
+        if (!ns.length || ns[0].__gal) return   // chỉ làm 1 lần
+        const cen: Record<string, { x: number; y: number; n: number }> = {}
+        for (const n of ns) { const L = n.layer ?? 'corporate'; (cen[L] ??= { x: 0, y: 0, n: 0 }); cen[L].x += n.x ?? 0; cen[L].y += n.y ?? 0; cen[L].n++ }
+        for (const L in cen) { cen[L].x /= cen[L].n || 1; cen[L].y /= cen[L].n || 1 }
+        for (const n of ns) {
+          const L = n.layer ?? 'corporate', g = GAL[L] ?? GAL.corporate, c = cen[L]
+          n.x = g.x + ((n.x ?? 0) - c.x) * 0.8   // dời cụm về tâm thiên hà + nén 0.8 cho gọn
+          n.y = g.y + ((n.y ?? 0) - c.y) * 0.8
+          n.__gal = true
+        }
+      }
       // FRAME: nhìn thẳng vào tâm cụm, lùi xa theo bán kính
       const frameCam = () => {
         if (cancelled) return
@@ -171,14 +205,35 @@ export default function Graph3D({ nodes, links, onOpen, onClose }: {
         const r = ds.length ? ds[Math.floor(ds.length * 0.85)] : 300
         fg.cameraPosition({ x: 0, y: 0, z: Math.max(260, r * 1.7 + 120) }, { x: 0, y: 0, z: 0 }, 900)
       }
-      fg.onEngineStop(frameCam)
-      timers.push(setTimeout(frameCam, 2500), setTimeout(frameCam, 5200)) // sim cần thời gian ổn định (đã gom để cleanup huỷ)
+      const settle = () => { layoutGalaxies(); frameCam() }   // dời 3 thiên hà rồi đóng khung
+      fg.onEngineStop(settle)
+      frameCamRef.current = frameCam
+      timers.push(setTimeout(settle, 2600), setTimeout(settle, 5200)) // dự phòng nếu onEngineStop trễ
       // ✨ trường sao nền
       const stars = new THREE.BufferGeometry()
       const arr = new Float32Array(600 * 3)
       for (let i = 0; i < arr.length; i++) arr[i] = (Math.sin(i * 99.13) * 0.5) * 4200
       stars.setAttribute('position', new THREE.BufferAttribute(arr, 3))
       fg.scene().add(new THREE.Points(stars, new THREE.PointsMaterial({ color: 0x8b86b0, size: 1.6, transparent: true, opacity: 0.6 })))
+      // 🌟 SAO TÂM mỗi thiên hà: cầu phát sáng + QUẦNG TRÒN MỀM (texture radial) + tên kho
+      const glowTex = (() => {
+        const cv = document.createElement('canvas'); cv.width = cv.height = 128
+        const g = cv.getContext('2d')!; const rg = g.createRadialGradient(64, 64, 0, 64, 64, 64)
+        rg.addColorStop(0, 'rgba(255,255,255,1)'); rg.addColorStop(0.25, 'rgba(255,255,255,0.7)'); rg.addColorStop(1, 'rgba(255,255,255,0)')
+        g.fillStyle = rg; g.fillRect(0, 0, 128, 128)
+        const t = new THREE.CanvasTexture(cv); return t
+      })()
+      ;(['personal', 'corporate', 'humanity'] as const).forEach(L => {
+        const c = GALAXY_PALETTE[L].star, ctr = GAL[L]
+        const sun = new THREE.Mesh(new THREE.SphereGeometry(15, 24, 24), new THREE.MeshBasicMaterial({ color: c }))
+        sun.position.set(ctr.x, ctr.y, 0); fg.scene().add(sun)
+        const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: c, transparent: true, opacity: 0.65, blending: THREE.AdditiveBlending, depthWrite: false }))
+        halo.scale.set(150, 150, 1); halo.position.set(ctr.x, ctr.y, 0); fg.scene().add(halo)
+        const lab = new SpriteText(LAYER_NAME[L]); lab.color = c; lab.textHeight = 14
+        ;(lab as unknown as THREE.Object3D).position.set(ctr.x, ctr.y - 42, 0)
+        ;(lab as unknown as { material: { depthWrite: boolean } }).material.depthWrite = false
+        fg.scene().add(lab as unknown as THREE.Object3D)
+      })
 
       onResize = () => { if (wrap.current) { fg.width(wrap.current.clientWidth); fg.height(wrap.current.clientHeight) } }
       onResize(); window.addEventListener('resize', onResize)
@@ -233,7 +288,10 @@ export default function Graph3D({ nodes, links, onOpen, onClose }: {
     <div className="absolute inset-0 z-20 flex bg-[#06060c]">
       {/* PANEL TRÁI */}
       <div className="w-[270px] shrink-0 border-r border-[var(--hud-line)] bg-[#0b0b14]/80 backdrop-blur p-3 overflow-auto flex flex-col gap-3">
-        <button onClick={onClose} className="hud-label hud-label-accent text-left">← về 2D</button>
+        <div className="flex items-center gap-2">
+          <button onClick={onClose} className="hud-label hud-label-accent text-left">← về 2D</button>
+          <button onClick={() => { setSel(null); setQ(''); frameCamRef.current?.() }} title="Đưa camera về toàn cảnh 3 thiên hà" className="ml-auto text-[10px] rounded-md border border-white/10 text-zinc-400 px-2 py-1 hover:text-white hover:border-white/25">⌖ Toàn cảnh</button>
+        </div>
         <input value={q} onChange={e => setQ(e.target.value)} placeholder="🔍 Tìm trong não — node liên quan sáng, còn lại tắt" className="w-full rounded-lg bg-white/5 border border-[var(--hud-line)] px-3 py-2 text-xs outline-none focus:border-violet-400/50" />
         {/* INSPECTOR */}
         <div>
