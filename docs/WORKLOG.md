@@ -2,6 +2,12 @@
 
 > Ghi lại mỗi đợt build để lần sau làm tốt hơn. Quy trình chuẩn: **đọc docs → sửa code → `npm run build` → test thật trên preview (đăng nhập, bấm từng nút) → cập nhật docs**.
 
+## 2026-06-16 (đợt 32) — 🔦 3D depth theo level: tăng level hiện thêm nhánh, ngoài nhánh chỉ MỜ
+Founder: ở chỗ Depth (3D Inspector) cho thể hiện theo số level — càng sâu nhánh mới tăng, còn lại ẩn MỜ bớt cho đỡ nặng + trực quan (thay vì ẩn hẳn).
+- Tách 2 chế độ tập-sáng: **TÌM** (gõ ô search) → node ngoài tập ẩn hẳn (như cũ); **CHỌN NODE + Depth 1/2/3** → node trong nhánh tới độ sâu `depth` sáng rõ, node ngoài nhánh VẪN hiện nhưng làm mờ (màu xám nhạt 0.12, link 0.05) → thấy bối cảnh mà không rối.
+- Tăng Depth 1→2→3 = tập sáng lan thêm 1 lớp BFS → "nhánh mới tăng" đúng nghĩa.
+**Verify**: 3D mở/đóng sạch, không crash, 0 lỗi console; tsc xanh.
+
 ## 2026-06-16 (đợt 31) — 🛠 Sửa ĐÚNG crash 3D/3 Vòng + khôi phục "Cây sự sống" xoè rộng
 Founder vẫn đen màn 3D + 3 Vòng crash (lỗi mới `Cannot read 'tick'` ở comp.tickFrame). Phát hiện: chính bản vá trước GÂY ra — gọi `forceContextLoss()` khi vòng animation thư viện còn chạy → frame kế đọc state đã huỷ → throw → sập React → 3 Vòng (2D) trắng theo.
 - **Teardown đúng**: `pauseAnimation()` DỪNG vòng rAF nội bộ TRƯỚC, rồi mới `_destructor()` (tự dispose renderer). Bỏ forceContextLoss/dispose thủ công (thủ phạm).

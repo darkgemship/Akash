@@ -24,6 +24,7 @@ export default function Graph3D({ nodes, links, onOpen, onClose }: {
   const wrap = useRef<HTMLDivElement>(null)
   const fgRef = useRef<FG | null>(null)
   const activeRef = useRef<Set<string> | null>(null)   // id node đang "sáng"; null = tất cả
+  const searchModeRef = useRef(false)   // true = đang TÌM (node ngoài tập → ẩn hẳn); false = chọn node theo level (ngoài tập → chỉ MỜ)
   const byId = useMemo(() => new Map(nodes.map(n => [n.id, n])), [nodes])
   const deg = useMemo(() => { const m = new Map<string, number>(); links.forEach(l => { m.set(l.from_node, (m.get(l.from_node) ?? 0) + 1); m.set(l.to_node, (m.get(l.to_node) ?? 0) + 1) }); return m }, [links])
   const adj = useMemo(() => { const m = new Map<string, Set<string>>(); links.forEach(l => { (m.get(l.from_node) ?? m.set(l.from_node, new Set()).get(l.from_node)!).add(l.to_node); (m.get(l.to_node) ?? m.set(l.to_node, new Set()).get(l.to_node)!).add(l.from_node) }); return m }, [links])
@@ -62,11 +63,12 @@ export default function Graph3D({ nodes, links, onOpen, onClose }: {
   const recompute = () => {
     const fg = fgRef.current; if (!fg) return
     const qq = vnorm(q)
+    searchModeRef.current = !!qq
     if (qq) {
       const hits = nodes.filter(n => vnorm(n.title ?? '').includes(qq)).map(n => n.id)
-      activeRef.current = hits.length ? expand(hits, 1) : new Set()   // search: trúng + hàng xóm 1 bước, còn lại TẮT
+      activeRef.current = hits.length ? expand(hits, 1) : new Set()   // search: trúng + hàng xóm 1 bước, còn lại TẮT (ẩn)
     } else if (sel) {
-      activeRef.current = expand([sel.id], depth)
+      activeRef.current = expand([sel.id], depth)   // chọn node: tập sáng = node + nhánh tới độ sâu `depth`; ngoài tập chỉ MỜ
     } else activeRef.current = null
     fg.nodeVisibility(fg.nodeVisibility()).linkVisibility(fg.linkVisibility()).nodeColor(fg.nodeColor()).linkColor(fg.linkColor())
   }
@@ -87,7 +89,8 @@ export default function Graph3D({ nodes, links, onOpen, onClose }: {
     const N: N3[] = nodes.filter(n => n.kind !== 'block').map(n => ({ id: n.id, name: n.title ?? 'Trang', layer: n.layer ?? 'personal', kind: n.kind, val: 1 + Math.min(10, (deg.get(n.id) ?? 0)) * 0.7 }))
     const present = new Set(N.map(n => n.id))
     const L: L3[] = links.filter(l => present.has(l.from_node) && present.has(l.to_node)).map(l => ({ source: l.from_node, target: l.to_node, dimension: l.dimension, weight: 1 }))
-    const vis = (id: string) => !hiddenRef.current.has(byId.get(id)?.layer ?? 'personal') && (!activeRef.current || activeRef.current.has(id))
+    // ẩn theo bộ lọc kho LUÔN; chỉ khi đang TÌM mới ẩn node ngoài tập — còn chọn-node-theo-level thì node ngoài tập VẪN hiện (làm mờ qua màu)
+    const vis = (id: string) => !hiddenRef.current.has(byId.get(id)?.layer ?? 'personal') && (!searchModeRef.current || !activeRef.current || activeRef.current.has(id))
 
     let fg: FG
     try {
