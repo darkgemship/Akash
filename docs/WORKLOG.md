@@ -2,6 +2,12 @@
 
 > Ghi lại mỗi đợt build để lần sau làm tốt hơn. Quy trình chuẩn: **đọc docs → sửa code → `npm run build` → test thật trên preview (đăng nhập, bấm từng nút) → cập nhật docs**.
 
+## 2026-06-16 (đợt 28) — 🧹 C(2): sửa nút chết + gom mode galaxy nâng cao (đỡ rối)
+- **Nút "Mở việc" chết**: việc được giao mà CHƯA gắn trang (node_id null) → bấm không tới đâu. Sửa: widget "Hôm nay cần làm" CHỈ hiện việc CÓ gắn trang (nút luôn tới đúng chỗ); việc chưa gắn trang vẫn ở khu Giao việc của MembersHub.
+- **Thanh mode Galaxy gọn lại**: chính = 🌌 Galaxy · 📜 Dòng đời · 🪐 3 Vòng · 🌐 3D (luôn hiện). Nâng cao = 🧘 Mandala · 🎯 Radar · 🧠 Neuro ẩn sau nút **⋯** (bấm bung/✕ thu). Giảm 7 nút mode → 4 + 1, đỡ cognitive load.
+**Verify**: preview — thanh mode chỉ còn 4 mode + ⋯; bấm ⋯ → Mandala/Radar/Neuro hiện + ✕; không lỗi console; tsc sạch.
+**Tiếp**: B — graph "AI hiểu bạn" (nhánh tổng hợp chân dung user theo thời gian).
+
 ## 2026-06-16 (đợt 27) — 🌈 C(1): nhuộm node theo cảm xúc trên Galaxy (thấy hành trình Hawkins)
 - Galaxy thêm toggle **🌈 Cảm xúc**: nhuộm mỗi node theo `emotion` của trang qua thang Hawkins (EMO_COLOR khớp EMO_SCALE PageFrame): đỏ đau → … → trắng tỉnh thức. Node chưa gắn cảm xúc giữ màu mặc định. Ưu tiên: cảm xúc > depth > màu loại.
 - `emotion` được nạp vào graph (loadGraph select thêm cột) + thêm vào type GNode.

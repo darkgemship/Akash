@@ -114,6 +114,7 @@ export default function Galaxy({ nodes, links, onOpen, onConnect, modeReq }: {
   const depthColRef = useRef(true); depthColRef.current = depthCol
   const [emoCol, setEmoCol] = useState(false)        // 🌈 nhuộm node theo cảm xúc (thang Hawkins) — thấy hành trình sáng dần
   const emoColRef = useRef(false); emoColRef.current = emoCol
+  const [moreModes, setMoreModes] = useState(false)  // ⋯ ẩn mode nâng cao (Mandala/Radar/Neuro) cho đỡ rối
   const [connect, setConnect] = useState(false)
   const [picked, setPicked] = useState<string | null>(null)
   const [dimOff, setDimOff] = useState<Set<string>>(new Set())
@@ -1367,13 +1368,19 @@ export default function Galaxy({ nodes, links, onOpen, onConnect, modeReq }: {
       {/* HUD phải: mode + zoom + motion + flow + connect */}
       <div className="absolute top-3 right-3 flex flex-col items-end gap-2 z-10">
         <div className="flex items-center gap-1 rounded-md bg-[#10101a]/85 backdrop-blur border border-[var(--hud-line)] p-1 text-[11px]">
+          {/* mode CHÍNH — luôn hiện */}
           <button onClick={() => setMode('galaxy')} title="Cấu trúc kho — cái gì nằm trong cái gì" className={`px-2 py-1.5 rounded-lg ${mode === 'galaxy' ? 'bg-violet-500/40 text-white' : 'text-zinc-400 hover:bg-white/10'}`}>🌌 Galaxy</button>
-          <button onClick={() => { setMode('mandala'); setFlow(true) }} title="Cây Sự Sống — tri thức nở trên đỉnh đầu" className={`px-2 py-1.5 rounded-lg ${mode === 'mandala' ? 'bg-amber-500/35 text-amber-100 shadow-lg shadow-amber-500/30' : 'text-zinc-400 hover:bg-white/10'}`}>🧘 Mandala</button>
-          <button onClick={() => { setMode('radar'); setMotion('still'); setFlow(false); setDimOff(new Set()) }} title="8 chiều liên kết cân hay lệch — bấm trục để soi riêng" className={`px-2 py-1.5 rounded-lg ${mode === 'radar' ? 'bg-violet-500/35 text-violet-100' : 'text-zinc-400 hover:bg-white/10'}`}>🎯 Radar</button>
-          <button onClick={() => { setMode('timeline'); setMotion('still') }} title="Dòng đời — tri thức đan vào mốc thời gian thực" className={`px-2 py-1.5 rounded-lg ${mode === 'timeline' ? 'bg-blue-500/35 text-blue-100 shadow-lg shadow-blue-500/30' : 'text-zinc-400 hover:bg-white/10'}`}>📜 Dòng đời</button>
-          <button onClick={() => { setMode('neuro'); setMotion('still'); setFlow(true) }} title="Bộ não 3D tự xoay — kéo nền để xoay, mỗi nhánh một vùng não" className={`px-2 py-1.5 rounded-lg ${mode === 'neuro' ? 'bg-emerald-500/35 text-emerald-100 shadow-lg shadow-emerald-500/30' : 'text-zinc-400 hover:bg-white/10'}`}>🧠 Neuro</button>
+          <button onClick={() => { setMode('timeline'); setMotion('still') }} title="Dòng đời — tri thức đan vào mốc thời gian thực; bật 🌈 Cảm xúc để thấy hành trình sáng dần" className={`px-2 py-1.5 rounded-lg ${mode === 'timeline' ? 'bg-blue-500/35 text-blue-100 shadow-lg shadow-blue-500/30' : 'text-zinc-400 hover:bg-white/10'}`}>📜 Dòng đời</button>
           <button onClick={() => { setMode('rings'); setMotion('still') }} title="3 vòng đồng tâm — đời tôi ở lõi, QNET, nhân loại; đập theo nhịp tim" className={`px-2 py-1.5 rounded-lg ${mode === 'rings' ? 'bg-pink-500/30 text-pink-100 shadow-lg shadow-pink-500/30' : 'text-zinc-400 hover:bg-white/10'}`}>🪐 3 Vòng</button>
           <button onClick={() => setShow3d(true)} title="Bộ não 3D — xoay/zoom mọi chiều, tìm node sáng, lọc kho, chỉnh lực" className="px-2 py-1.5 rounded-lg text-zinc-400 hover:bg-white/10">🌐 3D</button>
+          {/* mode NÂNG CAO — ẩn sau ⋯ cho đỡ rối */}
+          {moreModes && <>
+            <span className="w-px self-stretch bg-[var(--hud-line)] mx-0.5" />
+            <button onClick={() => { setMode('mandala'); setFlow(true) }} title="Cây Sự Sống — tri thức nở trên đỉnh đầu" className={`px-2 py-1.5 rounded-lg ${mode === 'mandala' ? 'bg-amber-500/35 text-amber-100 shadow-lg shadow-amber-500/30' : 'text-zinc-400 hover:bg-white/10'}`}>🧘 Mandala</button>
+            <button onClick={() => { setMode('radar'); setMotion('still'); setFlow(false); setDimOff(new Set()) }} title="8 chiều liên kết cân hay lệch — bấm trục để soi riêng" className={`px-2 py-1.5 rounded-lg ${mode === 'radar' ? 'bg-violet-500/35 text-violet-100' : 'text-zinc-400 hover:bg-white/10'}`}>🎯 Radar</button>
+            <button onClick={() => { setMode('neuro'); setMotion('still'); setFlow(true) }} title="Bộ não tự xoay — kéo nền để xoay, mỗi nhánh một vùng não" className={`px-2 py-1.5 rounded-lg ${mode === 'neuro' ? 'bg-emerald-500/35 text-emerald-100 shadow-lg shadow-emerald-500/30' : 'text-zinc-400 hover:bg-white/10'}`}>🧠 Neuro</button>
+          </>}
+          <button onClick={() => setMoreModes(v => !v)} title={moreModes ? 'Ẩn bớt' : 'Thêm chế độ xem (Mandala / Radar / Neuro)'} className={`px-2 py-1.5 rounded-lg ${moreModes ? 'bg-white/15 text-white' : 'text-zinc-500 hover:bg-white/10'}`}>{moreModes ? '✕' : '⋯'}</button>
         </div>
         <div className="flex items-center gap-1 rounded-md bg-[#10101a]/85 backdrop-blur border border-[var(--hud-line)] p-1">
           <button onClick={() => { const c = center(); zoomAt(c.x, c.y, 1.25) }} title="Phóng to" className="w-8 h-8 grid place-items-center rounded-lg text-zinc-300 hover:bg-white/10 text-lg">＋</button>

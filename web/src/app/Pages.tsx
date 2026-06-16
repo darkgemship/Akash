@@ -628,7 +628,8 @@ export function Today({ user, role, stats, recent, pages, editorial = [], counts
   // ===== KHỐI CẦN LÀM (chỉ những việc THẬT) =====
   const todos: { icon: string; label: string; sub?: string; act: () => void; cta: string }[] = []
   for (const id of dueIds.slice(0, 3)) { const n = pages.find(p2 => p2.id === id) ?? recent.find(p2 => p2.id === id); if (n) todos.push({ icon: '🔁', label: `Chuyển hoá tiếp: ${n.title || 'Trang'}`, sub: 'thắp thêm chiều còn tối để bài chín hơn', act: () => onDigest(n), cta: 'Mở' }) }
-  for (const a of myAsg.slice(0, 3)) todos.push({ icon: '📋', label: a.title, sub: a.due ? `việc được giao · hạn ${new Date(a.due).toLocaleDateString('vi')}` : 'việc được giao', act: () => { if (a.node_id) onOpenId(a.node_id) }, cta: 'Mở việc' })
+  // chỉ hiện việc CÓ gắn trang ở widget "cần làm" → nút "Mở việc" luôn tới đúng chỗ (việc chưa gắn trang nằm ở khu Giao việc, không tạo nút chết)
+  for (const a of myAsg.filter(a => a.node_id).slice(0, 3)) todos.push({ icon: '📋', label: a.title, sub: a.due ? `việc được giao · hạn ${new Date(a.due).toLocaleDateString('vi')}` : 'việc được giao', act: () => onOpenId(a.node_id!), cta: 'Mở việc' })
   for (const n of editorial.filter(e => e.status === 'draft').slice(0, 2)) todos.push({ icon: '🔁', label: `Sửa & nộp lại: ${n.title || 'Trang'}`, sub: (n as { note?: string }).note ? `BTV góp ý: ${(n as { note?: string }).note}` : 'bài bị trả lại', act: () => onOpen(n), cta: 'Sửa ngay' })
   if (role?.can_approve && (counts?.pendingAll ?? 0) > 0) todos.push({ icon: '📨', label: `${counts!.pendingAll} bài chờ bạn duyệt`, sub: 'thành viên đang đợi', act: () => onRaw?.(), cta: 'Vào duyệt' })
   return (
