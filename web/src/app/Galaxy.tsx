@@ -117,7 +117,7 @@ export default function Galaxy({ nodes, links, onOpen, onConnect, modeReq }: {
   connectRef.current = connect
 
   // đổi view → về camera gốc cho đỡ lạc
-  useEffect(() => { cam.current = { x: 0, y: 0, k: 1 }; setZoomPct(100); setUnplacedOpen(false) }, [mode])
+  useEffect(() => { cam.current = { x: 0, y: 0, k: 1 }; setZoomPct(100); setUnplacedOpen(false); const t = setTimeout(() => fitView(), 120); return () => clearTimeout(t) }, [mode]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // SỨC MẠNH NODE: càng nhiều liên kết càng to & sáng (hub tri thức)
   useEffect(() => {
@@ -430,6 +430,8 @@ export default function Galaxy({ nodes, links, onOpen, onConnect, modeReq }: {
       if (frame % 30 === 0 && emaDt > 26 && qual > 0.5) { qual -= 0.25; layout() }
       let nBeat = 0, nFireCl = -1, nFire = 0  // nhịp tim + vùng đang "firing"
       ctx.clearRect(0, 0, cv.width, cv.height)
+      // nền vũ trụ ĐẶC (mọi theme) — map là "cửa sổ không gian", không bao giờ lộ nền kem/trắng (fix blank light-mode)
+      ctx.fillStyle = '#0a0b14'; ctx.fillRect(0, 0, cv.width, cv.height)
       // ════════ 🪐 3 VÒNG ĐỒNG TÂM — entanglement rings, đập theo nhịp tim ════════
       if (mode === 'rings' && ringMetaRef.current) {
         const { cx: wcx, cy: wcy, RING, Rmax } = ringMetaRef.current
@@ -1144,7 +1146,28 @@ export default function Galaxy({ nodes, links, onOpen, onConnect, modeReq }: {
     c.k = k; c.x = mx - wx * k; c.y = my - wy * k
     setZoomPct(Math.round(k * 100))
   }
-  function resetCam() { cam.current = { x: 0, y: 0, k: 1 }; setZoomPct(100) }
+  // CANH KHUNG: tự đóng khung toàn bộ node vào màn — không bao giờ để "lạc ra ngoài" (blank)
+  function fitView() {
+    const r = ref.current?.getBoundingClientRect()
+    if (!r || pts.current.size === 0) { cam.current = { x: 0, y: 0, k: 1 }; setZoomPct(100); return }
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
+    pts.current.forEach(p => { if (p.x < minX) minX = p.x; if (p.y < minY) minY = p.y; if (p.x > maxX) maxX = p.x; if (p.y > maxY) maxY = p.y })
+    const gw = Math.max(1, maxX - minX), gh = Math.max(1, maxY - minY), pad = 90
+    const k = Math.min(1.8, Math.max(0.4, Math.min((r.width - pad * 2) / gw, (r.height - pad * 2) / gh)))
+    const cxw = (minX + maxX) / 2, cyw = (minY + maxY) / 2
+    cam.current = { k, x: r.width / 2 - cxw * k, y: r.height / 2 - cyw * k }
+    setZoomPct(Math.round(k * 100))
+  }
+  function resetCam() { fitView() }
+  // chống lạc: giữ tâm cụm node luôn nằm trong khung (không pan/zoom mất hút)
+  function clampCam() {
+    const r = ref.current?.getBoundingClientRect(); if (!r || pts.current.size === 0) return
+    let sx = 0, sy = 0; pts.current.forEach(p => { sx += p.x; sy += p.y })
+    const cx = sx / pts.current.size, cy = sy / pts.current.size, c = cam.current
+    const px = cx * c.k + c.x, py = cy * c.k + c.y, M = 80
+    if (px < M) c.x += M - px; else if (px > r.width - M) c.x -= px - (r.width - M)
+    if (py < M) c.y += M - py; else if (py > r.height - M) c.y -= py - (r.height - M)
+  }
 
   function findAt(e: React.MouseEvent): P | null {
     const r = ref.current!.getBoundingClientRect()
@@ -1249,6 +1272,7 @@ export default function Galaxy({ nodes, links, onOpen, onConnect, modeReq }: {
       } else {
         cam.current.x = p.cx + (e.clientX - p.sx)
         cam.current.y = p.cy + (e.clientY - p.sy)
+        clampCam()
       }
       if (Math.hypot(e.clientX - p.sx, e.clientY - p.sy) > 4) setTip(null)
       return

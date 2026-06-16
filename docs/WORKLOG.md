@@ -2,6 +2,14 @@
 
 > Ghi lại mỗi đợt build để lần sau làm tốt hơn. Quy trình chuẩn: **đọc docs → sửa code → `npm run build` → test thật trên preview (đăng nhập, bấm từng nút) → cập nhật docs**.
 
+## 2026-06-16 (đợt 23) — 🩹 Fix map trắng/blank (gốc: camera lạc) + nền tối mọi theme
+Founder báo các view hay trắng/blank, lag. Chẩn đoán live: graph KHÔNG lỗi — bấm ⟳ là hiện đủ → **gốc là camera bị pan/zoom ra ngoài khung** nên thấy trống; light mode thì canvas trong suốt lộ nền kem → "trắng".
+- **fitView()**: tự đóng khung toàn bộ node vào màn (tính bbox + k + offset). `resetCam` giờ = fitView. **Tự fit khi đổi mode** (setTimeout sau layout).
+- **clampCam()**: chặn pan làm lạc — giữ tâm cụm luôn trong khung (biên 80px).
+- **Nền vũ trụ ĐẶC mọi theme**: fillRect `#0a0b14` ngay sau clearRect → light mode không bao giờ lộ nền kem/trắng nữa (map = "cửa sổ không gian"). 3D cũng giữ nền tối.
+**Verify**: light mode → Galaxy tự fit 108%, render đầy đủ trên nền tối, không blank. tsc xanh.
+**Ghi chú hướng tiếp**: làm đẹp "mắt thứ 3" (gradient link + uốn lượn + node con lồng trong), graph "AI hiểu user" (nhánh Nhân loại), tối ưu lag sâu — đợt sau.
+
 ## 2026-06-16 (đợt 22) — 🗺️ Thiết kế lại 2D map (galaxy): icon · màu theo depth · phân cấp rõ
 Founder (ảnh AI Workshop OS): muốn 2D map bật/tắt icon dễ nhìn, màu theo depth level, liên kết di chuyển đẹp hơn, phân cấp page rõ.
 - **Icon trong node** (toggle 🖼 Icon, mặc định bật): GNode + select thêm `icon`; vẽ emoji giữa node (ưu tiên icon riêng → suy theo kind: 📦kho 📁folder 📄page 📝note). Chỉ vẽ khi node đủ to (R>7px) → hub/page có icon, note nhỏ giữ dạng chấm = phân cấp rõ.
