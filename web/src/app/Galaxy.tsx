@@ -482,16 +482,40 @@ export default function Galaxy({ nodes, links, onOpen, onConnect, modeReq }: {
           const a = pts.current.get(l.from_node), b = pts.current.get(l.to_node)
           if (!a || !b || (a.node.layer ?? 'personal') === (b.node.layer ?? 'personal')) return
           const ax = SX(a.x), ay = SY(a.y), bx = SX(b.x), by = SY(b.y)
-          const c = DIM_COLOR[l.dimension ?? ''] ?? '#c4b5fd'
-          ctx.strokeStyle = withAlpha(c, 0.10 + 0.32 * beat); ctx.lineWidth = (0.6 + 0.5 * beat) * dpr
-          // cong nhẹ về tâm → cảm giác "vướng víu lượng tử"
-          const mx = (ax + bx) / 2 + (csx - (ax + bx) / 2) * 0.25, my = (ay + by) / 2 + (csy - (ay + by) / 2) * 0.25
-          ctx.beginPath(); ctx.moveTo(ax, ay); ctx.quadraticCurveTo(mx, my, bx, by); ctx.stroke()
-          // hạt sáng chạy dọc theo nhịp
-          const tt = (t * 0.004 + (l.from_node.charCodeAt(0) % 9) * 0.11) % 1
-          const u = 1 - tt, qx = u * u * ax + 2 * u * tt * mx + tt * tt * bx, qy = u * u * ay + 2 * u * tt * my + tt * tt * by
-          const sg = 5 * dpr * beat; ctx.drawImage(glowSprite(c), qx - sg, qy - sg, sg * 2, sg * 2)
+          // GRADIENT theo màu 2 kho → sợi mống mắt giao thoa, sáng ở giữa (con mắt thứ 3)
+          const ca = RING_TINT[a.node.layer ?? 'personal'] ?? '#c4b5fd', cb = RING_TINT[b.node.layer ?? 'personal'] ?? '#c4b5fd'
+          const grad = ctx.createLinearGradient(ax, ay, bx, by)
+          grad.addColorStop(0, withAlpha(ca, 0.10 + 0.40 * beat)); grad.addColorStop(0.5, withAlpha('#f6f8ff', 0.05 + 0.14 * beat)); grad.addColorStop(1, withAlpha(cb, 0.10 + 0.40 * beat))
+          ctx.strokeStyle = grad; ctx.lineWidth = (0.55 + 0.6 * beat) * dpr
+          // uốn lượn: cong về ĐỒNG TỬ + sóng sin chậm dọc sợi
+          const dd = Math.hypot(bx - ax, by - ay) || 1, nx = -(by - ay) / dd, ny = (bx - ax) / dd
+          const seed = l.from_node.charCodeAt(0) + l.to_node.charCodeAt(1 % l.to_node.length)
+          ctx.beginPath(); ctx.moveTo(ax, ay)
+          const SEG = 16
+          for (let si = 1; si <= SEG; si++) {
+            const f = si / SEG, pull = Math.sin(f * Math.PI)
+            const lx = ax + (bx - ax) * f, ly = ay + (by - ay) * f
+            const tx = lx + (csx - lx) * 0.26 * pull, ty = ly + (csy - ly) * 0.26 * pull
+            const wave = Math.sin(f * Math.PI * 2 + t * 0.009 + seed) * 9 * dpr * pull
+            ctx.lineTo(tx + nx * wave, ty + ny * wave)
+          }
+          ctx.stroke()
+          // hạt sáng chạy theo nhịp (tại điểm cong giữa)
+          const tt = (t * 0.004 + (seed % 9) * 0.11) % 1, pf = Math.sin(tt * Math.PI)
+          const lxm = ax + (bx - ax) * tt, lym = ay + (by - ay) * tt
+          const qx = lxm + (csx - lxm) * 0.26 * pf, qy = lym + (csy - lym) * 0.26 * pf
+          const sg = 5 * dpr * beat; ctx.drawImage(glowSprite(tt < 0.5 ? ca : cb), qx - sg, qy - sg, sg * 2, sg * 2)
         })
+        // ── ĐỒNG TỬ: tâm hội tụ phát sáng, thở theo nhịp tim (con mắt thứ 3) ──
+        const pr = (16 + 10 * beat) * k * 0.7
+        ctx.drawImage(glowSprite('#a78bfa'), csx - pr * 2.6, csy - pr * 2.6, pr * 5.2, pr * 5.2)
+        ctx.globalAlpha = 0.9
+        ctx.fillStyle = '#06060c'; ctx.beginPath(); ctx.arc(csx, csy, pr, 0, 6.28); ctx.fill()
+        ctx.strokeStyle = withAlpha('#c4b5fd', 0.5 + 0.4 * beat); ctx.lineWidth = 1.4 * dpr
+        ctx.beginPath(); ctx.arc(csx, csy, pr, 0, 6.28); ctx.stroke()
+        ctx.fillStyle = withAlpha('#f6f8ff', 0.7 + 0.3 * beat)
+        ctx.beginPath(); ctx.arc(csx - pr * 0.3, csy - pr * 0.3, pr * 0.28, 0, 6.28); ctx.fill() // ánh phản chiếu
+        ctx.globalAlpha = 1
         // ── node thật = glint sáng trên vành ──
         const focusId0 = selRef.current
         const fset = focusId0 ? new Set<string>([focusId0]) : null
