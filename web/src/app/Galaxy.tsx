@@ -375,27 +375,32 @@ export default function Galaxy({ nodes, links, onOpen, onConnect, modeReq }: {
         p3dRef.current = p3
         neuroClustersRef.current = clusterKeys.length
       } else {
-        // GALAXY: radial tree đa gốc (như cũ)
-        const roots = nodes.filter(n => !n.parent_id || !ids.has(n.parent_id))
-        const cnt = new Map<string, number>()
-        const count = (n: GNode): number => { let s = 1; for (const k of kidsOf(n.id)) s += count(k); cnt.set(n.id, s); return s }
-        roots.forEach(count)
-        const depth = (n: GNode): number => { const ks = kidsOf(n.id); return ks.length ? 1 + Math.max(...ks.map(depth)) : 0 }
-        const maxD = Math.max(1, ...roots.map(depth))
-        const R0 = roots.length > 1 ? Math.min(W, H) * 0.16 : 0
-        const step = (Math.min(W, H) * 0.46 - R0) / maxD
-        const place = (n: GNode, a0: number, a1: number, d: number) => {
-          const a = (a0 + a1) / 2
-          const r = d === 0 ? R0 : R0 + d * step
-          m.set(n.id, { x: cx + Math.cos(a) * r, y: cy + Math.sin(a) * r, r: SIZE[n.kind] ?? 4, color: COLOR[n.kind] ?? COLOR.note, node: n, phase: rand() * Math.PI * 2 })
-          const ks = kidsOf(n.id)
-          const total = ks.reduce((s, k) => s + (cnt.get(k.id) ?? 1), 0)
-          let cur = a0
-          for (const k of ks) { const w = ((cnt.get(k.id) ?? 1) / Math.max(1, total)) * (a1 - a0); place(k, cur, cur + w, d + 1); cur += w }
+        // 🪐 GALAXY = 3 HỆ MẶT TRỜI: mỗi kho 1 tâm (xếp tam giác), node con xếp VÒNG TRÒN theo LEVEL quanh tâm,
+        // chia đều góc trên mỗi vòng (level 1 = vòng trong → sâu hơn ra vòng ngoài). Sao tâm = màu kho.
+        const S0 = Math.min(W, H)
+        const TRI: Record<string, { x: number; y: number }> = {
+          personal:  { x: cx,            y: cy - S0 * 0.27 },
+          corporate: { x: cx - S0 * 0.31, y: cy + S0 * 0.20 },
+          humanity:  { x: cx + S0 * 0.31, y: cy + S0 * 0.20 },
         }
-        const totalAll = roots.reduce((s, r) => s + (cnt.get(r.id) ?? 1), 0)
-        let cur = -Math.PI / 2
-        for (const r of roots) { const w = ((cnt.get(r.id) ?? 1) / Math.max(1, totalAll)) * Math.PI * 2; place(r, cur, cur + w, 0); cur += w }
+        const ringStep = S0 * 0.05
+        const grp: Record<string, Record<number, GNode[]>> = {}
+        for (const n of nodes) { const L = n.layer ?? 'personal', lv = levelOf(n.id); ((grp[L] ??= {})[lv] ??= []).push(n) }
+        for (const L of ['personal', 'corporate', 'humanity']) {
+          const c = TRI[L] ?? TRI.personal; const lvls = grp[L] || {}
+          for (const lvStr in lvls) {
+            const lv = +lvStr, arr = lvls[lv]
+            if (lv === 0) { arr.forEach(n => m.set(n.id, { x: c.x, y: c.y, r: SIZE.kho, color: GAL_PAL[L]?.star ?? COLOR.kho, node: n, phase: rand() * Math.PI * 2 })); continue }
+            const R = ringStep * (lv + 0.5)
+            arr.forEach((n, i) => {
+              const a = (i / arr.length) * Math.PI * 2 + lv * 0.6   // chia đều + lệch pha mỗi vòng cho so le đẹp
+              const sz = Math.min(10, (SIZE[n.kind] ?? 4) + (degRef.current.get(n.id) ?? 0) * 0.35) * (lv <= 1 ? 1.25 : lv === 2 ? 1 : 0.8)  // hành tinh to, sâu hơn nhỏ dần
+              m.set(n.id, { x: c.x + Math.cos(a) * R, y: c.y + Math.sin(a) * R, r: sz, color: galLevelColor(L, lv), node: n, phase: rand() * Math.PI * 2 })
+            })
+          }
+        }
+        // node lạc (không thuộc kho nào) → rải vành ngoài mờ
+        nodes.forEach(n => { if (!m.has(n.id)) { const a = rand() * Math.PI * 2; m.set(n.id, { x: cx + Math.cos(a) * S0 * 0.47, y: cy + Math.sin(a) * S0 * 0.47, r: SIZE[n.kind] ?? 4, color: COLOR[n.kind] ?? COLOR.note, node: n, phase: rand() * Math.PI * 2 }) } })
       }
       // CHỐNG NODE ĐÈ NHAU (Obsidian-style collision): vài vòng đẩy tách bằng spatial hash — gọn gàng, chỉnh chu
       if (mode === 'galaxy' || mode === 'mandala') {

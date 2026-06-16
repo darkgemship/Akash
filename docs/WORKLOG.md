@@ -2,6 +2,13 @@
 
 > Ghi lại mỗi đợt build để lần sau làm tốt hơn. Quy trình chuẩn: **đọc docs → sửa code → `npm run build` → test thật trên preview (đăng nhập, bấm từng nút) → cập nhật docs**.
 
+## 2026-06-16 (đợt 41) — 🪐 2D Galaxy → 3 HỆ MẶT TRỜI (vòng tròn theo level) cho đỡ loạn
+Founder: 2D loạn quá, muốn node phân bổ kiểu hành tinh — bấm sao bắn ra page hành tinh quay vòng quanh, mở rộng vòng 2/3/4.
+- **Galaxy mode 2D viết lại**: bỏ cây-toả-tròn-chung-1-tâm (gây loạn). Giờ 3 kho = 3 TÂM (tam giác: cá nhân trên, QNET trái-dưới, nhân loại phải-dưới); node con xếp VÒNG TRÒN theo LEVEL quanh tâm kho nó (vòng 1 trong → sâu hơn ra ngoài), chia ĐỀU góc + lệch pha mỗi vòng cho so le.
+- Màu theo 5-tầng (GAL_PAL), kích thước to-nhỏ theo bậc (hành tinh to, sâu hơn nhỏ dần). Sao tâm = màu kho. Node lạc rải vành ngoài mờ.
+**Verify**: preview — 3 cụm hệ mặt trời tách rõ, node xếp vòng theo level, 0 lỗi console; tsc xanh.
+**Còn (đợt sau, founder yêu cầu)**: nút độ-sâu 2D (lọc level như 3D) · click sao/kho để bung dần tầng (3D+2D) · đường nối CHA→CON = thẳng + mũi tên (theo link/backlink), đường liên kết 8-chiều = cong mềm tách biệt · pivot xoay 3D tự do hơn (đặt tâm vào kho).
+
 ## 2026-06-16 (đợt 40) — 🪐 3D tầng-màu hệ mặt trời + nút độ sâu · bỏ view cảm xúc · light chữ đen · 📄 đề xuất RAG
 - **Bảng màu 5 TẦNG đúng spec founder** (GALAXY_PALETTE 3D + GAL_PAL 2D đồng bộ): cá nhân ĐỎ(tâm)→cam nhạt(hành tinh)→xanh dương(tiểu HT)→xanh nhạt(vệ tinh)→đen xạm(thiên thạch); QNET vàng→tím→vàng nhạt→xanh ngọc→đen xạm; nhân loại hồng→hồng đào→chàm→tím nhạt→đen xạm.
 - **Nút "Độ sâu hệ" 3D** (1 Hành tinh · 2 Tiểu HT · 3 Vệ tinh · 4+ Tất cả): lọc node theo LEVEL — chỉ hiện tới tầng chọn (vis += levelOf ≤ maxLevel). Verify: depth=1 chỉ còn sao + hành tinh.
