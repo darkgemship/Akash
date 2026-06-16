@@ -7,7 +7,7 @@
 ```markdown
 # {Tiêu đề — ngắn, có từ khoá}
 
-**Loại:** {1 trong 8: Ghi chú/Bài học/Trải nghiệm/Blog/Video/Kịch bản/Khách hàng/Sách}
+**Loại trang:** {1 trong 7: Trải nghiệm/Bài học/Quy trình/Hồ sơ/Nguồn/Sự kiện/Ghi chú} — định dạng content (blog/video/reel…) là Trục 2 ở Xưởng, không phải loại trang
 **Ngày sự kiện:** {ngày THỰC TẾ nội dung xảy ra — không phải ngày tạo}
 **Campaign:** {chiến dịch content nếu có}
 
@@ -38,7 +38,7 @@
 | Nội dung gốc | ✅ (auto) | AI đối chiếu khi viết lại |
 
 ## Sau khi tạo trang, chuẩn còn nằm ở DB (máy tự lo)
-`props.page_type` · `event_date` · `props.campaign` · `props.via='studio'` · `status` (luồng duyệt) · links 8 chiều (+`excerpt`) · `props.principle` (sau khi Thấm).
+`props.page_type` · `event_date` · `props.campaign` · `props.via='studio'` · `status` (luồng duyệt) · links 8 chiều (+`excerpt`) · `props.principle` (sau khi Chuyển hoá).
 
 ## Quy ước đặt tên
 - Khách hàng: `Tên – trạng thái` (vd "Chị Lan – khách hàng đầu tiên")

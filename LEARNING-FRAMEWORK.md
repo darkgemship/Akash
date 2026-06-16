@@ -1,3 +1,5 @@
+> ⚠️ **LỊCH SỬ — đã thay thế.** Tài liệu sống & chuẩn hiện tại: [docs/AKASH.md](docs/AKASH.md) + docs/KHO-CHUAN.md + docs/FRAMEWORK.md. File này giữ làm tham khảo gốc.
+
 # Data Qi — Framework Đọc Hiểu (Digest) & Data Ops
 
 > Mục tiêu: người dùng THẬT SỰ thẩm thấu bài học (không đọc lướt), và editor up/cập nhật data toàn diện, tối ưu lưu trữ.

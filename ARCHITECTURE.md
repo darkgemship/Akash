@@ -1,3 +1,5 @@
+> ⚠️ **LỊCH SỬ — đã thay thế.** Tài liệu sống & chuẩn hiện tại: [docs/AKASH.md](docs/AKASH.md) + docs/KHO-CHUAN.md + docs/FRAMEWORK.md. File này giữ làm tham khảo gốc.
+
 # Data Qi — Kiến trúc dự án
 
 > Một nền tảng biến tri thức tổ chức + trải nghiệm cá nhân thành thu nhập số.

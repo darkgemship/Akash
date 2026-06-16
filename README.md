@@ -15,7 +15,8 @@ Stack: **Next.js 16 + Supabase** (project "data QI" → đổi tên Akash trong 
 - **Độ Chuyển hoá = derive từ links** (`web/src/lib/transformScore.ts`) — không lưu điểm tay; `wisdom_depth` chỉ giữ lịch ôn SM-2.
 - UI: `page.tsx` (workspace + cây + editor) · `Pages.tsx` (Today/Studio/Board/Profile/wizard Mục lục đời) · `Hubs.tsx` (KOL/Engine/Review/Members) · `Galaxy.tsx` (5 view canvas) · `Digest.tsx` (luồng Chuyển hoá 7 màn) · `PageFrame.tsx` (PropsPanel/PageFooter/DIMS).
 
-## Đọc docs theo thứ tự (mở phiên làm việc mới)
+## Đọc docs theo thứ tự
+0. [docs/AKASH.md](docs/AKASH.md) — 🌟 BẢN TỔNG: ý nghĩa, tầm nhìn, 3 kho, 7 loại, AI-hiểu-user, hành trình màu (mở phiên làm việc mới)
 1. [docs/DECISIONS.md](docs/DECISIONS.md) — hiến pháp: quyết định chốt + rules
 2. [docs/KHO-CHUAN.md](docs/KHO-CHUAN.md) — framework kho + 7 cây + 6 nhánh (§2bis là bản chốt)
 3. [docs/WORKLOG.md](docs/WORKLOG.md) — nhật ký build (mục mới nhất trước)

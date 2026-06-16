@@ -1,3 +1,5 @@
+> ⚠️ **LỊCH SỬ — đã thay thế.** Tài liệu sống & chuẩn hiện tại: [docs/AKASH.md](docs/AKASH.md) + docs/KHO-CHUAN.md + docs/FRAMEWORK.md. File này giữ làm tham khảo gốc.
+
 # Data Qi — Mô hình liên kết tri thức ĐA CHIỀU (đề xuất)
 
 > Nâng từ "neuron link" thô (cạnh vô hướng, không loại) → đồ thị tri thức thông minh nhiều chiều.

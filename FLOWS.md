@@ -1,3 +1,5 @@
+> ⚠️ **LỊCH SỬ — đã thay thế.** Tài liệu sống & chuẩn hiện tại: [docs/AKASH.md](docs/AKASH.md) + docs/KHO-CHUAN.md + docs/FRAMEWORK.md. File này giữ làm tham khảo gốc.
+
 # Data Qi — Flows & Functions (đã chốt)
 
 > File này ghi các luồng chạy & function đã thống nhất. Cập nhật dần khi chốt thêm.

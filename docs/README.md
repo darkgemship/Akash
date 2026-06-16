@@ -1,4 +1,6 @@
-# Akash — Documentation Index (cập nhật 2026-06-12)
+# Akash — Documentation Index
+
+> 🌟 **Đọc [AKASH.md](AKASH.md) TRƯỚC TIÊN** — bản tổng ý nghĩa/tầm nhìn/kiến trúc; nguồn sự thật khi mâu thuẫn. (cập nhật 2026-06-12)
 
 > Phiên mới đọc theo thứ tự: **DECISIONS → KHO-CHUAN → WORKLOG (mục mới nhất) → APP-FLOWS**.
 

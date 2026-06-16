@@ -1,3 +1,5 @@
+> 📌 **Cập nhật 2026-06-16** (xem AKASH.md §8): radar 5 cạnh §4 ĐÃ BỎ — điểm derive từ links (transformScore.ts). 🧡 Cảm xúc + 💙 Thời gian là **THUỘC TÍNH** (điền trên trang), không phải link.
+
 # AKASH FRAMEWORK — Gốc rễ (Single Source of Truth)
 
 > **Đây là tài liệu hiến pháp.** Mọi feature, mọi prompt AI, mọi quyết định data đều phải truy về được tài liệu này. Phiên bản này THAY THẾ framework cũ ở điểm quan trọng: **8 CHIỀU LIÊN KẾT là gốc rễ** (trước đây gốc là radar 5 cạnh + nhánh "truyền dạy"). Nhánh "biến thành bài học dạy người khác" (transmission) **bị loại bỏ** — giá trị trao đi qua CONTENT, không qua cấu trúc riêng.

@@ -7,7 +7,7 @@
 1. **Tên & nhận diện**: App tên **Akash** (akasha — hư không lưu trữ tri thức). Logo chữ "A" gradient tím→cyan. Identity màu: tím #8b5cf6 · cyan #22d3ee; light theme "paper" #faf9fc giữ identity, galaxy + login vĩnh viễn dark.
 2. **FRAMEWORK gốc rễ = 8 chiều liên kết** (knowledge/experience/emotion/values/people/time/reference/anchor — màu cố định trong FRAMEWORK.md §1). Đã BỎ nhánh "truyền dạy/transmission".
    **[CẬP NHẬT 2026-06-12, founder chốt]**: BỎ radar 5 cạnh — thước đo Độ Chuyển hoá CŨNG là 8 chiều, DERIVE từ bảng links + tín hiệu nội tại (công thức duy nhất: `web/src/lib/transformScore.ts`, căn cứ nghiên cứu docs/RESEARCH-VIZ-ARCH.md mũi 2). `wisdom_depth` chỉ còn vai trò lịch ôn SM-2. Một chữ thống nhất từ 12/6: **"Chuyển hoá"**.
-3. **Một chữ thống nhất: "Thấm"** (không dùng Học bài/Thẩm thấu). Luồng Thấm = 7 màn đi qua 8 chiều, Hoa Thấm 8 cánh, learned cần ≥2 chiều, lịch ôn SM-2 (1-3-7-21-60 ngày).
+3. **Một chữ thống nhất: "Thấm"** (không dùng Học bài/Thẩm thấu). Luồng Thấm = 7 màn đi qua 8 chiều, Hoa Chuyển hoá 8 cánh, learned cần ≥2 chiều, lịch ôn SM-2 (1-3-7-21-60 ngày).
 4. **Thời gian = event_date thực tế** (viết về quá khứ → ngày quá khứ), KHÔNG phải ngày tạo trang. Dòng đời cá nhân là trục gốc.
 5. **Liên kết mức câu/quote** (links.excerpt + from_block), không chỉ mức trang. Backlink tự động — đã giải thích trong UI.
 6. **Taxonomy 2 trục** (đã chốt, build dở): Trục 1 = bản chất tri thức (Trải nghiệm/Bài học/Quy trình/Hồ sơ/Nguồn/Sự kiện/Câu hỏi mở) gắn mọi trang; Trục 2 = định dạng đầu ra (blog/video/reel/email/caption) CHỈ gắn thẻ Xưởng content.
@@ -15,7 +15,7 @@
 8. **Org duy nhất** (is_primary): user mới = Thành viên cấp 1. 5 vai: Admin 5 / Tổng biên tập 4 / Biên tập viên 3 / Cộng tác viên 2 / Thành viên 1. Admin = ng.hongngoc1196@gmail.com.
 9. **Galaxy = 5 view, mỗi view một bản chất**: 🌌 cấu trúc · 🧘 Cây Sự Sống (thiền giả dưới, kho cá nhân→QNET→nhân loại mở quạt lên) · 🎯 Radar 8 trục (bấm trục solo) · 📜 Dòng đời (event_date) · 🧠 Neuro 3D (neuron soma méo + dendrite + nhịp tim lub-dub ~1.1s, mỗi nhịp 1 vùng firing + action potential).
 10. **Token hoá**: Qi điểm off-chain từ bảng events (thấm 10 · content 5 · nối 3 · trang 1) — blockchain thật CHỈ khi có lý do kinh tế + tư vấn pháp lý (3 giai đoạn trong ROADMAP).
-11. **Hướng đi đã chốt (chiến lược)**: DỪNG thêm tính năng → Tuần 1 deploy Vercel + test bằng acc Thành viên cấp 1 + mobile drawer → Tuần 2 pilot 5-10 người thật, đo bằng events → Tuần 3 cắm AI theo thứ tự: Studio chuẩn hoá (Haiku) → gợi ý liên kết → content theo giọng (Sonnet). North star: **số bài Thấm trọn/người/tuần**.
+11. **Hướng đi đã chốt (chiến lược)**: DỪNG thêm tính năng → Tuần 1 deploy Vercel + test bằng acc Thành viên cấp 1 + mobile drawer → Tuần 2 pilot 5-10 người thật, đo bằng events → Tuần 3 cắm AI theo thứ tự: Studio chuẩn hoá (Haiku) → gợi ý liên kết → content theo giọng (Sonnet). North star: **số bài Chuyển hoá trọn/người/tuần**.
 
 ## B. RULES ĐÃ LẬP (mọi phiên sau phải theo)
 

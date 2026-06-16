@@ -2,6 +2,16 @@
 
 > Ghi lại mỗi đợt build để lần sau làm tốt hơn. Quy trình chuẩn: **đọc docs → sửa code → `npm run build` → test thật trên preview (đăng nhập, bấm từng nút) → cập nhật docs**.
 
+## 2026-06-16 (đợt 24) — 📜 ĐẠI HỢP NHẤT: file tổng AKASH.md + sơ đồ + dọn mâu thuẫn docs
+Founder: rà toàn bộ project, liệt kê thừa thải, đọc lại mọi doc tìm điểm chưa logic, viết file tóm tắt tổng (ý nghĩa/tầm nhìn/giá trị/sứ mệnh/cấp tổ chức/phân bố kho/trường/page) tập trung AI-hiểu-user + content + trải nghiệm clean; nghiên cứu online; vẽ sơ đồ.
+- **2 agent song song**: kiểm kê tính năng/luồng (tìm thừa thải, cognitive-load hotspot) + audit 29 doc (tìm 11 mâu thuẫn). + 2 web search (second-brain×LLM 2026, RAG emotional context).
+- **docs/AKASH.md (MỚI) = nguồn sự thật duy nhất**: 14 mục — Akash là gì · tầm nhìn 10 năm/sứ mệnh/giá trị · vòng lặp cốt lõi · **🌈 hành trình màu (đỏ→vàng→xanh→hồng→trắng)** (vision mới founder, trước đây chưa doc nào ghi) · 3 kho/vai trò · phân bố 7 cây+6 nhánh+A-F · 7 loại trang + Properties 3 tầng · 8 chiều thuộc-tính-vs-liên-kết · **AI-hiểu-user 3 tầng (Core/Timeline/Knowledge) + graph "AI hiểu bạn"** · content engine "thiên tài bên trong" · Akash=Jarvis · 7 view · luật UX clean · lộ trình.
+- **Sửa mâu thuẫn doc** (agent chỉ ra): DECISIONS §A3 "Thấm"→"Chuyển hoá" (+ Hoa/north-star); STANDARD-TEMPLATE 8 loại→7 (định dạng content = Trục 2, không phải loại); FRAMEWORK banner (radar §4 đã bỏ, emotion/time là thuộc tính); 6 doc root cũ (WISDOM-DEPTH/LEARNING-FRAMEWORK/KNOWLEDGE-GRAPH/ARCHITECTURE/FLOWS/COLLECTIVE-KNOWLEDGE) gắn banner LỊCH SỬ; README ×2 trỏ AKASH.md lên đầu.
+- **Sơ đồ hệ thống** (visualize): vòng lặp 6 bước + 3 kho đồng tâm + AI-hiểu-user 3 tầng + dải hành trình màu.
+- **Thừa thải đã liệt kê** (làm code đợt sau): page_type↔subtype 2 taxonomy; Home cap vs Studio trùng đường tạo trang; 6+ Galaxy mode (ẩn nâng cao sau toggle); "Mở việc" (assignments.node_id) chết; ReviewHub chưa ghi content JSON; PAGE_TEMPLATES vs ingest_tpl; lag map.
+**Build xanh** (chỉ docs + memory; code không đổi lượt này).
+**Lưu ý**: smoke-test preview làm renderer treo (canvas nặng) → đã reload; tối ưu lag là task #36 còn mở.
+
 ## 2026-06-16 (đợt 23) — 🩹 Fix map trắng/blank (gốc: camera lạc) + nền tối mọi theme
 Founder báo các view hay trắng/blank, lag. Chẩn đoán live: graph KHÔNG lỗi — bấm ⟳ là hiện đủ → **gốc là camera bị pan/zoom ra ngoài khung** nên thấy trống; light mode thì canvas trong suốt lộ nền kem → "trắng".
 - **fitView()**: tự đóng khung toàn bộ node vào màn (tính bbox + k + offset). `resetCam` giờ = fitView. **Tự fit khi đổi mode** (setTimeout sau layout).
