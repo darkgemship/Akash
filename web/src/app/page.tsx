@@ -31,6 +31,19 @@ const COVERS = ['linear-gradient(135deg,#8b5cf6,#22d3ee)', 'linear-gradient(135d
 const ICONS = ['📄', '📝', '📁', '🗂️', '💡', '🎯', '🔥', '🌱', '⚡', '🧠', '❤️', '📚', '🚀', '✨', '🏆', '📊']
 // search thông minh: bỏ dấu + xếp hạng — prefix mạnh nhất, rồi đầu từ, chứa chuỗi, cuối cùng khớp tóm tắt/từ khoá
 const vnorm = (x: string) => (x ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd')
+// 🔑 Auto-keyword HEURISTIC local (không đốt token AI): tách từ → bỏ stopword → đếm tần suất → 5 từ nổi nhất.
+// User vẫn sửa/thêm tay được; mục tiêu chỉ là gợi mồi để trang nào cũng có từ khoá phục vụ tìm kiếm + AI.
+const KW_STOP = new Set('va la cua co khong nhung de cho ra vao len xuong khi nay no toi minh ban anh chi em ho ta cac mot hai moi rat thi ma nhu nen voi tu theo tai vi do day kia nao sao gi ai dau bao gio con hay hoac neu se da dang chua nua hon nhat cai chuyen viec dieu nguoi luc phai duoc bi tren duoi trong ngoai sau truoc giua qua lai chinh tuc tuy the ve deu chi cung'.split(' '))
+function autoKeywords(text: string, max = 5): string {
+  const freq = new Map<string, { raw: string; n: number }>()
+  for (const raw of (text || '').split(/[^A-Za-zÀ-ỹ0-9]+/)) {
+    if (raw.length < 3) continue
+    const key = vnorm(raw)
+    if (key.length < 3 || KW_STOP.has(key) || /^\d+$/.test(key)) continue
+    const cur = freq.get(key); if (cur) cur.n++; else freq.set(key, { raw: raw.toLowerCase(), n: 1 })
+  }
+  return [...freq.values()].sort((a, b) => b.n - a.n || b.raw.length - a.raw.length).slice(0, max).map(x => x.raw).join(', ')
+}
 function searchRank(q: string, n: { title: string | null; props?: Record<string, unknown> | null }): number {
   const t = vnorm(n.title ?? ''), qq = vnorm(q)
   if (!qq) return 0
@@ -373,7 +386,7 @@ function Workspace({ user }: { user: User }) {
       const { error } = await supabase.from('nodes').insert({
         id, org_id: orgId, owner_id: user.id, layer: 'personal', kind: 'note', parent_id: parent,
         title, event_date: today, status: 'published', min_level: 1,
-        props: { page_type: 'bai-hoc', via: cd.srcId ? 'kol' : 'capture', ...(principle ? { principle } : {}), ...(cd.srcId ? { mirror_of: cd.srcId } : {}) },
+        props: { page_type: 'bai-hoc', via: cd.srcId ? 'kol' : 'capture', keywords: autoKeywords(`${principle} ${cd.text} ${goc} ${apply}`), last_modified: nowD.toISOString(), ...(principle ? { principle } : {}), ...(cd.srcId ? { mirror_of: cd.srcId } : {}) },
         md: `**Loại:** 🎓 Bài học · **Ngày sự kiện:** ${nowD.toLocaleDateString('vi')}\n\n**Tóm tắt 1 câu:** ${insightBody}\n\n**Nguồn:** ${cd.src.trim() || 'tự đúc rút'}\n\n## ⚡ Nguyên lý cốt lõi\n${insightBody}\n\n## 🌍 ${cd.srcTitle ? 'Từ bài' : 'Trải nghiệm gốc nào sinh ra insight này?'}\n${goc ? '- ' + goc : '- (nối chiều 🌱 trải nghiệm về trang chuyện gốc)'}\n\n## 🎯 Áp dụng trong 7 ngày tới\n- ${apply || ''}`,
       })
       if (error) { setErr(error.message); return }
@@ -391,7 +404,7 @@ function Workspace({ user }: { user: User }) {
       id, org_id: orgId, owner_id: user.id, layer: 'personal', kind: 'note', parent_id: parent,
       title: `Nhật ký ${nowD.toLocaleDateString('vi')} · ${nowD.getHours()}h${String(nowD.getMinutes()).padStart(2, '0')}`,
       event_date: today, emotion: emo || null, status: 'published', min_level: 1,
-      props: { page_type: 'trai-nghiem', via: 'capture', ...(lesson.trim() ? { principle: lesson.trim() } : {}) },
+      props: { page_type: 'trai-nghiem', via: 'capture', keywords: autoKeywords(`${cd.text} ${lesson} ${who}`), last_modified: nowD.toISOString(), ...(lesson.trim() ? { principle: lesson.trim() } : {}) },
       md: `**Loại:** 🌱 Trải nghiệm · **Ngày sự kiện:** ${nowD.toLocaleDateString('vi')}\n\n**Tóm tắt 1 câu:** ${lesson.trim() || cd.text.slice(0, 120)}\n\n**Nguồn:** tự trải nghiệm\n\n## ⚡ Chuyện gì xảy ra\n${cd.text}\n\n## ❤️ Cảm xúc\n${emo || '—'}\n\n## 💚 Ai liên quan\n${who.trim() || '—'}\n\n## 🎓 Bài học rút ra\n- ${lesson.trim() || ''}\n\n**Cảnh này nói gì về tôi:** `,
     })
     if (error) { setErr(error.message); return }
@@ -452,7 +465,7 @@ function Workspace({ user }: { user: User }) {
   async function setNodeProp(key: string, val: unknown) {
     if (!editing) return
     const { data } = await supabase.from('nodes').select('props').eq('id', editing.id).single()
-    const props = { ...((data?.props as Record<string, unknown>) ?? {}), [key]: val }
+    const props = { ...((data?.props as Record<string, unknown>) ?? {}), [key]: val, last_modified: new Date().toISOString() }
     const { error } = await supabase.from('nodes').update({ props }).eq('id', editing.id)
     if (error) { setErr(error.message); return }
     if (orgId) loadTree(orgId)

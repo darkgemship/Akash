@@ -15,6 +15,12 @@ export const EMO_SCALE: { v: string; c: string }[] = [
   { v: '✨ tỉnh thức', c: '#f6f8ff' },    // ~ giác ngộ/Omega (trắng-vàng, KHÔNG đen)
 ]
 
+// Độ tin — CHỈ trang tri thức kiểm chứng được (bài học / quy trình / nguồn / tin ngành), nhật ký cá nhân không cần.
+export const CONFIDENCE: string[] = ['🟢 Đã kiểm chứng', '🔵 Đáng tin', '🟡 Cần xác minh', '🟠 Tin đồn / nghe nói', '⚪️ Giả thuyết']
+// Trường của tôi (mặc định, kho cá nhân): mức ưu tiên + trạng thái áp dụng vào đời thực.
+export const PRIORITY: string[] = ['🔥 Sống còn', '⭐ Cao', '· Vừa', '· Thấp']
+export const APPLY_STATUS: string[] = ['💡 Mới biết', '🧪 Đang thử', '🔁 Đang rèn', '✅ Đã thành nếp']
+
 /* =====================================================================
    PageFrame — bộ khung chuẩn của MỌI trang (xem docs/STANDARD-TEMPLATE.md)
    ┌──────────────────────────────────────────────┐
@@ -108,6 +114,11 @@ export function PropsPanel({ node, canE, isEditor, hubLabel, onSetProp, onSaveDa
   // kho cá nhân: chính chủ là "ban biên tập" của trang mình; kho chung: cần quyền biên tập
   const canFix = node.layer === 'personal' ? canE : isEditor
   const isShared = node.layer === 'corporate' || node.layer === 'humanity'  // QNET / Nhân loại = tài liệu tham chiếu cho AI
+  const pageType = (p.page_type as string) ?? ''
+  const isPersonal = node.layer === 'personal'
+  const isKnowledge = ['bai-hoc', 'quy-trinh', 'nguon'].includes(pageType) || node.subtype === 'news'  // tri thức kiểm chứng được → có Độ tin
+  const isVoice = node.subtype === 'profile_me'  // 🪞 trang "Tôi là ai" → có hồ sơ giọng cho AI viết đúng chất
+  const lastMod = p.last_modified as string | undefined
 
   const setField = (key: 'fixed_fields' | 'custom_fields', arr: Field[], i: number, v: string) =>
     onSetProp(key, arr.map((f, j) => j === i ? { ...f, value: v } : f))
@@ -179,6 +190,15 @@ export function PropsPanel({ node, canE, isEditor, hubLabel, onSetProp, onSaveDa
               </Row>
             </>
           )}
+          {/* Độ tin — CHỈ trang tri thức kiểm chứng được; nhật ký cá nhân không hỏi (không tạo cognitive load) */}
+          {isKnowledge && (
+            <Row label="Độ tin" hint="mức kiểm chứng — AI biết có nên trích dẫn như sự thật hay chỉ tham khảo">
+              <select disabled={!canE} value={(p.confidence as string) ?? ''} onChange={e => onSetProp('confidence', e.target.value)} className={flat}>
+                <option value="">—</option>
+                {CONFIDENCE.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </Row>
+          )}
           {(p.board as string) && (
             <Row label="Đầu ra media" hint="định dạng content (chỉ thẻ Xưởng)">
               <div className="flex gap-2">
@@ -212,6 +232,23 @@ export function PropsPanel({ node, canE, isEditor, hubLabel, onSetProp, onSaveDa
               </div>
             </Row>
           ))}
+          {/* 🪞 HỒ SƠ GIỌNG — chỉ trang "Tôi là ai": AI viết content ĐÚNG chất bạn (RAG đọc 3 trường này) */}
+          {isVoice && (<>
+            <Row label="Chất văn" hint="giọng viết của bạn — AI bắt chước khi soạn content">
+              <input disabled={!canE} key={node.id + '-ws'} defaultValue={(p.writing_style as string) ?? ''} onBlur={e => { if (e.target.value !== ((p.writing_style as string) ?? '')) onSetProp('writing_style', e.target.value) }} placeholder="vd: thẳng thắn, ví dụ đời thường, ít thuật ngữ…" className={flat} />
+            </Row>
+            <Row label="Từ cấm" hint="từ/sáo ngữ bạn KHÔNG bao giờ dùng — AI tránh tuyệt đối">
+              <input disabled={!canE} key={node.id + '-fw'} defaultValue={(p.forbidden_words as string) ?? ''} onBlur={e => { if (e.target.value !== ((p.forbidden_words as string) ?? '')) onSetProp('forbidden_words', e.target.value) }} placeholder="vd: bùng nổ, đột phá, x3 thu nhập…" className={flat} />
+            </Row>
+            <Row label="Câu tủ" hint="câu/khẩu quyết bạn hay nói — AI rải vào để ra đúng chất bạn">
+              <input disabled={!canE} key={node.id + '-fq'} defaultValue={(p.favorite_quotes as string) ?? ''} onBlur={e => { if (e.target.value !== ((p.favorite_quotes as string) ?? '')) onSetProp('favorite_quotes', e.target.value) }} placeholder="cách nhau dấu phẩy…" className={flat} />
+            </Row>
+          </>)}
+          {lastMod && (
+            <Row label="Cập nhật cuối" hint="tự động ghi khi bạn sửa trang">
+              <div className="px-2 py-1.5 text-[12px] text-zinc-500">{new Date(lastMod).toLocaleString('vi-VN')} <span className="text-[10px] text-zinc-700">· tự động</span></div>
+            </Row>
+          )}
         </div>
       </div>
       {/* ── TRƯỜNG CỦA TÔI — riêng trang này ── */}
@@ -221,6 +258,21 @@ export function PropsPanel({ node, canE, isEditor, hubLabel, onSetProp, onSaveDa
           <span className="text-[11px] text-zinc-500">riêng cho trang này</span>
           {canE && <button onClick={() => addField('custom_fields', mine)} className="ml-auto text-[10px] rounded-md border border-white/10 text-zinc-400 px-2 py-0.5 hover:text-white hover:border-white/25">＋ thêm trường</button>}
         </div>
+        {/* 2 trường mặc định kho cá nhân: ưu tiên + trạng thái áp dụng vào đời thực (đo "đã sống chưa", không chỉ "đã biết") */}
+        {isPersonal && (
+          <div className="grid sm:grid-cols-2 gap-x-8 gap-y-0.5 mb-1">
+            <Row label="Mức ưu tiên" hint="việc này quan trọng cỡ nào với bạn lúc này">
+              <select disabled={!canE} value={(p.priority as string) ?? ''} onChange={e => onSetProp('priority', e.target.value)} className={flat}>
+                <option value="">—</option>{PRIORITY.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </Row>
+            <Row label="Đã áp dụng" hint="từ BIẾT → SỐNG: bạn đang ở đâu với bài học này">
+              <select disabled={!canE} value={(p.apply_status as string) ?? ''} onChange={e => onSetProp('apply_status', e.target.value)} className={flat}>
+                <option value="">—</option>{APPLY_STATUS.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </Row>
+          </div>
+        )}
         {mine.length > 0 ? (
           <div className="grid sm:grid-cols-2 gap-x-8 gap-y-0.5">
             {mine.map((f, i) => (

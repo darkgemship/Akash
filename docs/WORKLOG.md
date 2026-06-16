@@ -2,6 +2,16 @@
 
 > Ghi lại mỗi đợt build để lần sau làm tốt hơn. Quy trình chuẩn: **đọc docs → sửa code → `npm run build` → test thật trên preview (đăng nhập, bấm từng nút) → cập nhật docs**.
 
+## 2026-06-16 (đợt 26) — 🧠 A: Properties theo-loại + trường AI-hiểu-sâu (giảm cognitive load)
+Mục tiêu: mỗi loại trang chỉ hỏi đúng trường nó cần; tự lấp từ khoá + thời gian; cho AI đủ ngữ cảnh để hiểu & viết đúng chất user.
+- **Độ tin (confidence)** — CHỈ hiện ở trang tri thức kiểm chứng được (bài học / quy trình / nguồn / tin ngành). Nhật ký cá nhân KHÔNG hỏi (đỡ rối). Thang: Đã kiểm chứng → Đáng tin → Cần xác minh → Tin đồn → Giả thuyết.
+- **Hồ sơ giọng** — CHỈ trang 🪞 "Tôi là ai": Chất văn (writing_style) · Từ cấm (forbidden_words) · Câu tủ (favorite_quotes). AI/RAG đọc 3 trường này để viết ĐÚNG chất user, tránh sáo ngữ.
+- **Trường của tôi (mặc định kho cá nhân)**: Mức ưu tiên + Đã áp dụng (Mới biết → Đang thử → Đang rèn → Đã thành nếp) — đo "đã SỐNG chưa" không chỉ "đã BIẾT".
+- **Auto-keyword heuristic** (`autoKeywords`, KHÔNG đốt token AI): tách từ → bỏ stopword tiếng Việt → đếm tần suất → 5 từ; tự gắn khi nạp capture (insight + trải nghiệm). User vẫn sửa tay.
+- **last_modified tự động**: ghi mỗi lần sửa props + lúc tạo qua capture; hiện read-only "Cập nhật cuối" ở Properties.
+**Verify**: preview trang "Tôi là ai" → 6 trường mới render đúng, layout 2 cột sạch, chip cảm xúc có chấm màu Hawkins, không lỗi console; tsc sạch. Độ tin/Cập-nhật-cuối ẩn đúng lúc (profile_me không phải tri thức, chưa sửa).
+**Tiếp**: B (graph "AI hiểu bạn" nhánh Nhân loại) → C (nhuộm node theo cảm xúc + ẩn mode nâng cao + sửa nút chết).
+
 ## 2026-06-16 (đợt 25) — 🩹 Chống trắng-màn/crash khi load 3D+rings + 🌈 thang màu Hawkins
 Founder: load view mắt/3D vẫn trắng màn + lag/crash; đổi màu theo bảng năng lượng rung (Hawkins) — tỉnh thức TRẮNG/VÀNG không phải đen.
 - **Hết trắng khi load**: (1) Graph3D dynamic import có `loading` nền tối "#06060c" (trước đó suspense render null → light mode lộ nền kem trắng); (2) `<canvas>` 2D thêm inline `background:#0a0b14` → dark ngay cả trước frame vẽ đầu.
