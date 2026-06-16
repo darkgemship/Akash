@@ -176,7 +176,7 @@ export default function Graph3D({ nodes, links, onOpen, onClose }: {
         .linkDirectionalParticleColor((l: object) => DIM_COLOR[(l as L3).dimension ?? ''] ?? '#67e8f9')   // hạt mang màu CHIỀU liên kết
         .linkDirectionalParticleSpeed(0.005)
         .linkDirectionalParticleWidth(2.2)
-        .onNodeClick((n: object) => { const g = byId.get((n as N3).id); if (g) { setSel(g); fg.cameraPosition({ x: (n as { x: number }).x, y: (n as { y: number }).y, z: (n as { z: number }).z + 120 }, n as { x: number; y: number; z: number }, 700) } })
+        .onNodeClick((n: object) => { const g = byId.get((n as N3).id); if (!g) return; try { setSel(g); fg.cameraPosition({ x: (n as { x: number }).x, y: (n as { y: number }).y, z: (n as { z: number }).z + 120 }, n as { x: number; y: number; z: number }, 700) } catch { /* GL state lỗi → bỏ qua, không sập */ } })
         .onBackgroundClick(() => { setSel(null); setQ(''); frameCamRef.current?.() })   // bấm nền = bỏ chọn + VỀ TOÀN CẢNH
       fgRef.current = fg
       fg.d3Force('charge')?.strength(repelRef.current)
@@ -323,7 +323,7 @@ export default function Graph3D({ nodes, links, onOpen, onClose }: {
                 <span className="hud-label mr-1">Depth</span>
                 {[1, 2, 3].map(d => <button key={d} onClick={() => setDepth(d)} className={`w-6 h-6 rounded text-xs ${depth === d ? 'ak-cta text-white' : 'bg-white/5 border border-white/10 text-zinc-400'}`}>{d}</button>)}
               </div>
-              <button onClick={() => onOpen(sel)} className="w-full rounded-lg ak-cta px-3 py-1.5 text-xs font-bold">Mở trang →</button>
+              <button onClick={() => { onOpen(sel); onClose() }} className="w-full rounded-lg ak-cta px-3 py-1.5 text-xs font-bold">Mở trang →</button>
             </div>
           ) : <p className="text-[11px] text-zinc-600 leading-relaxed">Bấm 1 node để soi — node + liên kết của nó sáng lên, đọc được ở đây. Gõ ô tìm để lọc theo tên.</p>}
         </div>
