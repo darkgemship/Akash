@@ -4,7 +4,13 @@ import dynamic from 'next/dynamic'
 // 3D dùng Three.js → chỉ tải khi mở (ssr:false), không phình app chính
 const Graph3D = dynamic(() => import('./Graph3D'), { ssr: false })
 
-export type GNode = { id: string; title: string | null; kind: string; parent_id: string | null; layer?: string; event_date?: string | null; subtype?: string | null }
+export type GNode = { id: string; title: string | null; kind: string; parent_id: string | null; layer?: string; event_date?: string | null; subtype?: string | null; icon?: string | null }
+// icon hiển thị trong node (ưu tiên icon riêng → suy theo loại)
+const KIND_ICON: Record<string, string> = { kho: '📦', folder: '📁', page: '📄', note: '📝', database: '🗂️' }
+function nodeIcon(n: GNode): string { return n.icon || KIND_ICON[n.kind] || '•' }
+// màu theo ĐỘ SÂU từ node đang chọn (gần = sáng nóng → xa = nguội mờ)
+const DEPTH_COLOR = ['#ffffff', '#f5b942', '#22d3ee', '#a78bfa', '#6366f1', '#475569']
+const depthColorOf = (d: number) => DEPTH_COLOR[Math.min(d, DEPTH_COLOR.length - 1)]
 export type GLink = { from_node: string; to_node: string; dimension: string | null }
 
 type P = { x: number; y: number; r: number; color: string; node: GNode; phase: number }
@@ -96,6 +102,10 @@ export default function Galaxy({ nodes, links, onOpen, onConnect, modeReq }: {
   const [mode, setMode] = useState<Mode>('galaxy')
   const [show3d, setShow3d] = useState(false)
   const [flow, setFlow] = useState(false)
+  const [showIcons, setShowIcons] = useState(true)   // 🖼 icon trong node cho dễ nhìn
+  const showIconsRef = useRef(true); showIconsRef.current = showIcons
+  const [depthCol, setDepthCol] = useState(true)     // 🎨 màu theo độ sâu khi chọn node
+  const depthColRef = useRef(true); depthColRef.current = depthCol
   const [connect, setConnect] = useState(false)
   const [picked, setPicked] = useState<string | null>(null)
   const [dimOff, setDimOff] = useState<Set<string>>(new Set())
@@ -880,10 +890,23 @@ export default function Galaxy({ nodes, links, onOpen, onConnect, modeReq }: {
       // FOCUS 1-HOP: hover (neuro) hoặc CLICK CHỌN (mọi mode trừ timeline) → chỉ node + hàng xóm sáng
       const focusId = (mode === 'neuro' ? hv : null) ?? selRef.current
       let focusSet: Set<string> | null = null
+      const depthMap = new Map<string, number>()   // độ sâu BFS từ node chọn (galaxy/mandala/radar)
       if (focusId && mode !== 'timeline') {
-        focusSet = new Set([focusId])
-        links.forEach(l => { if (l.from_node === focusId) focusSet!.add(l.to_node); if (l.to_node === focusId) focusSet!.add(l.from_node) })
+        if (mode === 'neuro') {
+          focusSet = new Set([focusId])
+          links.forEach(l => { if (l.from_node === focusId) focusSet!.add(l.to_node); if (l.to_node === focusId) focusSet!.add(l.from_node) })
+        } else {
+          depthMap.set(focusId, 0)
+          let fr = [focusId]
+          for (let d = 1; d <= 5 && fr.length; d++) {
+            const nx: string[] = []
+            for (const id of fr) for (const l of links) { const o = l.from_node === id ? l.to_node : l.to_node === id ? l.from_node : null; if (o && !depthMap.has(o)) { depthMap.set(o, d); nx.push(o) } }
+            fr = nx
+          }
+          focusSet = new Set(depthMap.keys())
+        }
       }
+      const useDepth = depthColRef.current && depthMap.size > 0 && mode !== 'neuro'
       // NODES — sức mạnh theo số liên kết: hub càng nối nhiều càng to & sáng
       pts.current.forEach(p => {
         const w = wpos(p)
@@ -927,9 +950,10 @@ export default function Galaxy({ nodes, links, onOpen, onConnect, modeReq }: {
         // cull: node ngoài màn hình thì bỏ qua hẳn (đỡ vẽ vô ích khi zoom/xoay)
         if (gx0 < -140 * dpr || gx0 > cv.width + 140 * dpr || gy0 < -140 * dpr || gy0 > cv.height + 140 * dpr) return
         // quầng glow = sprite vẽ sẵn (thay shadowBlur)
+        const nodeCol = useDepth ? depthColorOf(depthMap.get(p.node.id) ?? 5) : p.color
         const glowR = SR(w.r + power) + ((p.node.kind === 'kho' ? 26 : p.node.kind === 'folder' ? 12 : 7) + Math.min(16, deg * 2) + (hot ? 10 : 0) + nb * 36) * dpr
-        ctx.drawImage(glowSprite(p.color), gx0 - glowR, gy0 - glowR, glowR * 2, glowR * 2)
-        ctx.fillStyle = p.color
+        ctx.drawImage(glowSprite(nodeCol), gx0 - glowR, gy0 - glowR, glowR * 2, glowR * 2)
+        ctx.fillStyle = nodeCol
         if (mode === 'neuro') {
           // 🧠 NEURON THẬT: soma méo hữu cơ + tua dendrite + nhân sáng
           const cxp = gx0, cyp = gy0
@@ -1021,6 +1045,21 @@ export default function Galaxy({ nodes, links, onOpen, onConnect, modeReq }: {
           ctx.strokeStyle = isPicked ? 'rgba(251,191,36,.9)' : 'rgba(255,255,255,.5)'
           ctx.lineWidth = 1.5 * dpr
           ctx.beginPath(); ctx.arc(SX(w.x), SY(w.y), SR(w.r) + 6 * dpr + (isPicked ? Math.sin(t * 0.15) * 2 * dpr : 0), 0, 6.28); ctx.stroke()
+        }
+        // ⊙ vòng trắng cho node ĐANG CHỌN (kiểu ảnh tham chiếu)
+        if (p.node.id === focusId && mode !== 'neuro' && !isPicked) {
+          ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.lineWidth = 1.5 * dpr
+          ctx.beginPath(); ctx.arc(gx0, gy0, SR(w.r + power) + 9 * dpr, 0, 6.28); ctx.stroke()
+        }
+        // 🖼 ICON trong node — dễ nhìn & phân cấp (chỉ node đủ to; note nhỏ giữ dạng chấm)
+        if (showIconsRef.current && mode !== 'neuro') {
+          const Ri = SR(w.r + power)
+          if (Ri > 7 * dpr) {
+            ctx.font = `${Math.round(Ri * 1.25)}px serif`
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle'
+            ctx.fillText(nodeIcon(p.node), gx0, gy0)
+            ctx.textBaseline = 'alphabetic'
+          }
         }
         // label: kho luôn hiện; trong mandala folder/page chỉ hiện khi zoom (đỡ rối); note khi zoom sâu
         const showLabel = p.node.kind === 'kho' ? true
@@ -1297,6 +1336,8 @@ export default function Galaxy({ nodes, links, onOpen, onConnect, modeReq }: {
           ))}
         </div>}
         <div className="flex items-center gap-1 rounded-md bg-[#10101a]/85 backdrop-blur border border-[var(--hud-line)] p-1 text-[11px]">
+          <button onClick={() => setShowIcons(v => !v)} title="Bật/tắt icon trong node cho dễ nhìn" className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg ${showIcons ? 'bg-white/15 text-white' : 'text-zinc-400 hover:bg-white/10'}`}>🖼 Icon</button>
+          <button onClick={() => setDepthCol(v => !v)} title="Chọn 1 node → tô màu các node theo độ sâu (gần sáng, xa mờ)" className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg ${depthCol ? 'bg-violet-500/30 text-violet-100' : 'text-zinc-400 hover:bg-white/10'}`}>🎨 Depth</button>
           {(mode === 'galaxy' || mode === 'mandala') && <button onClick={() => setFlow(f => !f)} title="Hạt năng lượng chạy dọc mọi liên kết — thấy tri thức đang truyền" className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg ${flow ? 'bg-cyan-500/30 text-cyan-100' : 'text-zinc-400 hover:bg-white/10'}`}><span className="dq-prev-flow" />Dòng chảy</button>}
           {onConnect && <button onClick={() => { setConnect(c => !c); pickRef.current = null; setPicked(null) }} title="Bấm 2 node để tạo liên kết mới — có vụ nổ ăn mừng" className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg ${connect ? 'bg-amber-500/30 text-amber-100' : 'text-zinc-400 hover:bg-white/10'}`}><span className="dq-prev-link" />Nối</button>}
           <button onClick={() => setSugOpen(s => !s)} title="Máy soi cặp trang nên nối mà chưa nối" className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg ${sugOpen ? 'bg-violet-500/30 text-violet-100' : 'text-zinc-400 hover:bg-white/10'}`}><span className="dq-prev-sug">✨</span>Gợi ý</button>

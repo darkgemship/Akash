@@ -2,6 +2,14 @@
 
 > Ghi lại mỗi đợt build để lần sau làm tốt hơn. Quy trình chuẩn: **đọc docs → sửa code → `npm run build` → test thật trên preview (đăng nhập, bấm từng nút) → cập nhật docs**.
 
+## 2026-06-16 (đợt 22) — 🗺️ Thiết kế lại 2D map (galaxy): icon · màu theo depth · phân cấp rõ
+Founder (ảnh AI Workshop OS): muốn 2D map bật/tắt icon dễ nhìn, màu theo depth level, liên kết di chuyển đẹp hơn, phân cấp page rõ.
+- **Icon trong node** (toggle 🖼 Icon, mặc định bật): GNode + select thêm `icon`; vẽ emoji giữa node (ưu tiên icon riêng → suy theo kind: 📦kho 📁folder 📄page 📝note). Chỉ vẽ khi node đủ to (R>7px) → hub/page có icon, note nhỏ giữ dạng chấm = phân cấp rõ.
+- **Màu theo độ sâu** (toggle 🎨 Depth): chọn 1 node → BFS tới 5 bước → tô node theo depth (0 trắng · 1 vàng · 2 cyan · 3 tím · 4 chàm · xa mờ) cho cả glow + thân; node ĐANG CHỌN có vòng trắng (kiểu ảnh tham chiếu). Tắt thì về màu theo kho.
+- **Phân cấp**: size theo degree (hub to), hub≥4 có hào quang thở, icon chỉ ở node lớn → mắt thấy ngay cấp bậc. Link giữ flow hạt chạy + sáng khi focus.
+- 2 toggle nằm cạnh "Dòng chảy / Nối / Gợi ý" trên thanh điều khiển Galaxy; chỉ ảnh hưởng 2D (neuro/timeline giữ nguyên hành vi).
+**Verify**: galaxy 2D hiện icon trong node; nút 🖼 Icon + 🎨 Depth hoạt động; build + tsc xanh.
+
 ## 2026-06-16 (đợt 21) — 🌐 Galaxy 3D (3d-force-graph) + search highlight
 Founder: dựng view 3D như ảnh "AI Workshop OS" — zoom/xoay 3D, depth, filter loại, chỉnh cường độ link; + search thì node liên quan sáng, còn lại tắt.
 **Nghiên cứu**: xác nhận đó là `3d-force-graph` (vasturiano, Three.js/WebGL). Dùng **vanilla** (không wrapper react-force-graph) để tránh peer-dep React 19/Next 16.
