@@ -2,6 +2,12 @@
 
 > Ghi lại mỗi đợt build để lần sau làm tốt hơn. Quy trình chuẩn: **đọc docs → sửa code → `npm run build` → test thật trên preview (đăng nhập, bấm từng nút) → cập nhật docs**.
 
+## 2026-06-16 (đợt 39) — 🩹 Sửa Galaxy 2D dồn-góc/trống khi mở (auto-fit bắt sai lúc layout còn giãn)
+Founder: mở Galaxy ra map trống/lệch góc (dark thì văng hẳn). Nguyên nhân: layout lực còn đang GIÃN ở mốc fit 140/600/1300ms → fitView khung theo bbox đang phình → cụm dồn góc/zoom bé; reset tay (lúc đã settle) thì đúng.
+- **fitView dùng bbox PHÂN VỊ 4%–96%** (bỏ node văng lẻ) → khung sát cụm chính, không bị 1-2 outlier kéo lệch.
+- **Thêm mốc auto-fit muộn** [400, 1200, 2400, 3800, 5200]ms → bắt đúng lúc layout đã ổn định (~3s).
+**Verify**: preview mở Galaxy → tự khung GIỮA ~79% (không cần reset tay); 0 lỗi console; tsc xanh.
+
 ## 2026-06-16 (đợt 38) — 🎨 Map đổi nền theo theme + ✨ Hero parallax
 - **2D & 3D đổi nền theo THEME**: tone trắng (light) → nền KEM (#f4f1ea), tone tối → vũ trụ. Galaxy 2D: fill mỗi frame theo `data-theme` + inline style canvas theo theme; rings radial nền sáng khi light. 3D: backgroundColor theo theme lúc tạo + MutationObserver đổi LIVE khi bật/tắt tone trắng; link sáng/đậm hơn trên nền kem. (Đáp yêu cầu "qua tone trắng thì 3d cũng trắng" + không còn nền-ép-tối lệch theme.)
 - **✨ Hero parallax** (Home, card "AI hiểu bạn"): component <Parallax> — di chuột, lớp Constellation (data-px -34, lùi xa) + lớp nội dung (data-px 10, theo nhẹ) dịch ngược chiều tạo chiều sâu, mượt (transition + translate3d).

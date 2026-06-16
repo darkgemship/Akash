@@ -137,7 +137,7 @@ export default function Galaxy({ nodes, links, onOpen, onConnect, modeReq }: {
   connectRef.current = connect
 
   // đổi view → về camera gốc cho đỡ lạc
-  useEffect(() => { cam.current = { x: 0, y: 0, k: 1 }; setZoomPct(100); setUnplacedOpen(false); const t = setTimeout(() => fitView(), 120); return () => clearTimeout(t) }, [mode]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { cam.current = { x: 0, y: 0, k: 1 }; setZoomPct(100); setUnplacedOpen(false); const ts = [400, 1200, 2400, 3800, 5200].map(ms => setTimeout(() => fitView(), ms)); return () => ts.forEach(clearTimeout) }, [mode]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // SỨC MẠNH NODE: càng nhiều liên kết càng to & sáng (hub tri thức)
   useEffect(() => {
@@ -1202,10 +1202,14 @@ export default function Galaxy({ nodes, links, onOpen, onConnect, modeReq }: {
   function fitView() {
     const r = ref.current?.getBoundingClientRect()
     if (!r || pts.current.size === 0) { cam.current = { x: 0, y: 0, k: 1 }; setZoomPct(100); return }
-    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
-    pts.current.forEach(p => { if (p.x < minX) minX = p.x; if (p.y < minY) minY = p.y; if (p.x > maxX) maxX = p.x; if (p.y > maxY) maxY = p.y })
+    // bbox theo PHÂN VỊ 4%–96% (bỏ node văng lẻ) → khung sát CỤM CHÍNH, không bị dồn góc vì 1-2 outlier
+    const xs: number[] = [], ys: number[] = []
+    pts.current.forEach(p => { xs.push(p.x); ys.push(p.y) })
+    xs.sort((a, b) => a - b); ys.sort((a, b) => a - b)
+    const q = (arr: number[], f: number) => arr[Math.min(arr.length - 1, Math.max(0, Math.floor(arr.length * f)))]
+    const minX = q(xs, 0.04), maxX = q(xs, 0.96), minY = q(ys, 0.04), maxY = q(ys, 0.96)
     const gw = Math.max(1, maxX - minX), gh = Math.max(1, maxY - minY), pad = 90
-    const k = Math.min(1.8, Math.max(0.4, Math.min((r.width - pad * 2) / gw, (r.height - pad * 2) / gh)))
+    const k = Math.min(1.8, Math.max(0.35, Math.min((r.width - pad * 2) / gw, (r.height - pad * 2) / gh)))
     const cxw = (minX + maxX) / 2, cyw = (minY + maxY) / 2
     cam.current = { k, x: r.width / 2 - cxw * k, y: r.height / 2 - cyw * k }
     setZoomPct(Math.round(k * 100))
