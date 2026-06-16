@@ -566,7 +566,7 @@ function Workspace({ user }: { user: User }) {
   }, [user.id])
   const loadGraph = useCallback(async (org: string) => {
     const [{ data: ns }, { data: ls }] = await Promise.all([
-      supabase.from('nodes').select('id,title,kind,parent_id,layer,event_date,subtype,icon').eq('org_id', org).neq('kind', 'block').order('created_at'),
+      supabase.from('nodes').select('id,title,kind,parent_id,layer,event_date,subtype,icon,emotion').eq('org_id', org).neq('kind', 'block').order('created_at'),
       supabase.from('links').select('from_node,to_node,dimension').eq('org_id', org),
     ])
     setAllNodes((ns as GNode[]) ?? []); setLinks((ls as GLink[]) ?? [])

@@ -4,13 +4,19 @@ import dynamic from 'next/dynamic'
 // 3D dùng Three.js → chỉ tải khi mở (ssr:false), không phình app chính
 const Graph3D = dynamic(() => import('./Graph3D'), { ssr: false, loading: () => <div className="absolute inset-0 z-20 grid place-items-center bg-[#06060c] text-zinc-500 text-sm">Đang dựng bộ não 3D…</div> })
 
-export type GNode = { id: string; title: string | null; kind: string; parent_id: string | null; layer?: string; event_date?: string | null; subtype?: string | null; icon?: string | null }
+export type GNode = { id: string; title: string | null; kind: string; parent_id: string | null; layer?: string; event_date?: string | null; subtype?: string | null; icon?: string | null; emotion?: string | null }
 // icon hiển thị trong node (ưu tiên icon riêng → suy theo loại)
 const KIND_ICON: Record<string, string> = { kho: '📦', folder: '📁', page: '📄', note: '📝', database: '🗂️' }
 function nodeIcon(n: GNode): string { return n.icon || KIND_ICON[n.kind] || '•' }
 // màu theo ĐỘ SÂU từ node đang chọn (gần = sáng nóng → xa = nguội mờ)
 const DEPTH_COLOR = ['#ffffff', '#f5b942', '#22d3ee', '#a78bfa', '#6366f1', '#475569']
 const depthColorOf = (d: number) => DEPTH_COLOR[Math.min(d, DEPTH_COLOR.length - 1)]
+// 🌈 màu theo CẢM XÚC (thang Hawkins): node sáng dần khi user đi lên — thấy hành trình chuyển hoá. Khớp EMO_SCALE ở PageFrame.
+const EMO_COLOR: Record<string, string> = {
+  '😣 đau/sợ': '#e23b3b', '😤 tức': '#f0673a', '🌫️ hoài nghi': '#c08a3a', '🔥 thôi thúc': '#f5b942',
+  '😌 nhẹ nhõm': '#5fbf6b', '💗 yêu thương': '#34d399', '😮 vỡ oà': '#60a5fa', '🙏 thanh thản': '#a78bfa', '✨ tỉnh thức': '#f6f8ff',
+}
+const emoColorOf = (e?: string | null) => (e ? EMO_COLOR[e] : undefined)
 export type GLink = { from_node: string; to_node: string; dimension: string | null }
 
 type P = { x: number; y: number; r: number; color: string; node: GNode; phase: number }
@@ -106,6 +112,8 @@ export default function Galaxy({ nodes, links, onOpen, onConnect, modeReq }: {
   const showIconsRef = useRef(true); showIconsRef.current = showIcons
   const [depthCol, setDepthCol] = useState(true)     // 🎨 màu theo độ sâu khi chọn node
   const depthColRef = useRef(true); depthColRef.current = depthCol
+  const [emoCol, setEmoCol] = useState(false)        // 🌈 nhuộm node theo cảm xúc (thang Hawkins) — thấy hành trình sáng dần
+  const emoColRef = useRef(false); emoColRef.current = emoCol
   const [connect, setConnect] = useState(false)
   const [picked, setPicked] = useState<string | null>(null)
   const [dimOff, setDimOff] = useState<Set<string>>(new Set())
@@ -976,7 +984,8 @@ export default function Galaxy({ nodes, links, onOpen, onConnect, modeReq }: {
         // cull: node ngoài màn hình thì bỏ qua hẳn (đỡ vẽ vô ích khi zoom/xoay)
         if (gx0 < -140 * dpr || gx0 > cv.width + 140 * dpr || gy0 < -140 * dpr || gy0 > cv.height + 140 * dpr) return
         // quầng glow = sprite vẽ sẵn (thay shadowBlur)
-        const nodeCol = useDepth ? depthColorOf(depthMap.get(p.node.id) ?? 5) : p.color
+        const emoC = emoColRef.current ? emoColorOf(p.node.emotion) : undefined
+        const nodeCol = emoC ?? (useDepth ? depthColorOf(depthMap.get(p.node.id) ?? 5) : p.color)
         const glowR = SR(w.r + power) + ((p.node.kind === 'kho' ? 26 : p.node.kind === 'folder' ? 12 : 7) + Math.min(16, deg * 2) + (hot ? 10 : 0) + nb * 36) * dpr
         ctx.drawImage(glowSprite(nodeCol), gx0 - glowR, gy0 - glowR, glowR * 2, glowR * 2)
         ctx.fillStyle = nodeCol
@@ -1387,6 +1396,7 @@ export default function Galaxy({ nodes, links, onOpen, onConnect, modeReq }: {
         <div className="flex items-center gap-1 rounded-md bg-[#10101a]/85 backdrop-blur border border-[var(--hud-line)] p-1 text-[11px]">
           <button onClick={() => setShowIcons(v => !v)} title="Bật/tắt icon trong node cho dễ nhìn" className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg ${showIcons ? 'bg-white/15 text-white' : 'text-zinc-400 hover:bg-white/10'}`}>🖼 Icon</button>
           <button onClick={() => setDepthCol(v => !v)} title="Chọn 1 node → tô màu các node theo độ sâu (gần sáng, xa mờ)" className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg ${depthCol ? 'bg-violet-500/30 text-violet-100' : 'text-zinc-400 hover:bg-white/10'}`}>🎨 Depth</button>
+          <button onClick={() => setEmoCol(v => !v)} title="Nhuộm node theo cảm xúc (thang năng lượng Hawkins) — thấy hành trình sáng dần: đỏ (đau) → … → trắng (tỉnh thức)" className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg ${emoCol ? 'bg-amber-500/25 text-amber-100' : 'text-zinc-400 hover:bg-white/10'}`}>🌈 Cảm xúc</button>
           {(mode === 'galaxy' || mode === 'mandala') && <button onClick={() => setFlow(f => !f)} title="Hạt năng lượng chạy dọc mọi liên kết — thấy tri thức đang truyền" className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg ${flow ? 'bg-cyan-500/30 text-cyan-100' : 'text-zinc-400 hover:bg-white/10'}`}><span className="dq-prev-flow" />Dòng chảy</button>}
           {onConnect && <button onClick={() => { setConnect(c => !c); pickRef.current = null; setPicked(null) }} title="Bấm 2 node để tạo liên kết mới — có vụ nổ ăn mừng" className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg ${connect ? 'bg-amber-500/30 text-amber-100' : 'text-zinc-400 hover:bg-white/10'}`}><span className="dq-prev-link" />Nối</button>}
           <button onClick={() => setSugOpen(s => !s)} title="Máy soi cặp trang nên nối mà chưa nối" className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg ${sugOpen ? 'bg-violet-500/30 text-violet-100' : 'text-zinc-400 hover:bg-white/10'}`}><span className="dq-prev-sug">✨</span>Gợi ý</button>

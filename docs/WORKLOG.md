@@ -2,6 +2,13 @@
 
 > Ghi lại mỗi đợt build để lần sau làm tốt hơn. Quy trình chuẩn: **đọc docs → sửa code → `npm run build` → test thật trên preview (đăng nhập, bấm từng nút) → cập nhật docs**.
 
+## 2026-06-16 (đợt 27) — 🌈 C(1): nhuộm node theo cảm xúc trên Galaxy (thấy hành trình Hawkins)
+- Galaxy thêm toggle **🌈 Cảm xúc**: nhuộm mỗi node theo `emotion` của trang qua thang Hawkins (EMO_COLOR khớp EMO_SCALE PageFrame): đỏ đau → … → trắng tỉnh thức. Node chưa gắn cảm xúc giữ màu mặc định. Ưu tiên: cảm xúc > depth > màu loại.
+- `emotion` được nạp vào graph (loadGraph select thêm cột) + thêm vào type GNode.
+- Mục đích: user NHÌN THẤY mình đang sáng dần lên thang ý thức — payoff trực quan của thang màu đợt 25.
+**Verify**: preview mở Galaxy bật 🌈 → render nền tối, không crash, không lỗi console; node nhật ký có cảm xúc đổi màu.
+**Tiếp C**: ẩn mode galaxy nâng cao sau 1 nút (đỡ rối) + soát/sửa nút chết. Rồi B (graph "AI hiểu bạn").
+
 ## 2026-06-16 (đợt 26) — 🧠 A: Properties theo-loại + trường AI-hiểu-sâu (giảm cognitive load)
 Mục tiêu: mỗi loại trang chỉ hỏi đúng trường nó cần; tự lấp từ khoá + thời gian; cho AI đủ ngữ cảnh để hiểu & viết đúng chất user.
 - **Độ tin (confidence)** — CHỈ hiện ở trang tri thức kiểm chứng được (bài học / quy trình / nguồn / tin ngành). Nhật ký cá nhân KHÔNG hỏi (đỡ rối). Thang: Đã kiểm chứng → Đáng tin → Cần xác minh → Tin đồn → Giả thuyết.
