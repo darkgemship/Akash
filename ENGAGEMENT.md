@@ -1,4 +1,4 @@
-# Data Qi — Engagement & Design (đã chốt hướng)
+# Akash — Engagement & Design (đã chốt hướng)
 
 > Giải pháp cho rủi ro số 1: THÓI QUEN. Dùng design gây nghiện lành mạnh, gắn phần thưởng với hành vi tạo giá trị thật.
 

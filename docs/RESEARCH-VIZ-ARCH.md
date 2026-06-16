@@ -97,9 +97,9 @@ Theo thuật toán semantic zoom của rtopmap/ZMLT + "Text fade threshold" củ
 
 ### Key findings
 - Hiện trạng Akash: điểm 5 cạnh đang được TÍNH HEURISTIC một lần lúc Thấm rồi GHI CỨNG vào bảng wisdom_depth (merge GREATEST với điểm cũ), kèm dims jsonb 8 boolean — tức là điểm là snapshot tay, không phải derive từ links. Nếu user nối thêm link sau khi Thấm, điểm KHÔNG đổi; nếu xoá link, điểm cũng không giảm → điểm và graph lệch nhau ngay từ thiết kế.
-  - nguồn: /Users/nguyenvanhongngoc/Desktop/Data Qi/web/src/app/Digest.tsx (dòng 241-263, công thức fresh + merged + upsert wisdom_depth)
+  - nguồn: /Users/nguyenvanhongngoc/Desktop/Akash/web/src/app/Digest.tsx (dòng 241-263, công thức fresh + merged + upsert wisdom_depth)
 - BUG lịch ôn: wisdom_depth.review_count được ĐỌC (old?.review_count ?? 0) nhưng KHÔNG có chỗ nào trong web/src ghi tăng nó → next_review_at luôn = now + [1,3,7,21,60][0] = +1 ngày mãi mãi. Luồng 'Ôn lại' chưa tồn tại; Pages.tsx chỉ đọc next_review_at để hiện badge due.
-  - nguồn: /Users/nguyenvanhongngoc/Desktop/Data Qi/web/src/app/Digest.tsx:261 và web/src/app/Pages.tsx:736-738 (grep toàn src không có write nào vào review_count)
+  - nguồn: /Users/nguyenvanhongngoc/Desktop/Akash/web/src/app/Digest.tsx:261 và web/src/app/Pages.tsx:736-738 (grep toàn src không có write nào vào review_count)
 - Nguyên tắc derive-vs-store (DDIA/Kleppmann + thực hành denormalization): giữ bảng nguồn chuẩn hoá làm source of truth, lớp derived (view/materialized view/bảng cache) phải LUÔN tính lại được từ nguồn; chỉ denormalize trường ít đổi và đọc nhiều — trường đổi thường xuyên mà nhúng vào nhiều nơi là tự ký hợp đồng đồng bộ thủ công. Materialized view = persist kết quả query, tự chọn lịch refresh.
   - nguồn: https://dataintensive.net/ ; https://www.datacamp.com/tutorial/denormalization ; https://docs.oracle.com/cd/E11882_01/server.112/e25554/basicmv.htm
 - FSRS tách 3 tầng rạch ròi: (1) review log append-only (Anki revlog: mỗi lần ôn 1 dòng), (2) memory state lưu trên card chỉ 2 số Stability + Difficulty, (3) Retrievability TÍNH ON-THE-FLY R(t)=(1+F·t/S)^C, interval kế = S(Rd^(1/C)−1)/F theo desired retention 0.9. Lịch ôn là state riêng, không trộn với điểm hiểu.
@@ -107,7 +107,7 @@ Theo thuật toán semantic zoom của rtopmap/ZMLT + "Text fade threshold" củ
 - Các app chấm 'độ hiểu một note' đều DERIVE chứ không lưu tay: Anki 'mature' = interval ≥ 21 ngày (tính từ scheduler state, stats tính từ revlog); RemNote 6 mức mastery (New/Acquiring <3d/Growing 3d-3w/Solidifying 3w-3m/Retaining 3m+/Stale quá hạn) suy từ interval giữa 2 lần ôn; WaniKani 9 stage Apprentice→Burned suy từ đúng/sai từng review (đúng +1 stage, sai tụt ≥1); Readwise Mastery dùng exponential decay + feedback soon/later/someday/never.
   - nguồn: https://docs.ankiweb.net/stats.html ; https://help.remnote.com/en/articles/7970392-flashcard-statistics ; https://knowledge.wanikani.com/wanikani/srs-stages/ ; https://help.readwise.io/article/26-how-does-the-readwise-spaced-repetition-algorithm-work
 - Schema links hiện tại đã đủ để derive 8 chiều: links(org_id, from_node, to_node, dimension ∈ 8 giá trị, excerpt, from_block, source) + tín hiệu nội tại trang đã có sẵn chỗ lưu (nodes.emotion, nodes.event_date, props.principle, props.refs, props.action, trang mantra subtype='mantra' link anchor về bài gốc). NHƯNG links thiếu created_by → điểm cá nhân trong kho org chưa attribute được cho từng user.
-  - nguồn: /Users/nguyenvanhongngoc/Desktop/Data Qi/web/src/app/page.tsx:280-281,971 ; web/src/app/Digest.tsx:230-240 ; docs/FRAMEWORK.md §1
+  - nguồn: /Users/nguyenvanhongngoc/Desktop/Akash/web/src/app/page.tsx:280-281,971 ; web/src/app/Digest.tsx:230-240 ; docs/FRAMEWORK.md §1
 - Quy mô 200 trang/user, ~vài trăm links: plain SQL view/RPC tính on-read mất vài ms — CHƯA cần materialized view hay event sourcing đầy đủ; bảng events hiện có (type='tham') đã là event log nhẹ đủ dùng làm audit trail. Materialized view chỉ cần khi >10k nodes.
   - nguồn: docs/DECISIONS.md mục C (DB ~95 nodes, 35+ links) + nguyên tắc hybrid normalized-source/derived-layer từ https://www.splunk.com/en_us/blog/learn/data-denormalization.html
 

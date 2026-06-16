@@ -1,4 +1,4 @@
-# Data Qi — Phân tích data model (vs Obsidian, cho AI-readiness)
+# Akash — Phân tích data model (vs Obsidian, cho AI-readiness)
 
 > Kết luận: mô hình ~80% tối ưu, nhắm cao hơn Obsidian. Cần khóa 3 điểm để AI dùng mượt (map vào GraphRAG).
 

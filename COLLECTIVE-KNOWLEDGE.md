@@ -1,6 +1,6 @@
 > ⚠️ **LỊCH SỬ — đã thay thế.** Tài liệu sống & chuẩn hiện tại: [docs/AKASH.md](docs/AKASH.md) + docs/KHO-CHUAN.md + docs/FRAMEWORK.md. File này giữ làm tham khảo gốc.
 
-# Data Qi — Trí tuệ tập thể: 3 tầng & cơ chế "Bắn qua"
+# Akash — Trí tuệ tập thể: 3 tầng & cơ chế "Bắn qua"
 
 > Tầm nhìn: một Wikipedia sống. Trải nghiệm cá nhân chảy lên làm giàu tri thức tập đoàn, rồi vươn ra nhân loại. Mọi người cùng xây.
 

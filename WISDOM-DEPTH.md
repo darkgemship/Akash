@@ -1,6 +1,6 @@
 > ⚠️ **LỊCH SỬ — đã thay thế.** Tài liệu sống & chuẩn hiện tại: [docs/AKASH.md](docs/AKASH.md) + docs/KHO-CHUAN.md + docs/FRAMEWORK.md. File này giữ làm tham khảo gốc.
 
-# Data Qi — Thước đo "Độ Thấm" của tri thức (Wisdom Depth)
+# Akash — Thước đo "Độ Thấm" của tri thức (Wisdom Depth)
 
 > Mỗi node/bài học có một thước đo đa cạnh, đo mức NHẬP TÂM: từ "biết" → "sống" → "lan tỏa".
 > Đây là thang chuyển hóa **Thông tin → Tri thức → Trí tuệ**.

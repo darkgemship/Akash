@@ -1,4 +1,4 @@
-# Data Qi — MVP v0.1: "The Growing Brain Vault"
+# Akash — MVP v0.1: "The Growing Brain Vault"
 
 > Nhỏ nhất có thể, nhưng chứng minh được giả thuyết sống còn: **member có hình thành thói quen ghi chú & bộ não có giữ chân họ không?**
 
@@ -44,8 +44,8 @@
 → Xong S5 = có thể cho nhóm member thật dùng thử & đo.
 
 ## 5. Auth cho MVP — ĐÃ CHỐT: SSO quanlysukien ngay từ S0
-- Data Qi cấu hình **Third-Party Auth** tin JWT do quanlysukien phát (qua JWKS / signing keys bất đối xứng).
-- User đăng nhập qua quanlysukien → token dùng được ở Data Qi → RLS chạy theo `sub` (user_id).
+- Akash cấu hình **Third-Party Auth** tin JWT do quanlysukien phát (qua JWKS / signing keys bất đối xứng).
+- User đăng nhập qua quanlysukien → token dùng được ở Akash → RLS chạy theo `sub` (user_id).
 - Hệ quả: **clearance level DERIVE từ danh tính quanlysukien** (xem dưới), không quản trùng.
 
 ## 6. Định nghĩa "Done" của MVP

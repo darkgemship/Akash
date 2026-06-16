@@ -1,4 +1,4 @@
-# Data Qi — Chiến lược lưu trữ (đã chốt)
+# Akash — Chiến lược lưu trữ (đã chốt)
 
 ## 1. Định dạng tài liệu
 - **Nguồn sự thật:** JSON block tree (BlockNote) lưu trong Postgres `jsonb`.

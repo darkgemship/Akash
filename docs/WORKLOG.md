@@ -2,6 +2,17 @@
 
 > Ghi lại mỗi đợt build để lần sau làm tốt hơn. Quy trình chuẩn: **đọc docs → sửa code → `npm run build` → test thật trên preview (đăng nhập, bấm từng nút) → cập nhật docs**.
 
+## 2026-06-16 (KẾT SỔ phiên graph/3D) — tổng hợp + việc tiếp theo
+PHIÊN NÀY (đợt 25→44, ~20 commit): ổn định + redesign toàn bộ data-viz + vài tính năng lõi.
+- **Ổn định**: diệt crash WebGL kéo-sập-app (StrictMode orphan rAF "reading tick" → hoãn-init+cờ-cancelled+error-swallow); hết trắng-màn load; Galaxy 2D hết dồn-góc (fitView phân vị + auto-fit muộn); 3D click không sập→home (try/catch + mở-rồi-thoát-3D).
+- **Hệ màu thống nhất 5 TẦNG/kho** (3D+2D): đỏ→cam→xanh dương→xanh nhạt→đen xạm (cá nhân) · vàng→tím→… (QNET) · hồng→… (nhân loại). Sao tâm mỗi kho.
+- **3D = 3 hệ mặt trời** (tách tam giác deterministic) + node vành quỹ đạo theo level + nút Độ-sâu-hệ + ◎ pivot quanh kho + mũi tên hướng link + đổi nền theo theme.
+- **2D Galaxy = 3 hệ mặt trời** (vòng tròn chia đều theo level) + nút TẦNG lọc level + cha→con thẳng-mũi-tên / liên kết 8-chiều cong. Bỏ view 3 Vòng cho nhẹ. Cây sự sống = mảng quạt. Light mode chữ node đen.
+- **MeMirror "AI hiểu bạn"** (chân dung sống heuristic) + Properties theo-loại + auto-keyword + hồ sơ giọng + thang Hawkins.
+- **📄 docs/RAG-CHUNKING.md** (đề xuất tự băm chunk cho RAG) + **docs/NEXT-STEPS.md** (việc tiếp).
+- **📁 Đổi tên thư mục Data Qi → Akash** (git/source nguyên vẹn; tiêu đề docs cập nhật).
+**Việc tiếp theo → xem `docs/NEXT-STEPS.md`** (A: nicety graph · B: RAG/AI khi có key · C: deploy chờ vercel login · D: dọn Data Qi cũ + mở project ở path mới).
+
 ## 2026-06-16 (đợt 43) — 🎯 Pivot xoay 3D quanh kho + 📁 ghi nhận đổi tên thư mục Data Qi → Akash
 - **Pivot 3D tự do**: panel "3 thiên hà (kho)" thêm nút **◎** mỗi kho → bay camera + đặt TÂM XOAY vào tâm thiên hà đó (cameraPosition lookAt = orbit center) → xoay quanh kho thay vì cố định gốc. (đáp "muốn tâm là điểm trung tâm các kho"). Toggle ẩn/hiện tách riêng nút tên kho.
 - **📁 ĐỔI TÊN THƯ MỤC**: founder đổi `~/Desktop/Data Qi` → `~/Desktop/Akash` (khớp rebrand). Git + toàn bộ source theo nguyên vẹn sang Akash; `Data Qi` cũ chỉ còn stub `.next`. KHÔNG mất dữ liệu. Từ giờ làm việc ở `~/Desktop/Akash/`. (Lưu ý: session harness vẫn cấu hình path cũ → preview/dev cần mở lại project ở Akash.)
