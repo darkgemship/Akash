@@ -1,5 +1,8 @@
 'use client'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import dynamic from 'next/dynamic'
+// 3D dùng Three.js → chỉ tải khi mở (ssr:false), không phình app chính
+const Graph3D = dynamic(() => import('./Graph3D'), { ssr: false })
 
 export type GNode = { id: string; title: string | null; kind: string; parent_id: string | null; layer?: string; event_date?: string | null; subtype?: string | null }
 export type GLink = { from_node: string; to_node: string; dimension: string | null }
@@ -91,6 +94,7 @@ export default function Galaxy({ nodes, links, onOpen, onConnect, modeReq }: {
   const [tip, setTip] = useState<{ x: number; y: number; title: string; kind: string; deg: number } | null>(null)
   const [motion, setMotion] = useState<Motion>('drift')
   const [mode, setMode] = useState<Mode>('galaxy')
+  const [show3d, setShow3d] = useState(false)
   const [flow, setFlow] = useState(false)
   const [connect, setConnect] = useState(false)
   const [picked, setPicked] = useState<string | null>(null)
@@ -1251,6 +1255,7 @@ export default function Galaxy({ nodes, links, onOpen, onConnect, modeReq }: {
   const center = () => { const r = ref.current?.getBoundingClientRect(); return { x: (r?.width ?? 0) / 2, y: (r?.height ?? 0) / 2 } }
   return (
     <div className="relative w-full h-full select-none">
+      {show3d && <Graph3D nodes={nodes} links={links} onOpen={onOpen} onClose={() => setShow3d(false)} />}
       <canvas ref={ref} onClick={onClick} onMouseDown={onDown} onMouseMove={onMove} onMouseUp={onUp}
         onMouseLeave={() => { hoverId.current = null; setTip(null); panning.current = null; nodeDrag.current = null }}
         className={`w-full h-full block ${connect ? 'cursor-crosshair' : 'cursor-grab active:cursor-grabbing'}`} />
@@ -1271,6 +1276,7 @@ export default function Galaxy({ nodes, links, onOpen, onConnect, modeReq }: {
           <button onClick={() => { setMode('timeline'); setMotion('still') }} title="Dòng đời — tri thức đan vào mốc thời gian thực" className={`px-2 py-1.5 rounded-lg ${mode === 'timeline' ? 'bg-blue-500/35 text-blue-100 shadow-lg shadow-blue-500/30' : 'text-zinc-400 hover:bg-white/10'}`}>📜 Dòng đời</button>
           <button onClick={() => { setMode('neuro'); setMotion('still'); setFlow(true) }} title="Bộ não 3D tự xoay — kéo nền để xoay, mỗi nhánh một vùng não" className={`px-2 py-1.5 rounded-lg ${mode === 'neuro' ? 'bg-emerald-500/35 text-emerald-100 shadow-lg shadow-emerald-500/30' : 'text-zinc-400 hover:bg-white/10'}`}>🧠 Neuro</button>
           <button onClick={() => { setMode('rings'); setMotion('still') }} title="3 vòng đồng tâm — đời tôi ở lõi, QNET, nhân loại; đập theo nhịp tim" className={`px-2 py-1.5 rounded-lg ${mode === 'rings' ? 'bg-pink-500/30 text-pink-100 shadow-lg shadow-pink-500/30' : 'text-zinc-400 hover:bg-white/10'}`}>🪐 3 Vòng</button>
+          <button onClick={() => setShow3d(true)} title="Bộ não 3D — xoay/zoom mọi chiều, tìm node sáng, lọc kho, chỉnh lực" className="px-2 py-1.5 rounded-lg text-zinc-400 hover:bg-white/10">🌐 3D</button>
         </div>
         <div className="flex items-center gap-1 rounded-md bg-[#10101a]/85 backdrop-blur border border-[var(--hud-line)] p-1">
           <button onClick={() => { const c = center(); zoomAt(c.x, c.y, 1.25) }} title="Phóng to" className="w-8 h-8 grid place-items-center rounded-lg text-zinc-300 hover:bg-white/10 text-lg">＋</button>

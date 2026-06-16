@@ -2,6 +2,16 @@
 
 > Ghi lại mỗi đợt build để lần sau làm tốt hơn. Quy trình chuẩn: **đọc docs → sửa code → `npm run build` → test thật trên preview (đăng nhập, bấm từng nút) → cập nhật docs**.
 
+## 2026-06-16 (đợt 21) — 🌐 Galaxy 3D (3d-force-graph) + search highlight
+Founder: dựng view 3D như ảnh "AI Workshop OS" — zoom/xoay 3D, depth, filter loại, chỉnh cường độ link; + search thì node liên quan sáng, còn lại tắt.
+**Nghiên cứu**: xác nhận đó là `3d-force-graph` (vasturiano, Three.js/WebGL). Dùng **vanilla** (không wrapper react-force-graph) để tránh peer-dep React 19/Next 16.
+- `npm i 3d-force-graph three three-spritetext @types/three`.
+- **Graph3D.tsx** (client): `new ForceGraph3D(el)` — nạp `next/dynamic` ssr:false trong Galaxy (Three cần window; chỉ tải khi mở, không phình app). Node màu theo kho (cyan/tím/hồng), size theo degree; link màu theo 8 chiều (DIM_COLOR); orbit/zoom/drag built-in; particle flow; nhãn hub (SpriteText) cho node degree≥6; starfield Points.
+- **Search → liên quan sáng, còn lại TẮT**: ô tìm (vnorm không dấu) → activeRef = node trúng + hàng xóm 1 bước; nodeVisibility/linkVisibility ẩn phần ngoài. Click node → focus + bay camera; Depth 1/2/3 mở rộng BFS.
+- **Filter kho** (panel phải, đếm số), **Lực** (Đẩy=charge, Độ dài link=link.distance, slider reheat), **Hiển thị** (nhãn hub / particle / tự xoay), **Inspector** + **Top hubs**. Nút "🌐 3D" ở thanh mode Galaxy, "← về 2D" để đóng.
+**Bug & fix**: (1) canvas đen — `zoomToFit` đặt camera lệch ra ngoài cụm (z=26 nhìn z=-974) → thay bằng frameCam tự tính bán kính cụm, nhìn thẳng tâm, lùi r×1.9+120, gọi onEngineStop + timer fallback. (2) SpriteText/three thiếu types → @types/three + cast Object3D.
+**Verify**: 219 node/103 link render 3D màu đúng; search "crypto" → chỉ cụm crypto sáng, còn lại tắt. tsc + build xanh.
+
 ## 2026-06-16 (đợt 20) — 🪐 Galaxy "3 Vòng đồng tâm" + 📰 News feed
 **A — Mode 3 Vòng (theo ảnh quantum-entanglement founder gửi)**: Galaxy.tsx mode mới `rings`. Layout: 3 ring đồng tâm — cá nhân (cyan #22d3ee) ở LÕI → QNET (tím) → nhân loại (hồng) ngoài cùng. Draw tự chứa: nền hư không + bụi sao, mỗi ring là vành HẠT mịn (340–940 hạt, gaussian band, gradient hue quanh vòng) phát sáng **đập theo nhịp tim lub-dub** (beat 0.55→1.0, chu kỳ ~1.4s); node thật = glint sáng trên vành (size theo degree) + nhãn leader-line khi hover/chọn; **tia ENTANGLEMENT** = link nối 2 kho khác nhau vẽ thành đường cong sáng có hạt chạy theo nhịp. Nút mode 🪐 3 Vòng. Verify: render mượt, không lỗi console, sát ảnh tham chiếu.
 **B — News (founder đề xuất, mình recommend tab thay vì nhánh sâu)**: KolFeed thêm tab 🌟 KOL / 📰 Tin ngành. Editor "➕ Đăng tin" (form: tiêu đề, tóm tắt, nguồn, ❝ câu trích đắt, 🎯 dùng khi nào) → tạo node subtype='news' layer humanity dưới hub '📰 Dòng tin ngành', owner null (của org). User đọc → "💎 Rút insight" dùng LẠI luồng onInsight (đào sâu 30s → Kim cương + nối Tham chiếu về tin gốc). Tái dùng 2 trường vàng + luồng insight đã gộp — không cơ chế mới.
