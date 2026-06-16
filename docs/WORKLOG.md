@@ -2,6 +2,19 @@
 
 > Ghi lại mỗi đợt build để lần sau làm tốt hơn. Quy trình chuẩn: **đọc docs → sửa code → `npm run build` → test thật trên preview (đăng nhập, bấm từng nút) → cập nhật docs**.
 
+## 2026-06-16 (đợt 30) — 🛡️ Sửa CRASH WebGL: 3D + view mắt không còn kéo sập app
+Founder báo: mở view mắt (3 Vòng) & 3D crash hoàn toàn. Lỗi gốc (từ stack): `THREE.WebGLRenderer: A WebGL context could not be created (OES_packed_depth_stencil required)` + `Error creating WebGL context` + bug three `Cannot access 'info' before initialization` ở onContextRestore. Các throw này KHÔNG được bắt → sập cả React → overlay lỗi che luôn view mắt 2D (và GPU process crash kéo theo canvas 2D).
+**Nguyên nhân**: (1) GPU yếu / hardware-accel tắt → không tạo nổi WebGL context; (2) mở/đóng 3D nhiều lần KHÔNG giải phóng context → cạn (~16) → trình duyệt từ chối; (3) three tự "restore" context lỗi → throw lần 2.
+**Sửa (Graph3D.tsx)**:
+- Probe WebGL trước khi dựng; không có → set glError, hiện fallback "🪐 Máy này chưa bật được 3D · ← Về 2D" thay vì throw.
+- Bọc `new ForceGraph3D` trong try/catch; thất bại → fallback.
+- `rendererConfig` nhẹ cho GPU yếu: antialias off · stencil off · powerPreference low-power · failIfMajorPerformanceCaveat false.
+- Chặn `webglcontextlost` (preventDefault) → diệt vòng restore lỗi; mất context → fallback.
+- Cleanup triệt để: `renderer.forceContextLoss()` + `dispose()` + `_destructor()` khi đóng → không cạn context.
+- Bọc vòng `tick` raf trong try/catch (context mất giữa frame không throw).
+**Sửa (Galaxy.tsx + ErrorBoundary.tsx mới)**: bọc <Graph3D> trong ErrorBoundary → mọi throw còn sót chỉ hiện fallback + tự về 2D, KHÔNG sập app/che view mắt.
+**Verify**: preview — view 3 Vòng (mắt) render đủ 3 vành + đồng tử (không crash); 3D render đủ node/link/panel (không regression); 0 lỗi console; tsc sạch. Fallback sẽ kích hoạt đúng trên máy WebGL fail.
+
 ## 2026-06-16 (đợt 29) — 🪞 B: "AI hiểu bạn" — chân dung SỐNG trên trang Tôi là ai + nút graph
 Linh hồn Jarvis: Akash phản chiếu lại chính user, tự dày lên theo thời gian. KHÔNG làm trùng — gom vào trang 🪞 Tôi là ai sẵn có.
 - **MeMirror.tsx** (component mới): card "AKASH HIỂU BẠN" tự tổng hợp HEURISTIC (không token) từ kho cá nhân:

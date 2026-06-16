@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
 // 3D dùng Three.js → chỉ tải khi mở (ssr:false), không phình app chính
 const Graph3D = dynamic(() => import('./Graph3D'), { ssr: false, loading: () => <div className="absolute inset-0 z-20 grid place-items-center bg-[#06060c] text-zinc-500 text-sm">Đang dựng bộ não 3D…</div> })
+import ErrorBoundary from './ErrorBoundary'
 
 export type GNode = { id: string; title: string | null; kind: string; parent_id: string | null; layer?: string; event_date?: string | null; subtype?: string | null; icon?: string | null; emotion?: string | null }
 // icon hiển thị trong node (ưu tiên icon riêng → suy theo loại)
@@ -1352,7 +1353,15 @@ export default function Galaxy({ nodes, links, onOpen, onConnect, modeReq }: {
   const center = () => { const r = ref.current?.getBoundingClientRect(); return { x: (r?.width ?? 0) / 2, y: (r?.height ?? 0) / 2 } }
   return (
     <div className="relative w-full h-full select-none">
-      {show3d && <Graph3D nodes={nodes} links={links} onOpen={onOpen} onClose={() => setShow3d(false)} />}
+      {show3d && (
+        <ErrorBoundary onError={() => setShow3d(false)} fallback={
+          <div className="absolute inset-0 z-20 grid place-items-center bg-[#06060c] text-center px-8">
+            <div className="max-w-sm"><div className="text-4xl mb-3">🪐</div><div className="text-zinc-200 text-base font-semibold mb-1.5">Máy này chưa bật được 3D</div><p className="text-zinc-500 text-[13px] mb-4">Dùng các chế độ 2D: Galaxy · Dòng đời · 3 Vòng.</p><button onClick={() => setShow3d(false)} className="rounded-lg ak-cta px-5 py-2 text-sm font-bold">← Về 2D</button></div>
+          </div>
+        }>
+          <Graph3D nodes={nodes} links={links} onOpen={onOpen} onClose={() => setShow3d(false)} />
+        </ErrorBoundary>
+      )}
       <canvas ref={ref} onClick={onClick} onMouseDown={onDown} onMouseMove={onMove} onMouseUp={onUp}
         onMouseLeave={() => { hoverId.current = null; setTip(null); panning.current = null; nodeDrag.current = null }}
         style={{ background: '#0a0b14' }}

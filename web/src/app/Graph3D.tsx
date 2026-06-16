@@ -44,6 +44,7 @@ export default function Graph3D({ nodes, links, onOpen, onClose }: {
   const [particles, setParticles] = useState(true)
   const [labels, setLabels] = useState(true)
   const [autoRot, setAutoRot] = useState(false)
+  const [glError, setGlError] = useState(false)   // WebGL không tạo được context (GPU yếu/cạn) → hiện fallback thay vì sập app
 
   // mở rộng tập "sáng" theo độ sâu (BFS) từ 1 node
   const expand = (rootIds: string[], d: number): Set<string> => {
@@ -74,12 +75,24 @@ export default function Graph3D({ nodes, links, onOpen, onClose }: {
   // dựng đồ thị 1 lần
   useEffect(() => {
     if (!wrap.current) return
+    // 0) kiểm tra WebGL trước — máy không hỗ trợ thì hiện fallback, KHÔNG để three throw làm sập app
+    try {
+      const probe = document.createElement('canvas')
+      const gl = probe.getContext('webgl2') || probe.getContext('webgl') || probe.getContext('experimental-webgl')
+      if (!gl) { setGlError(true); return }
+    } catch { setGlError(true); return }
+
     const N: N3[] = nodes.filter(n => n.kind !== 'block').map(n => ({ id: n.id, name: n.title ?? 'Trang', layer: n.layer ?? 'personal', kind: n.kind, val: 1 + Math.min(10, (deg.get(n.id) ?? 0)) * 0.7 }))
     const present = new Set(N.map(n => n.id))
     const L: L3[] = links.filter(l => present.has(l.from_node) && present.has(l.to_node)).map(l => ({ source: l.from_node, target: l.to_node, dimension: l.dimension, weight: 1 }))
     const vis = (id: string) => !hiddenRef.current.has(byId.get(id)?.layer ?? 'personal') && (!activeRef.current || activeRef.current.has(id))
 
-    const fg = new ForceGraph3D(wrap.current)
+    let fg: FG
+    try {
+      // attrs nhẹ cho GPU yếu: tắt antialias/stencil, ưu tiên tiết kiệm điện, không bỏ cuộc nếu GPU chậm
+      fg = new ForceGraph3D(wrap.current, { rendererConfig: { antialias: false, alpha: true, stencil: false, powerPreference: 'low-power', failIfMajorPerformanceCaveat: false } })
+    } catch (e) { console.warn('3D init failed', e); setGlError(true); return }
+    fg
       .backgroundColor('#06060c')
       .graphData({ nodes: N, links: L })
       .nodeVal('val')
@@ -126,11 +139,25 @@ export default function Graph3D({ nodes, links, onOpen, onClose }: {
 
     const onResize = () => { if (wrap.current) { fg.width(wrap.current.clientWidth); fg.height(wrap.current.clientHeight) } }
     onResize(); window.addEventListener('resize', onResize)
+    // CHẶN vòng restore lỗi của three (bug "Cannot access 'info' before initialization") khi context bị mất:
+    // preventDefault để trình duyệt KHÔNG tự restore; báo fallback gọn thay vì sập.
+    const canvas = wrap.current.querySelector('canvas')
+    const onLost = (e: Event) => { e.preventDefault(); setGlError(true) }
+    canvas?.addEventListener('webglcontextlost', onLost, false)
     // auto-rotate đơn giản: quay camera quanh tâm
     let raf = 0, ang = 0
-    const tick = () => { if (autoRotRef.current) { ang += 0.0016; const d = 380; fg.cameraPosition({ x: d * Math.sin(ang), z: d * Math.cos(ang) }) } raf = requestAnimationFrame(tick) }
+    const tick = () => { try { if (autoRotRef.current) { ang += 0.0016; const d = 380; fg.cameraPosition({ x: d * Math.sin(ang), z: d * Math.cos(ang) }) } } catch { /* context có thể mất giữa frame */ } raf = requestAnimationFrame(tick) }
     tick()
-    return () => { cancelAnimationFrame(raf); window.removeEventListener('resize', onResize); fg._destructor?.() }
+    return () => {
+      cancelAnimationFrame(raf); window.removeEventListener('resize', onResize)
+      canvas?.removeEventListener('webglcontextlost', onLost)
+      // GIẢI PHÓNG context triệt để (tránh cạn ~16 context của trình duyệt khi mở/đóng 3D nhiều lần)
+      try {
+        const r = (fg as unknown as { renderer?: () => { dispose?: () => void; forceContextLoss?: () => void } }).renderer?.()
+        r?.forceContextLoss?.(); r?.dispose?.()
+      } catch { /* bỏ qua */ }
+      try { fg._destructor?.() } catch { /* bỏ qua */ }
+    }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // refs để accessor đọc state mới nhất mà không dựng lại graph
@@ -148,6 +175,17 @@ export default function Graph3D({ nodes, links, onOpen, onClose }: {
   const topHubs = useMemo(() => [...deg.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8).map(([id, d]) => ({ n: byId.get(id), d })).filter(x => x.n), [deg, byId])
   const toggleLayer = (L: string) => setHidden(s => { const n = new Set(s); n.has(L) ? n.delete(L) : n.add(L); return n })
 
+  if (glError) return (
+    <div className="absolute inset-0 z-20 grid place-items-center bg-[#06060c] text-center px-8">
+      <div className="max-w-sm">
+        <div className="text-4xl mb-3">🪐</div>
+        <div className="text-zinc-200 text-base font-semibold mb-1.5">Máy này chưa bật được 3D</div>
+        <p className="text-zinc-500 text-[13px] leading-relaxed mb-4">Trình duyệt không tạo được đồ hoạ 3D (WebGL) — thường do tăng tốc phần cứng bị tắt hoặc card yếu. Bạn vẫn xem được toàn bộ bằng các chế độ 2D: <b className="text-zinc-300">Galaxy · Dòng đời · 3 Vòng</b>.</p>
+        <button onClick={onClose} className="rounded-lg ak-cta px-5 py-2 text-sm font-bold">← Về 2D</button>
+        <p className="text-zinc-600 text-[11px] mt-3">Mẹo: bật “Use hardware acceleration” trong cài đặt trình duyệt rồi mở lại.</p>
+      </div>
+    </div>
+  )
   return (
     <div className="absolute inset-0 z-20 flex bg-[#06060c]">
       {/* PANEL TRÁI */}
