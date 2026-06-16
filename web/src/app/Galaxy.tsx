@@ -67,7 +67,7 @@ export default function Galaxy({ nodes, links, onOpen, onConnect, modeReq }: {
   nodes: GNode[]; links: GLink[]
   onOpen: (n: GNode) => void
   onConnect?: (a: string, b: string) => void
-  modeReq?: { mode: string; t: number } | null
+  modeReq?: { mode: string; t: number; emo?: boolean } | null
 }) {
   const ref = useRef<HTMLCanvasElement>(null)
   const pts = useRef<Map<string, P>>(new Map())
@@ -92,7 +92,7 @@ export default function Galaxy({ nodes, links, onOpen, onConnect, modeReq }: {
   const unplacedRef = useRef<GNode[]>([])                                     // radar: chưa có link chiều / timeline: chưa có date
   const tlMetaRef = useRef<Record<string, { pxPerMs: number; y: number; min: number }> | null>(null)
   const ringMetaRef = useRef<{ cx: number; cy: number; RING: Record<string, number>; Rmax: number } | null>(null)
-  useEffect(() => { if (modeReq?.mode) { setMode(modeReq.mode as Mode); setMotion('still') } }, [modeReq]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (modeReq?.mode) { setMode(modeReq.mode as Mode); setMotion('still'); if (modeReq.emo) setEmoCol(true) } }, [modeReq]) // eslint-disable-line react-hooks/exhaustive-deps
   const tlZoomRef = useRef(1)                       // zoom THỜI GIAN quanh cột HÔM NAY (1 = thấy trọn quá khứ)
   const relayoutRef = useRef<() => void>(() => {})  // wheel gọi lại layout khi đổi time-zoom
   // 🧠 NEURO 3D: vị trí 3D + góc xoay (kéo nền để xoay, tự quay chậm)

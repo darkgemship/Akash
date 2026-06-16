@@ -2,6 +2,17 @@
 
 > Ghi lại mỗi đợt build để lần sau làm tốt hơn. Quy trình chuẩn: **đọc docs → sửa code → `npm run build` → test thật trên preview (đăng nhập, bấm từng nút) → cập nhật docs**.
 
+## 2026-06-16 (đợt 29) — 🪞 B: "AI hiểu bạn" — chân dung SỐNG trên trang Tôi là ai + nút graph
+Linh hồn Jarvis: Akash phản chiếu lại chính user, tự dày lên theo thời gian. KHÔNG làm trùng — gom vào trang 🪞 Tôi là ai sẵn có.
+- **MeMirror.tsx** (component mới): card "AKASH HIỂU BẠN" tự tổng hợp HEURISTIC (không token) từ kho cá nhân:
+  · 🌈 **Hành trình cảm xúc** — phân bố 9 mức Hawkins (bar màu) + đọc XU HƯỚNG (so nửa gần đây vs nửa đầu → "đang đi LÊN thang ý thức" / "cần được ôm ấp" / "thăng bằng").
+  · 📊 tăng trưởng: số trang sống · bài học 💎 · đã sống ✅ (apply_status thành nếp/đang rèn).
+  · 🗣 giọng của bạn (writing_style) + 3 bài học gần đây.
+- **Nút 🌌 "Xem graph chân dung"** → mở Galaxy mode Dòng đời với 🌈 Cảm xúc TỰ BẬT (modeReq thêm cờ `emo`) → thấy node sáng dần theo hành trình.
+- Render chỉ khi `subtype==='profile_me'`; tái dùng `tree` + EMO_SCALE, đồng bộ màu với đợt 25/27.
+**Verify**: preview trang Tôi là ai → card hiện (83 trang · 15 bài học), bài học gần đây liệt kê, nút mở Galaxy timeline + emoCol bật đúng; không lỗi console; tsc sạch.
+**Xong A→B→C.** Còn (khi có data thật/AI thật): tổng hợp tính cách DISC/MBTI vào card; RAG đọc hồ sơ giọng khi sinh content.
+
 ## 2026-06-16 (đợt 28) — 🧹 C(2): sửa nút chết + gom mode galaxy nâng cao (đỡ rối)
 - **Nút "Mở việc" chết**: việc được giao mà CHƯA gắn trang (node_id null) → bấm không tới đâu. Sửa: widget "Hôm nay cần làm" CHỈ hiện việc CÓ gắn trang (nút luôn tới đúng chỗ); việc chưa gắn trang vẫn ở khu Giao việc của MembersHub.
 - **Thanh mode Galaxy gọn lại**: chính = 🌌 Galaxy · 📜 Dòng đời · 🪐 3 Vòng · 🌐 3D (luôn hiện). Nâng cao = 🧘 Mandala · 🎯 Radar · 🧠 Neuro ẩn sau nút **⋯** (bấm bung/✕ thu). Giảm 7 nút mode → 4 + 1, đỡ cognitive load.

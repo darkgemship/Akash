@@ -6,6 +6,7 @@ import dynamic from 'next/dynamic'
 import type { PartialBlock } from '@blocknote/core'
 import Galaxy, { type GNode, type GLink } from './Galaxy'
 import Digest from './Digest'
+import MeMirror from './MeMirror'
 import { Profile, Today, Board, Studio, LifeChaptersWizard } from './Pages'
 import { KolFeed, ContentEngine, ReviewHub, MembersHub } from './Hubs'
 import Warp from './Warp'
@@ -266,7 +267,7 @@ function Workspace({ user }: { user: User }) {
   const [tplFor, setTplFor] = useState<{ parentId: string | null; layer: string } | null>(null)
   const [lifeWiz, setLifeWiz] = useState(false)
   const [capDeep, setCapDeep] = useState<{ kind: 'exp' | 'insight'; text: string; emo: string; who: string; lesson: string; src: string; gocstory: string; apply: string; srcId?: string; srcTitle?: string } | null>(null)
-  const [galaxyModeReq, setGalaxyModeReq] = useState<{ mode: string; t: number } | null>(null)
+  const [galaxyModeReq, setGalaxyModeReq] = useState<{ mode: string; t: number; emo?: boolean } | null>(null)
   const [mobileNav, setMobileNav] = useState(false)
   const [themeLight, setThemeLight] = useState(false)
   useEffect(() => { setThemeLight(typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'light') }, [])
@@ -991,6 +992,10 @@ function Workspace({ user }: { user: User }) {
                 <input value={editTitle} readOnly={!canEditLayer(layerOf(editing.id))} onChange={e => setEditTitle(e.target.value)} onBlur={saveTitle} onKeyDown={e => e.key === 'Enter' && (e.target as HTMLInputElement).blur()} className="ak-display w-full text-4xl font-bold bg-transparent outline-none placeholder:text-zinc-700 mb-2" placeholder="Trang chưa có tiêu đề" />
                 {canEditLayer(layerOf(editing.id)) && isGenericTitle(editTitle) && suggestTitle() && (
                   <button onClick={applySuggestedTitle} title="Đặt tiêu đề từ nội dung (Tóm tắt 1 câu / câu đầu)" className="mb-2 -mt-1 inline-flex items-center gap-1.5 text-[11px] rounded-lg bg-violet-500/10 border border-violet-400/25 text-violet-200 px-2.5 py-1 hover:bg-violet-500/20 transition">✨ Gợi ý tiêu đề: <span className="text-zinc-300 italic truncate max-w-[360px]">“{suggestTitle()}”</span></button>
+                )}
+                {/* 🪞 "AI hiểu bạn" — chân dung sống, chỉ trên trang Tôi là ai */}
+                {nodeOf(editing.id)?.subtype === 'profile_me' && (
+                  <MeMirror nodes={tree} onOpenPortrait={() => { setView('galaxy'); setGalaxyModeReq({ mode: 'timeline', emo: true, t: Date.now() }); setToast('🌌 Chân dung cảm xúc của bạn trên Dòng đời — node sáng dần khi bạn đi lên'); setTimeout(() => setToast(''), 4000) }} />
                 )}
                 {/* ① PROPERTIES — 📌 trường chuẩn ban biên tập (fix cứng) + ✏️ trường riêng user (PageFrame.tsx). Trang tổng (kho/hub) không có */}
                 {(() => {
