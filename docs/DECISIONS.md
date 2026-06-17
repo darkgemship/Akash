@@ -45,4 +45,14 @@
 - DB "data QI": ~95 nodes, 35+ links, đầy đủ bảng (nodes/links/wisdom_depth/events/content_results/open_questions/ai_jobs/assignments/profiles.voice).
 - Acc test: ng.hongngoc1196@gmail.com / DataQi@2026 (Admin).
 - **Việc dở dang**: taxonomy 2 trục (chốt rồi chưa build) · mobile drawer · deploy Vercel · bật Leaked Password Protection (dashboard) · dọn trang test "ádfsdfsd…" trong kho admin · embeddings/pgvector · milestones.
-- Docs đọc theo thứ tự: DECISIONS.md (file này) → FRAMEWORK.md → ROADMAP.md → STANDARD-TEMPLATE.md → AI-FRAMEWORK.md → WORKLOG.md (lịch sử chi tiết).
+- Docs đọc theo thứ tự: DECISIONS.md (file này) → AKASH.md → KHO-CHUAN.md → FRAMEWORK.md → ROLES.md → GRAPH-VISION.md → AUDIT-2026-06-17.md → NEXT-STEPS.md → WORKLOG.md (lịch sử).
+
+## D. CẬP NHẬT 2026-06-17 (chốt — đè lên mô tả cũ ở các mục trên)
+1. **KHUNG 7 CHIỀU** (chốt 17/6, bỏ Neo): **5 chiều QUAN HỆ** vẽ đường nối = Kiến thức·Con người·Trải nghiệm·Tham chiếu·Giá trị · **Thời gian** = TRỤC (Dòng đời; mỗi kho 1 trục: đời tôi / QNET 28 năm / lịch sử thế giới) · **Cảm xúc** = HIỆU ỨNG tia sáng bắn từ node (không phải đường nối). **Neo (Neo/quote) ĐÃ BỎ** khỏi chiều — quote vẫn ghi vào Kim Chỉ Nam như TÍNH NĂNG. Hoa Chuyển hoá = 7 cánh. Dòng đời hiện 7 chiều. Radar 7 trục. Màu chiều nguồn `Galaxy.tsx DIM_COLOR`.
+1b. **3 chuyển động tri thức**: ① **Nội hoá/Hấp thụ** (kho chung→mình) · ② **Đúc kết** (trải nghiệm→bài học) · ③ **Ứng dụng = Xưởng content** (tri thức chín→series hành động/content, trong kho cá nhân).
+2. **Chuyển hoá = 2 chế độ**: 📥 **Nội hoá** (kho chung, bắt buộc) · 🌾 **Đúc kết** (kho cá nhân trải nghiệm, tuỳ tâm). Bài sinh từ digest + container không vào hàng đợi đúc kết.
+3. **Bảo mật kho cá nhân**: `layer='personal'` CHỈ chủ đọc/sửa/xoá (RLS chặn admin); `links` theo `can_see_node`; giọng/branding ở bảng `user_voice` (đã DROP `profiles.voice`). Khuôn `bootstrap_me`. Reset `vault_reset`. Snapshot `vault_snapshots`+pg_cron 2 ngày.
+4. **Tài khoản do Admin cấp** (Edge `admin-create-user`) — **chặn tự đăng ký, chỉ login**. Vai member/editor/chief → level 1/2/4.
+5. **Luồng duyệt GitHub-style**: lịch sử nộp 🔴/🟡/🟢 + trả-lại→sửa→nộp-lại. Assignment open→submitted→done, **nghiệm thu=award_qi**, thông báo nhóm qua `board_messages`, hiện realtime ở "Cần làm".
+6. **Galaxy 4 view chính** (Thiên hà·Cây sự sống·Dòng đời·3D); Radar/Neuro sau ⋯; bỏ "3 Vòng".
+7. **Một chữ = "Chuyển hoá"** (bỏ "Thấm").

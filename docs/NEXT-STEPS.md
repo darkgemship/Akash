@@ -1,24 +1,37 @@
-# ▶️ Akash — Việc làm tiếp (cập nhật 2026-06-16, cuối phiên graph/3D)
+# ▶️ Akash — Việc làm tiếp (cập nhật 2026-06-17)
 
-> Đọc cùng: `docs/AKASH.md` (tổng) · `docs/WORKLOG.md` (nhật ký) · `docs/RAG-CHUNKING.md` (kiến trúc RAG) · memory `akash-project-state.md`.
-> ⚠️ Path mới: dự án ở **`~/Desktop/Akash`** (đã đổi tên từ "Data Qi"). Chạy: `cd ~/Desktop/Akash/web && npm run dev`.
+> Đọc cùng: `docs/AUDIT-2026-06-17.md` (audit + đề xuất view + function) · `docs/AKASH.md` (tổng) · `docs/WORKLOG.md` (nhật ký) · `docs/IMPROVEMENT.md` (sổ hiểu nhau) · memory `akash-project-state.md`.
+> Chạy: `cd ~/Desktop/Akash/web && npm run dev`. Project Supabase: data QI `vntndprivvkgjbeutand` (KHÔNG đụng project thật 578 user).
 
-## A. Graph/Visualization — nicety còn lại
-- [ ] **Click thẳng vào NGÔI SAO (tâm kho)** để bung dần tầng (hành tinh→tiểu HT→vệ tinh). Hiện đạt qua nút **TẦNG** (2D) / **Độ sâu hệ** (3D) + nút **◎** pivot. Sao là THREE mesh nên cần raycast riêng nếu muốn click trực tiếp.
-- [ ] (tuỳ) Độ sâu RIÊNG từng thiên hà (giờ là global 1 nút cho cả 3 kho).
-- [ ] (tuỳ) Hover: tô màu KHÁC nhau cho link-đi (forward) vs backlink (incoming) — hiện cùng highlight "hot".
-- [ ] Soát warning React "useEffect deps changed size" (non-fatal, chưa rõ nguồn — không từ thay đổi gần đây).
+## 🔴 Cần FOUNDER thao tác tay
+- [ ] Dán `ANTHROPIC_API_KEY` + `OPENAI_API_KEY` vào **Supabase Edge secret** (không NEXT_PUBLIC) → bật `ai-standardize` + `rag-embed`.
+- [ ] Supabase Dashboard → Authentication → **tắt "Allow new users to sign up"** (khoá cứng; app đã bỏ UI đăng ký).
+- [ ] (deploy) `vercel login` → mình deploy: root `web` + 2 env NEXT_PUBLIC Supabase.
 
-## B. AI / RAG — khi founder cắm API key (Edge Function secret, KHÔNG NEXT_PUBLIC)
-- [ ] **Băm chunk** (RAG-CHUNKING §2): Edge Function cắt md theo heading `##` + nhét metadata (kho/loại/level/8-chiều/emotion/keywords/confidence) → bảng `chunks`. Heuristic trước (miễn phí), chạy qua `ai_jobs`.
-- [ ] **pgvector**: `create extension vector` + bảng `chunks(embedding vector)` + RPC `match_chunks` (hybrid: lọc metadata → vector → keyword, trộn RRF).
-- [ ] **Agent hỏi-đáp** trả lời bằng **hồ sơ giọng** (writing_style / forbidden_words / favorite_quotes ở trang "Tôi là ai").
-- [ ] Tổng hợp **DISC/MBTI** từ "3 câu hôm nay" vào chân dung MeMirror (heuristic được, không cần token).
-- [ ] Auto-ingest nguồn ngoài (YouTube transcript / FB-IG post / meeting note) → md → vào kho → tự băm.
+## A. Graph — view mới cho 6 chiều (đẹp hơn) — xem AUDIT §C
+- [ ] **C1 Quỹ đạo theo chiều** (làm trước): chọn node → 6 vòng tròn màu = 6 chiều, neighbor bay trên vòng của chiều nối nó. Chỉ cần data `links`, render canvas.
+- [ ] **C2 Vòng hợp âm (Chord)**: node gom theo kho, ruy-băng nối tô màu chiều — ảnh "wow".
+- [ ] (tuỳ) C3 "6 bầu trời" (mỗi ô 1 chiều) · C4 Sankey dòng chảy kho→chiều→kho.
 
-## C. Deploy (chờ founder thao tác)
-- [ ] Founder chạy `vercel login` (OAuth, không QR) → mình deploy nốt: root = `web`, 2 env NEXT_PUBLIC Supabase → tạo link/QR live.
+## B. Dọn code graph (tuỳ, không ảnh hưởng chạy) — xem AUDIT §B
+- [ ] Galaxy: xoá code chết `depthCol`/`DEPTH_COLOR`/`depthColorOf`.
+- [ ] Galaxy: quyết mode `rings` (~120 dòng không truy cập được) — xoá hay gắn lại nút.
 
-## D. Dọn dẹp
-- [ ] Xoá thư mục rỗng cũ `~/Desktop/Data Qi` (chỉ còn `.next`).
-- [ ] Mở lại project/Claude ở `~/Desktop/Akash` để dev + preview MCP trỏ đúng path.
+## C. Đồng bộ docs còn lại — xem AUDIT §A
+- [ ] Đổi "8 chiều"→"6 chiều liên kết (+2 thuộc tính)" ở APP-FLOWS, USER-STORIES, RAG-CHUNKING, AKASH §8.
+- [ ] Thống nhất "Chuyển hoá" (bỏ "Thấm") ở FRAMEWORK §5, KHO-CHUAN, USER-STORIES.
+- [ ] FRAMEWORK §4 bỏ hẳn radar 5 cạnh; AI-FRAMEWORK/ROADMAP đổi `profiles.voice`→`user_voice`.
+- [ ] README: chốt MỘT thứ tự đọc docs.
+
+## D. Tính năng tiếp theo (khi có key)
+- [ ] **RAG search UI**: ô "Hỏi kho của tôi" → RPC `ask_my_vault` (wrap `match_chunks`, chỉ trong kho mình) → AI trả lời.
+- [ ] **Sinh content theo giọng**: Edge `generate-content` từ bài đã Chuyển hoá + `user_voice.branding`.
+- [ ] Tổng hợp DISC/MBTI từ "3 câu hôm nay" vào MeMirror (heuristic, không cần token).
+
+## E. Function/hạ tầng cần chuẩn bị — xem AUDIT §E
+- [ ] RPC `dim_link_stats(p_org)` cho view Chord/Sankey.
+- [ ] (tuỳ) RPC `node_dim_summary(p_node)` cho view Quỹ đạo.
+- [ ] (RAG) RPC `ask_my_vault(p_query)` + Edge `generate-content`.
+
+## F. Test một vòng thực tế
+- [ ] Cấp 1 tài khoản test (Nhân sự) → đăng nhập → giao việc gắn trang → xem thông báo Phòng biên tập → nộp → nghiệm thu (+Qi) → kiểm Snapshot/Khôi phục/Reset.

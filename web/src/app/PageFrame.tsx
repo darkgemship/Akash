@@ -20,6 +20,8 @@ export const CONFIDENCE: string[] = ['🟢 Đã kiểm chứng', '🔵 Đáng ti
 // Trường của tôi (mặc định, kho cá nhân): mức ưu tiên + trạng thái áp dụng vào đời thực.
 export const PRIORITY: string[] = ['🔥 Sống còn', '⭐ Cao', '· Vừa', '· Thấp']
 export const APPLY_STATUS: string[] = ['💡 Mới biết', '🧪 Đang thử', '🔁 Đang rèn', '✅ Đã thành nếp']
+// 👥 Phân loại người trong "Con người" (mentor/guru/vĩ nhân/gia đình…) — để sau phân nhóm mạng quan hệ
+export const PERSON_CAT: string[] = ['🧑‍🏫 Mentor', '🧘 Guru / Thầy', '🌟 Vĩ nhân', '👨‍👩‍👧 Gia đình', '🤝 Bạn bè', '🧑‍💼 Đối tác / Khách']
 
 /* =====================================================================
    PageFrame — bộ khung chuẩn của MỌI trang (xem docs/STANDARD-TEMPLATE.md)
@@ -53,9 +55,11 @@ export const DIMS: Record<string, { label: string; color: string; icon: string; 
   people: { label: 'Con người', color: '#34d399', icon: '💚', q: 'Bạn thấy/nghe chuyện thật của AI liên quan điều này?' },
   time: { label: 'Thời gian', color: '#60a5fa', icon: '💙', q: 'Xảy ra KHI NÀO trong dòng đời? Nối vào timeline.' },
   reference: { label: 'Tham chiếu', color: '#e879f9', icon: '💗', q: 'Nguồn ở đâu? Trang nào hướng tới, trang nào trỏ về?' },
-  anchor: { label: 'Neo', color: '#f87171', icon: '❤️', q: 'Rút thành câu CHÂM NGÔN của chính bạn → Kim Chỉ Nam.' },
 }
 
+// chiều có "vật" riêng (không phải trang thường): Con người = hồ sơ người · Giá trị = giá trị trong Kim Chỉ Nam
+// → picker lọc theo subtype + cho TẠO MỚI ngay. (Neo đã bỏ — quote ghi thẳng vào Kim Chỉ Nam, không còn là chiều.)
+const DIM_SUBTYPE: Record<string, string> = { people: 'person', values: 'core_value' }
 // Trục 1 — bản chất tri thức (mọi trang). Trục 2 — định dạng đầu ra (chỉ thẻ Xưởng content)
 export const PAGE_TYPES: [string, string][] = [
   ['trai-nghiem', '🌱 Trải nghiệm'], ['bai-hoc', '🎓 Bài học / Khái niệm'], ['quy-trinh', '📋 Quy trình / Checklist'],
@@ -90,6 +94,28 @@ const Sect = ({ title, hint, children }: { title: string; hint?: string; childre
     {children}
   </div>
 )
+
+// 🏷️ Ô TAG dùng chung (Từ khoá, sau này: Con người…): lưu dạng chuỗi "a, b, c" (tương thích chunk/search) — gõ Enter/phẩy thêm, ✕ xoá
+export function TagField({ value, onChange, canE, placeholder, accent }: { value: string; onChange: (v: string) => void; canE: boolean; placeholder?: string; accent?: string }) {
+  const tags = (value ?? '').split(',').map(t => t.trim()).filter(Boolean)
+  const [draft, setDraft] = useState('')
+  const c = accent ?? '#a78bfa'
+  const add = (t: string) => { const v = t.trim().replace(/,/g, ''); if (!v || tags.includes(v)) { setDraft(''); return } onChange([...tags, v].join(', ')); setDraft('') }
+  const rm = (t: string) => onChange(tags.filter(x => x !== t).join(', '))
+  return (
+    <div className="flex flex-wrap items-center gap-1 py-1 min-h-[34px]">
+      {tags.map(t => (
+        <span key={t} className="flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[12px]" style={{ background: c + '22', border: `1px solid ${c}55`, color: '#ece9f4' }}>
+          {t}{canE && <button onClick={() => rm(t)} title="Xoá thẻ" className="text-zinc-500 hover:text-red-300 leading-none">✕</button>}
+        </span>
+      ))}
+      {canE && <input value={draft} onChange={e => setDraft(e.target.value)} autoComplete="off" data-1p-ignore
+        onKeyDown={e => { if ((e.key === 'Enter' || e.key === ',') && draft.trim()) { e.preventDefault(); add(draft) } else if (e.key === 'Backspace' && !draft && tags.length) rm(tags[tags.length - 1]) }}
+        onBlur={() => draft.trim() && add(draft)} placeholder={tags.length ? '' : (placeholder ?? '+ thẻ…')}
+        className="flex-1 min-w-[90px] bg-transparent outline-none text-[13px] text-zinc-100 px-1 py-0.5 placeholder:text-zinc-600" />}
+    </div>
+  )
+}
 
 /* =====================================================================
    ① PROPS PANEL — ngay dưới title
@@ -176,8 +202,8 @@ export function PropsPanel({ node, canE, isEditor, hubLabel, onSetProp, onSaveDa
           <Row label="Nguồn" hint="sách / URL / người kể / tự trải nghiệm">
             <input disabled={!canE} key={node.id + '-src'} defaultValue={(p.source as string) ?? ''} onBlur={e => { if (e.target.value !== ((p.source as string) ?? '')) onSetProp('source', e.target.value) }} placeholder="—" className={flat} />
           </Row>
-          <Row label="Từ khoá" hint="cách nhau dấu phẩy — phục vụ tìm kiếm & AI">
-            <input disabled={!canE} key={node.id + '-kw'} defaultValue={(p.keywords as string) ?? ''} onBlur={e => { if (e.target.value !== ((p.keywords as string) ?? '')) onSetProp('keywords', e.target.value) }} placeholder="—" className={flat} />
+          <Row label="Từ khoá" hint="thẻ tag — gõ rồi Enter/phẩy để thêm, ✕ để xoá (hệ thống tự gợi từ nội dung, bạn sửa được)">
+            <TagField value={(p.keywords as string) ?? ''} onChange={v => onSetProp('keywords', v)} canE={canE} placeholder="+ từ khoá…" accent="#e879f9" />
           </Row>
           {/* Kho chung (QNET/Nhân loại) = tài liệu tham chiếu → 2 trường vàng cho AI viết content rẻ mà hay */}
           {isShared && (
@@ -209,6 +235,13 @@ export function PropsPanel({ node, canE, isEditor, hubLabel, onSetProp, onSaveDa
           )}
           {(((p.page_type as string) === 'ho-so') || node.subtype === 'person') && (
             <>
+              {node.subtype === 'person' && (
+                <Row label="Phân loại" hint="mentor / guru / vĩ nhân / gia đình / bạn bè — để sau phân nhóm mạng quan hệ">
+                  <select disabled={!canE} value={(p.category as string) ?? ''} onChange={e => onSetProp('category', e.target.value)} className={flat}>
+                    <option value="">— chọn —</option>{PERSON_CAT.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </Row>
+              )}
               <Row label="Giai đoạn" hint="trạng thái quan hệ">
                 <select disabled={!canE} value={(p.giai_doan as string) ?? ''} onChange={e => onSetProp('giai_doan', e.target.value)} className={flat}>
                   <option value="">—</option>
@@ -320,7 +353,7 @@ export function PropsPanel({ node, canE, isEditor, hubLabel, onSetProp, onSaveDa
    🗂 trang con → ❤️ liên kết 8 chiều (nối ngay tại chỗ) → 🕸️ đi/về →
    💎 tinh hoa → 📚 references → 📎 đính kèm
 ===================================================================== */
-export function PageFooter({ node, pages, outLinks, backLinks, mdText, canE, lite, onOpen, onAddChild, onLink, onSetProp }: {
+export function PageFooter({ node, pages, outLinks, backLinks, mdText, canE, lite, onOpen, onAddChild, onLink, onSetProp, onCreateForDim }: {
   node: FrameNode
   pages: FrameNode[]            // toàn bộ tree — để tra tên trang & picker nối
   outLinks: LinkOut[]
@@ -332,6 +365,7 @@ export function PageFooter({ node, pages, outLinks, backLinks, mdText, canE, lit
   onAddChild: () => void
   onLink: (toId: string, dimension: string) => void
   onSetProp: (key: string, val: unknown) => void
+  onCreateForDim?: (name: string, subtype: string) => Promise<string | null>   // tạo người/giá trị/quote mới rồi nối
 }) {
   const [picker, setPicker] = useState<{ dim: string; q: string } | null>(null)
   const byId = useMemo(() => new Map(pages.map(pg => [pg.id, pg])), [pages])
@@ -418,19 +452,34 @@ export function PageFooter({ node, pages, outLinks, backLinks, mdText, canE, lit
                     {back.map(pg => pageChip(pg, '←', d.color))}
                   </div>
                 ) : <p className="text-[10px] text-zinc-700 leading-relaxed italic">{d.q}</p>}
-                {/* picker nối ngay tại chiều này (chỉ 6 chiều quan hệ) */}
-                {!isAttr && picker?.dim === k && (
-                  <div className="mt-2 rounded-lg bg-black/30 border border-white/10 p-1.5">
-                    <input autoFocus value={picker.q} onChange={e => setPicker({ dim: k, q: e.target.value })} placeholder={`Tìm trang để nối chiều ${d.label}…`} className="w-full bg-transparent outline-none text-xs px-1 py-0.5 mb-1 text-zinc-200" />
-                    <div className="max-h-36 overflow-auto space-y-0.5">
-                      {pages.filter(pg => pg.id !== node.id && pg.kind !== 'kho' && (pg.title ?? '').toLowerCase().includes(picker.q.toLowerCase())).slice(0, 8).map(pg => (
-                        <button key={pg.id} onClick={() => { onLink(pg.id, k); setPicker(null) }} className="w-full text-left text-[11px] rounded px-1.5 py-1 text-zinc-300 hover:bg-white/10 flex items-center gap-1.5">
-                          <span className="shrink-0">{pg.icon || kindIcon(pg.kind)}</span><span className="truncate">{pg.title || 'Chưa đặt tên'}</span>
-                        </button>
-                      ))}
+                {/* picker theo chiều: people/values/anchor lọc theo subtype + cho TẠO MỚI; còn lại = tìm trang thường */}
+                {!isAttr && picker?.dim === k && (() => {
+                  const st = DIM_SUBTYPE[k]   // person | core_value | mantra | undefined
+                  const qq = picker.q.toLowerCase().trim()
+                  const list = pages.filter(pg => pg.id !== node.id && pg.kind !== 'kho' && (st ? pg.subtype === st : true) && (pg.title ?? '').toLowerCase().includes(qq)).slice(0, 8)
+                  const exact = list.some(pg => (pg.title ?? '').toLowerCase().trim() === qq)
+                  const canCreate = !!st && !!onCreateForDim && picker.q.trim().length > 0 && !exact
+                  const ph = k === 'people' ? 'Tên người… (gõ tên mới = tạo người mới)' : k === 'values' ? 'Giá trị cốt lõi… (vd: Chính trực)' : k === 'anchor' ? 'Câu châm ngôn / quote…' : `Tìm trang để nối chiều ${d.label}…`
+                  const newLbl = k === 'people' ? 'người' : k === 'values' ? 'giá trị' : 'câu châm ngôn'
+                  return (
+                    <div className="mt-2 rounded-lg bg-black/30 border border-white/10 p-1.5">
+                      <input autoFocus value={picker.q} onChange={e => setPicker({ dim: k, q: e.target.value })} autoComplete="off" data-1p-ignore placeholder={ph} className="w-full bg-transparent outline-none text-xs px-1 py-0.5 mb-1 text-zinc-200" />
+                      <div className="max-h-36 overflow-auto space-y-0.5">
+                        {list.map(pg => (
+                          <button key={pg.id} onClick={() => { onLink(pg.id, k); setPicker(null) }} className="w-full text-left text-[11px] rounded px-1.5 py-1 text-zinc-300 hover:bg-white/10 flex items-center gap-1.5">
+                            <span className="shrink-0">{pg.icon || kindIcon(pg.kind)}</span><span className="truncate">{pg.title || 'Chưa đặt tên'}</span>
+                          </button>
+                        ))}
+                        {canCreate && (
+                          <button onClick={async () => { const id = await onCreateForDim!(picker.q.trim(), st!); setPicker(null); if (id) onLink(id, k) }} className="w-full text-left text-[11px] rounded px-1.5 py-1 text-emerald-300 hover:bg-emerald-500/10 flex items-center gap-1.5">
+                            <span className="shrink-0">＋</span><span className="truncate">Tạo {newLbl} mới: “{picker.q.trim()}”</span>
+                          </button>
+                        )}
+                        {!list.length && !canCreate && <p className="text-[10px] text-zinc-600 px-1 py-1">{st ? 'Gõ để tạo mới…' : 'Không tìm thấy trang.'}</p>}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )
+                })()}
               </div>
             )
           })}

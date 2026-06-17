@@ -2,13 +2,13 @@
    Nguồn sự thật = bảng links (+ tín hiệu nội tại trang). wisdom_depth chỉ còn vai trò lịch ôn SM-2.
    Pattern theo Anki/FSRS/RemNote: scheduler state lưu, mọi điểm số đều derive — không bao giờ lệch. */
 
-export const DIM_KEYS = ['knowledge', 'experience', 'emotion', 'values', 'people', 'time', 'reference', 'anchor'] as const
+export const DIM_KEYS = ['knowledge', 'experience', 'emotion', 'values', 'people', 'time', 'reference'] as const   // 7 chiều (bỏ Neo)
 export type DimKey = typeof DIM_KEYS[number]
 
-// trọng số tổng = 1.00 — experience + anchor nặng nhất: bằng chứng chuyển hoá THẬT
+// trọng số tổng = 1.00 — experience nặng nhất: bằng chứng chuyển hoá THẬT (đã gộp phần của Neo cũ vào experience/values)
 const W: Record<DimKey, number> = {
-  knowledge: 0.12, reference: 0.10, emotion: 0.10, time: 0.10,
-  people: 0.11, values: 0.13, experience: 0.17, anchor: 0.17,
+  knowledge: 0.14, reference: 0.12, emotion: 0.12, time: 0.12,
+  people: 0.13, values: 0.16, experience: 0.21,
 }
 // bão hoà: tín hiệu đầu của MỖI chiều đáng giá nhất (1→50%, 2→75%, 3→87.5%) — farm 50 link 1 chiều không ăn điểm
 const sat = (x: number) => 1 - Math.pow(2, -x)

@@ -42,12 +42,14 @@ const VOICE_QS = [
 ]
 function VoiceCard({ me }: { me: string }) {
   const [ans, setAns] = useState<string[]>(Array(8).fill(''))
+  const [branding, setBranding] = useState('')   // nguyên tắc thương hiệu / content — AI coi như luật xây content giống mình
   const [open, setOpen] = useState(false)
   const [saved, setSaved] = useState('')
   useEffect(() => {
-    supabase.from('profiles').select('voice').eq('id', me).maybeSingle().then(({ data }) => {
-      const v = data?.voice as { answers?: string[] } | null
+    supabase.from('user_voice').select('voice').eq('user_id', me).maybeSingle().then(({ data }) => {
+      const v = data?.voice as { answers?: string[]; branding?: string } | null
       if (v?.answers) setAns(a => a.map((_, i) => v.answers![i] ?? ''))
+      if (v?.branding) setBranding(v.branding)
     })
   }, [me])
   const filled = ans.filter(a => a.trim()).length
@@ -66,14 +68,68 @@ function VoiceCard({ me }: { me: string }) {
               <textarea value={ans[i]} onChange={e => setAns(a => a.map((x, j) => j === i ? e.target.value : x))} className="w-full h-12 rounded-xl bg-white/5 border border-white/10 p-2.5 text-xs outline-none focus:border-amber-400/50" />
             </div>
           ))}
+          {/* 🎨 Nguyên tắc thương hiệu / content — thêm bao nhiêu cũng được, AI coi như LUẬT để dựng content giống mình */}
+          <div className="pt-1 border-t border-white/10">
+            <div className="text-xs text-amber-300/90 mb-1 mt-2">🎨 Nguyên tắc thương hiệu &amp; content của tôi <span className="text-zinc-600">(mỗi dòng 1 nguyên tắc — AI dựng content theo đây)</span></div>
+            <textarea value={branding} onChange={e => setBranding(e.target.value)} placeholder={'vd:\n- Luôn mở bài bằng 1 câu hỏi chạm\n- Không dùng từ "bí quyết", "đỉnh cao"\n- Màu chủ đạo tím–vàng, tông ấm\n- Mỗi bài kết bằng 1 hành động nhỏ'} className="w-full h-28 rounded-xl bg-white/5 border border-white/10 p-2.5 text-xs outline-none focus:border-amber-400/50" />
+          </div>
           <button onClick={async () => {
-            const { error } = await supabase.from('profiles').upsert({ id: me, voice: { answers: ans, updated_at: new Date().toISOString() } })
-            setSaved(error ? '⚠️ ' + error.message : '✅ Đã lưu giọng của bạn')
+            const { error } = await supabase.from('user_voice').upsert({ user_id: me, voice: { answers: ans, branding: branding.trim(), updated_at: new Date().toISOString() } })
+            setSaved(error ? '⚠️ ' + error.message : '✅ Đã lưu giọng & nguyên tắc của bạn')
             setTimeout(() => setSaved(''), 2500)
-          }} className="w-full rounded-xl bg-amber-400 text-black hover:bg-amber-300 py-2.5 text-sm font-bold">💾 Lưu giọng</button>
+          }} className="w-full rounded-xl bg-amber-400 text-black hover:bg-amber-300 py-2.5 text-sm font-bold">💾 Lưu giọng &amp; nguyên tắc</button>
           {saved && <p className="text-xs text-zinc-300">{saved}</p>}
         </div>
       )}
+    </Card>
+  )
+}
+
+type Snap = { id: string; label: string | null; kind: string; created_at: string }
+function BackupCard({ me }: { me: string }) {
+  const [snaps, setSnaps] = useState<Snap[]>([])
+  const [busy, setBusy] = useState('')
+  const [msg, setMsg] = useState('')
+  const load = () => supabase.from('vault_snapshots').select('id,label,kind,created_at').eq('user_id', me).order('created_at', { ascending: false }).limit(20).then(({ data }) => setSnaps((data as Snap[]) ?? []))
+  useEffect(() => { load() }, [me]) // eslint-disable-line react-hooks/exhaustive-deps
+  const flash = (m: string) => { setMsg(m); setTimeout(() => setMsg(''), 3000) }
+  async function create() {
+    setBusy('create'); const { error } = await supabase.rpc('snapshot_create', { p_label: 'Điểm khôi phục thủ công' })
+    setBusy(''); flash(error ? '⚠️ ' + error.message : '✅ Đã tạo điểm khôi phục'); if (!error) load()
+  }
+  async function restore(id: string) {
+    if (!confirm('Khôi phục về điểm này? Toàn bộ kho cá nhân HIỆN TẠI sẽ được thay bằng bản đã lưu.')) return
+    setBusy(id); const { error } = await supabase.rpc('snapshot_restore', { p_id: id })
+    setBusy(''); flash(error ? '⚠️ ' + error.message : '✅ Đã khôi phục — tải lại trang để thấy'); if (!error) setTimeout(() => location.reload(), 1200)
+  }
+  async function reset() {
+    if (!confirm('RESET kho cá nhân về khuôn chuẩn? Mọi trang cá nhân hiện tại sẽ bị XOÁ (nên tạo điểm khôi phục trước).')) return
+    setBusy('reset'); const { error } = await supabase.rpc('vault_reset')
+    setBusy(''); flash(error ? '⚠️ ' + error.message : '✅ Đã reset về khuôn chuẩn — tải lại trang'); if (!error) setTimeout(() => location.reload(), 1200)
+  }
+  const fmt = (s: string) => new Date(s).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+  return (
+    <Card className="mb-4">
+      <div className="flex items-center justify-between mb-2">
+        <Lbl>🗄️ Sao lưu &amp; Khôi phục kho cá nhân</Lbl>
+        <button onClick={create} disabled={!!busy} className="text-xs rounded-lg bg-emerald-500/20 border border-emerald-400/30 text-emerald-200 px-3 py-1.5 disabled:opacity-50">{busy === 'create' ? '…' : '＋ Tạo điểm khôi phục'}</button>
+      </div>
+      <p className="text-[11px] text-zinc-500 mb-2">Tự động sao lưu mỗi 2 ngày (giữ 5 bản gần nhất). Bạn cũng tự tạo điểm khôi phục bất cứ lúc nào.</p>
+      <div className="space-y-1 max-h-56 overflow-auto">
+        {snaps.map(s => (
+          <div key={s.id} className="flex items-center gap-2 rounded-lg bg-white/[0.03] border border-white/10 px-3 py-2">
+            <span className="text-xs shrink-0">{s.kind === 'auto' ? '🤖' : '📌'}</span>
+            <span className="text-xs flex-1 min-w-0 truncate">{s.label || 'Điểm khôi phục'} <span className="text-zinc-600">· {fmt(s.created_at)}</span></span>
+            <button onClick={() => restore(s.id)} disabled={!!busy} className="text-[10px] rounded-md bg-white/10 border border-white/10 px-2.5 py-1 hover:bg-white/15 disabled:opacity-50 shrink-0">{busy === s.id ? '…' : '↩ Khôi phục'}</button>
+          </div>
+        ))}
+        {snaps.length === 0 && <p className="text-xs text-zinc-600 py-2">Chưa có bản sao lưu nào — bấm "Tạo điểm khôi phục".</p>}
+      </div>
+      <div className="mt-3 pt-3 border-t border-white/10 flex items-center justify-between">
+        <span className="text-[11px] text-zinc-500">Muốn làm lại từ đầu theo khuôn chuẩn?</span>
+        <button onClick={reset} disabled={!!busy} className="text-[10px] rounded-md bg-red-500/15 border border-red-400/30 text-red-300 px-2.5 py-1.5 hover:bg-red-500/25 disabled:opacity-50">{busy === 'reset' ? '…' : '🔄 Reset về khuôn chuẩn'}</button>
+      </div>
+      {msg && <p className="text-xs mt-2 text-zinc-300">{msg}</p>}
     </Card>
   )
 }
@@ -127,6 +183,7 @@ export function Profile({ user }: { user: User }) {
         <Card><Lbl>🎓 Bài đã chuyển hoá</Lbl><div className="text-3xl font-black">{learned}</div></Card>
       </div>
       <VoiceCard me={user.id} />
+      <BackupCard me={user.id} />
       <Card className="mb-4">
         <Lbl>🔒 Đổi mật khẩu</Lbl>
         <div className="flex gap-2">
@@ -150,7 +207,7 @@ type SPage = { id: string; title: string | null; layer: string; kind: string; pa
 // liên kết bài mới ↔ trang có sẵn: dir 'out' = bài này nối tới trang, 'in' = backlink từ trang về bài này; dim = 1 trong 8 chiều FRAMEWORK
 type Conn = { id: string; dir: 'out' | 'in'; dim: string }
 const DIM_VI: [string, string][] = [['knowledge', 'Kiến thức'], ['experience', 'Trải nghiệm'], ['emotion', 'Cảm xúc'], ['values', 'Giá trị'], ['people', 'Con người'], ['time', 'Thời gian'], ['reference', 'Tham chiếu'], ['anchor', 'Neo']]
-type Asg = { id: string; title: string; note: string | null; due: string | null; status: string; assignee: string; assigner: string; created_at: string }
+type Asg = { id: string; title: string; note: string | null; due: string | null; status: string; assignee: string; assigner: string; created_at: string; node_id?: string | null }
 const sw = (x: string) => (x ?? '').toLowerCase()
 
 const DEFAULT_TPL: Record<string, string> = {
@@ -170,7 +227,7 @@ export function Studio({ orgId, user, canEdit, canApprove, pages, onOpen, onRelo
   const [step, setStep] = useState(1)
   const [draft, setDraft] = useState('')          // bản AI tạo lại — user sửa trước khi nộp
   const [pretty, setPretty] = useState(true)      // xem kiểu Notion / MD
-  const [history, setHistory] = useState<{ id: string; title: string | null; status: string; created_at: string }[]>([])
+  const [history, setHistory] = useState<{ id: string; title: string | null; status: string; created_at: string; note?: string }[]>([])
   const [raw, setRaw] = useState('')
   const [title, setTitle] = useState('')
   const [ptype, setPtype] = useState('ghi-chu')
@@ -186,11 +243,11 @@ export function Studio({ orgId, user, canEdit, canApprove, pages, onOpen, onRelo
   const [busy, setBusy] = useState(false)
   const [asgs, setAsgs] = useState<Asg[]>([])
   const [members, setMembers] = useState<{ user_id: string; email: string }[]>([])
-  const [na, setNa] = useState({ assignee: '', title: '', note: '', due: '' })
+  const [na, setNa] = useState({ assignee: '', title: '', note: '', due: '', node_id: '' })
 
   function loadAsg() {
     supabase.from('assignments').select('*').order('created_at', { ascending: false }).limit(30).then(({ data }) => setAsgs((data as Asg[]) ?? []))
-    supabase.from('nodes').select('id,title,status,created_at').eq('owner_id', user.id).eq('props->>via', 'studio').order('created_at', { ascending: false }).limit(10).then(({ data }) => setHistory((data as { id: string; title: string | null; status: string; created_at: string }[]) ?? []))
+    supabase.from('nodes').select('id,title,status,created_at,props').eq('owner_id', user.id).eq('props->>via', 'studio').order('created_at', { ascending: false }).limit(10).then(({ data }) => setHistory(((data as { id: string; title: string | null; status: string; created_at: string; props?: Record<string, unknown> }[]) ?? []).map(h => ({ id: h.id, title: h.title, status: h.status, created_at: h.created_at, note: (h.props?.review_note as string) ?? undefined }))))
     if (canApprove) supabase.rpc('admin_list_members').then(({ data }) => { if (data) setMembers(data as { user_id: string; email: string }[]) })
   }
   useEffect(loadAsg, [canApprove]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -290,7 +347,8 @@ export function Studio({ orgId, user, canEdit, canApprove, pages, onOpen, onRelo
     if (!orgId || !title.trim()) return
     setBusy(true)
     const owner = user.id
-    const status = target === 'personal' ? 'published' : 'pending'
+    // PUBLISH THEO VAI TRÒ: kho cá nhân luôn published; kho chung → Admin/Tổng biên tập (canApprove) vào thẳng OFFICIAL, Editor thì 'pending' chờ 1 trong 2 duyệt
+    const status = (target === 'personal' || canApprove) ? 'published' : 'pending'
     const md = draft
     const kho = pages.find(pg => pg.kind === 'kho' && pg.layer === target)
     const parent = destId ?? kho?.id ?? null   // folder user chọn ở bước 3; mặc định = ngoài cùng kho
@@ -369,14 +427,10 @@ export function Studio({ orgId, user, canEdit, canApprove, pages, onOpen, onRelo
             {/* 📋 TRƯỜNG CHUẨN của trang — theo docs/STANDARD-TEMPLATE.md, để data nộp lên hoàn thiện */}
             <div>
               <div className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1.5">📋 Trường chuẩn — máy điền trước, bạn chỉnh cho đúng</div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2">
+              <div className="mb-2">
                 <label className="block">
                   <span className="text-[10px] text-zinc-500">📅 Ngày sự kiện — ngày THỰC TẾ xảy ra, không phải hôm nay</span>
                   <input type="date" value={eventDate} onChange={e => setEventDate(e.target.value)} className="mt-1 w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2 text-sm outline-none focus:border-violet-400/50 [color-scheme:dark]" />
-                </label>
-                <label className="block">
-                  <span className="text-[10px] text-zinc-500">🚩 Campaign — chiến dịch content (tuỳ chọn)</span>
-                  <input value={campaign} onChange={e => setCampaign(e.target.value)} placeholder="vd: Tuyển thành viên T6" className="mt-1 w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2 text-sm outline-none focus:border-violet-400/50" />
                 </label>
               </div>
               <label className="block mb-2">
@@ -504,21 +558,39 @@ export function Studio({ orgId, user, canEdit, canApprove, pages, onOpen, onRelo
         <div className="mt-4">
           <Card>
             <Lbl>🗂️ Lịch sử nộp từ Studio</Lbl>
-            <div className="space-y-1">
-              {history.map(h => (
-                <button key={h.id} onClick={() => onOpen(h.id)} className="w-full flex items-center gap-2 text-left rounded-lg bg-white/[0.03] border border-white/10 px-2.5 py-1.5 hover:border-violet-400/40">
-                  <span className="text-xs shrink-0">{h.status === 'published' ? '✅' : h.status === 'pending' ? '⏳' : '📝'}</span>
-                  <span className="flex-1 text-xs truncate text-zinc-300">{h.title}</span>
-                  <span className="text-[10px] text-zinc-600 shrink-0">{h.status === 'published' ? 'đã duyệt' : h.status === 'pending' ? 'chờ duyệt' : 'bị trả lại'} · {new Date(h.created_at).toLocaleDateString('vi')}</span>
-                </button>
-              ))}
+            <div className="space-y-1.5">
+              {history.map(h => {
+                // GitHub-style: xanh=đã duyệt(merged) · vàng=chờ duyệt(open) · ĐỎ=bị trả lại(changes requested)
+                const st = h.status === 'published' ? { ic: '🟢', txt: 'đã duyệt', cls: 'border-emerald-400/30 bg-emerald-500/[0.06]', tc: 'text-emerald-300' }
+                  : h.status === 'pending' ? { ic: '🟡', txt: 'chờ duyệt', cls: 'border-amber-400/30 bg-amber-500/[0.06]', tc: 'text-amber-300' }
+                  : { ic: '🔴', txt: 'bị trả lại', cls: 'border-red-400/30 bg-red-500/[0.06]', tc: 'text-red-300' }
+                const rejected = h.status !== 'published' && h.status !== 'pending'
+                return (
+                  <div key={h.id} className={`rounded-lg border px-2.5 py-1.5 ${st.cls}`}>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs shrink-0">{st.ic}</span>
+                      <button onClick={() => onOpen(h.id)} className="flex-1 text-xs truncate text-zinc-200 text-left hover:text-white">{h.title}</button>
+                      <span className={`text-[10px] shrink-0 ${st.tc}`}>{st.txt} · {new Date(h.created_at).toLocaleDateString('vi')}</span>
+                    </div>
+                    {rejected && (
+                      <div className="mt-1 pl-6">
+                        {h.note && <p className="text-[10px] text-red-200/80 mb-1">💬 Góp ý: {h.note}</p>}
+                        <div className="flex gap-1.5">
+                          <button onClick={() => onOpen(h.id)} className="text-[10px] rounded-md bg-white/10 border border-white/10 px-2 py-1 hover:bg-white/15">✏️ Sửa</button>
+                          <button onClick={async () => { await supabase.from('nodes').update({ status: 'pending' }).eq('id', h.id); loadAsg() }} className="text-[10px] rounded-md bg-amber-500/20 border border-amber-400/30 text-amber-200 px-2 py-1 hover:bg-amber-500/30">↩ Nộp lại</button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
             </div>
           </Card>
         </div>
       )}
 
       {/* PHÂN VIỆC BIÊN TẬP */}
-      <div className="mt-6">
+      <div className="mt-6" id="asg-box">
         <Card>
           <Lbl>📋 Nhiệm vụ biên tập {canApprove ? '— bạn phân việc xuống' : '— việc được giao cho bạn'}</Lbl>
           {canApprove && (
@@ -529,26 +601,50 @@ export function Studio({ orgId, user, canEdit, canApprove, pages, onOpen, onRelo
               </select>
               <input value={na.title} onChange={e => setNa({ ...na, title: e.target.value })} placeholder="Việc gì? (vd: Nhập chương 3 Atomic Habits)" className="flex-1 min-w-[200px] rounded-lg bg-white/5 border border-white/10 px-2.5 py-2 text-xs outline-none" />
               <input type="date" value={na.due} onChange={e => setNa({ ...na, due: e.target.value })} className="rounded-lg bg-[#15151f] border border-white/10 px-2 py-2 text-xs outline-none" />
+              <select value={na.node_id} onChange={e => setNa({ ...na, node_id: e.target.value })} title="Gắn việc vào 1 trang cụ thể (tuỳ chọn)" className="rounded-lg bg-[#15151f] border border-white/10 px-2 py-2 text-xs outline-none max-w-[170px]">
+                <option value="">— gắn trang (tuỳ chọn) —</option>
+                {pages.filter(p => p.kind !== 'kho').slice(0, 200).map(p => <option key={p.id} value={p.id}>{(p.icon || '📄') + ' ' + (p.title || 'Trang')}</option>)}
+              </select>
               <button onClick={async () => {
                 if (!na.assignee || !na.title.trim() || !orgId) return
-                await supabase.from('assignments').insert({ org_id: orgId, assigner: user.id, assignee: na.assignee, title: na.title.trim(), note: na.note || null, due: na.due || null })
-                setNa({ assignee: '', title: '', note: '', due: '' }); loadAsg()
+                await supabase.from('assignments').insert({ org_id: orgId, assigner: user.id, assignee: na.assignee, title: na.title.trim(), note: na.note || null, due: na.due || null, node_id: na.node_id || null })
+                // 🔔 thông báo nhóm: đăng lên Phòng biên tập (kèm trang nếu có) để cả team thấy
+                const who = members.find(m => m.user_id === na.assignee)?.email.split('@')[0] ?? 'thành viên'
+                await supabase.from('board_messages').insert({ org_id: orgId, body: `📋 Giao việc cho @${who}: ${na.title.trim()}${na.due ? ` (hạn ${na.due})` : ''}`, node_id: na.node_id || null })
+                setNa({ assignee: '', title: '', note: '', due: '', node_id: '' }); loadAsg()
               }} className="rounded-lg ak-cta px-4 py-2 text-xs font-bold">Giao việc</button>
             </div>
           )}
           <div className="space-y-1.5">
-            {asgs.map(a => (
-              <div key={a.id} className={`flex items-center gap-2.5 rounded-xl border px-3 py-2 ${a.status === 'done' ? 'bg-white/[0.02] border-white/5 opacity-50' : 'bg-white/[0.04] border-white/10'}`}>
-                <span>{a.status === 'done' ? '✅' : '🔖'}</span>
-                <div className="flex-1 min-w-0">
-                  <div className={`text-sm truncate ${a.status === 'done' ? 'line-through text-zinc-500' : 'text-zinc-200'}`}>{a.title}</div>
-                  <div className="text-[10px] text-zinc-600">{a.assignee === user.id ? 'giao cho bạn' : 'bạn giao'}{a.due ? ` · hạn ${a.due}` : ''}</div>
+            {asgs.map(a => {
+              // trạng thái màu GitHub-style: vàng=đang làm(open) · xanh dương=đã nộp chờ duyệt(submitted) · xanh lá=xong(done)
+              const st = a.status === 'done' ? { ic: '🟢', txt: 'xong', tc: 'text-emerald-400' }
+                : a.status === 'submitted' ? { ic: '🔵', txt: 'đã nộp · chờ duyệt', tc: 'text-blue-300' }
+                : { ic: '🟡', txt: 'đang làm', tc: 'text-amber-300' }
+              const iAmReviewer = a.assigner === user.id || canApprove
+              return (
+                <div key={a.id} className={`flex items-center gap-2.5 rounded-xl border px-3 py-2 ${a.status === 'done' ? 'bg-white/[0.02] border-white/5 opacity-60' : 'bg-white/[0.04] border-white/10'}`}>
+                  <span className="shrink-0">{st.ic}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className={`text-sm truncate ${a.status === 'done' ? 'line-through text-zinc-500' : 'text-zinc-200'}`}>{a.title}</div>
+                    <div className="text-[10px] text-zinc-600">{a.assignee === user.id ? 'giao cho bạn' : 'bạn giao'}{a.due ? ` · hạn ${a.due}` : ''} · <span className={st.tc}>{st.txt}</span></div>
+                    {a.note && a.status !== 'done' && <div className="text-[10px] text-red-200/70 truncate">💬 {a.note}</div>}
+                  </div>
+                  <div className="flex gap-1.5 shrink-0">
+                    {a.node_id && <button onClick={() => onOpen(a.node_id!)} className="text-[10px] rounded-lg bg-white/10 border border-white/10 px-2.5 py-1.5">Mở</button>}
+                    {/* người nhận: chưa nộp → Nộp */}
+                    {a.status === 'open' && a.assignee === user.id && (
+                      <button onClick={async () => { await supabase.from('assignments').update({ status: 'submitted' }).eq('id', a.id); loadAsg() }} className="text-[10px] rounded-lg bg-emerald-500/15 border border-emerald-400/30 text-emerald-300 px-2.5 py-1.5">📨 Nộp</button>
+                    )}
+                    {/* người giao / duyệt: đã nộp → Duyệt xong hoặc Trả lại kèm góp ý */}
+                    {a.status === 'submitted' && iAmReviewer && (<>
+                      <button onClick={async () => { await supabase.from('assignments').update({ status: 'done' }).eq('id', a.id); await supabase.rpc('award_qi', { p_user: a.assignee, p_type: 'content', p_node: a.node_id ?? null }); loadAsg() }} className="text-[10px] rounded-lg bg-emerald-500/20 border border-emerald-400/30 text-emerald-200 px-2.5 py-1.5" title="Nghiệm thu — tự cộng Qi cho người làm">✓ Nghiệm thu</button>
+                      <button onClick={async () => { const why = prompt('Trả lại — góp ý cho người làm:', a.note ?? ''); if (why === null) return; await supabase.from('assignments').update({ status: 'open', note: why.trim() || null }).eq('id', a.id); loadAsg() }} className="text-[10px] rounded-lg bg-red-500/15 border border-red-400/30 text-red-300 px-2.5 py-1.5">↩ Trả lại</button>
+                    </>)}
+                  </div>
                 </div>
-                {a.status !== 'done' && a.assignee === user.id && (
-                  <button onClick={async () => { await supabase.from('assignments').update({ status: 'submitted' }).eq('id', a.id); loadAsg() }} className="text-[10px] rounded-lg bg-emerald-500/15 border border-emerald-400/30 text-emerald-300 px-2.5 py-1.5 shrink-0">📨 Nộp</button>
-                )}
-              </div>
-            ))}
+              )
+            })}
             {asgs.length === 0 && <p className="text-xs text-zinc-600 py-2">Chưa có nhiệm vụ nào.</p>}
           </div>
         </Card>
@@ -564,12 +660,13 @@ const CAP_TYPES: [string, string, string][] = [
   ['insight', '💎 Insight', 'Ý chợt loé — vào 💎 Kim cương bài học'],
   ['quote', '💬 Quote đắt', 'Câu nói hay vừa nghe/đọc — kèm nguồn'],
 ]
-export function Today({ user, role, stats, recent, pages, editorial = [], counts, account, onOpen, onOpenId, onCapture, onGalaxy, onDigest, onRaw, onKolAll }: {
+export function Today({ user, role, stats, recent, pages, commonPages = [], editorial = [], counts, account, onOpen, onOpenId, onCapture, onGalaxy, onDigest, onRaw, onKolAll }: {
   user: User
   role?: { level: number; can_edit: boolean; can_approve: boolean } | null
   stats: { pages: number; notes: number; links: number; dims?: number }
   recent: TodayNode[]
   pages: TodayNode[]            // note cá nhân — để tính "cần chuyển hoá"
+  commonPages?: TodayNode[]     // bài kho QNET + Nhân loại — nhiệm vụ chuyển hoá hằng ngày
   editorial?: (TodayNode & { status?: string; note?: string })[]
   counts?: { values: number; mantras: number; people: number; dated: number; pendingAll?: number }
   account?: React.ReactNode    // cụm tài khoản (theme + email + thoát) — đặt ở Home thay vì Kho
@@ -588,7 +685,12 @@ export function Today({ user, role, stats, recent, pages, editorial = [], counts
   const [cap, setCap] = useState('')
   const [capType, setCapType] = useState('exp')
   const [capSrc, setCapSrc] = useState('')
-  const [myAsg, setMyAsg] = useState<{ id: string; title: string; due: string | null; node_id?: string | null }[]>([])
+  const [myAsg, setMyAsg] = useState<{ id: string; title: string; due: string | null; node_id?: string | null; status: string; note?: string | null }[]>([])
+  const [reviewCount, setReviewCount] = useState(0)   // việc nhân viên đã nộp, chờ MÌNH duyệt
+  const loadMyAsg = () => {
+    supabase.from('assignments').select('id,title,due,node_id,status,assignee,note').eq('assignee', user.id).neq('status', 'done').order('created_at', { ascending: false }).limit(8).then(({ data }) => setMyAsg((data as { id: string; title: string; due: string | null; node_id?: string | null; status: string; note?: string | null }[]) ?? []))
+    supabase.from('assignments').select('id', { count: 'exact', head: true }).eq('assigner', user.id).eq('status', 'submitted').then(({ count }) => setReviewCount(count ?? 0))
+  }
   const [kol, setKol] = useState<{ id: string; title: string; props: Record<string, unknown> }[]>([])
   const [quote, setQuote] = useState<{ text: string; from: string; id: string } | null>(null)
   const [qaOpen, setQaOpen] = useState(false)
@@ -608,39 +710,87 @@ export function Today({ user, role, stats, recent, pages, editorial = [], counts
       const PT2: Record<string, number> = { tham: 10, content: 5, link: 3, create: 1 }
       setQi(Math.round((data ?? []).reduce((s, e) => s + (PT2[e.type as string] ?? 0), 0)))
     })
-    supabase.from('assignments').select('id,title,due,node_id,status,assignee').eq('assignee', user.id).neq('status', 'done').limit(5).then(({ data }) => setMyAsg((data as { id: string; title: string; due: string | null; node_id?: string | null }[]) ?? []))
+    loadMyAsg()
     supabase.from('nodes').select('id,title,props').eq('subtype', 'kol_post').order('created_at', { ascending: false }).limit(30).then(({ data }) => {
       const all = (data as { id: string; title: string; props: Record<string, unknown> }[]) ?? []
       // xoay theo ngày để feed luôn mới
       const day = Math.floor(Date.now() / 86400000)
       setKol(all.length ? [0, 1, 2].map(i => all[(day * 3 + i) % all.length]) : [])
     })
-    // quote sống: lấy 1 câu từ Kim Chỉ Nam
+    // quote sống: lấy 1 câu từ Kim Chỉ Nam — GHÉP câu trích với DÒNG TÁC GIẢ ("> — Tên · ngày") để hiện đúng nguồn, không generic
     supabase.from('nodes').select('id,md,title').eq('owner_id', user.id).eq('subtype', 'anchor_home').limit(1).maybeSingle().then(({ data }) => {
-      const qs = (data?.md ?? '').split('\n').filter((l: string) => l.startsWith('> '))
-      if (qs.length) { const day = Math.floor(Date.now() / 86400000); setQuote({ text: qs[day % qs.length].slice(2), from: 'Kim Chỉ Nam của bạn', id: data!.id as string }) }
+      const lines = (data?.md ?? '').split('\n').map((l: string) => l.trim())
+      const items: { text: string; from: string }[] = []
+      for (let i = 0; i < lines.length; i++) {
+        const l = lines[i]
+        if (!l.startsWith('> ') || l.startsWith('> —')) continue
+        const text = l.slice(2).replace(/^💬\s*/, '').replace(/^["“”]|["“”]$/g, '').trim()
+        if (!text) continue
+        // dòng kế nếu là "> — Tác giả · ngày" → tách tác giả (bỏ phần " · ngày")
+        const next = lines[i + 1] ?? ''
+        let from = 'Kim Chỉ Nam của bạn'
+        if (next.startsWith('> —')) { const a = next.slice(3).split('·')[0].replace(/[*_]/g, '').trim(); if (a && !/^sưu tầm$/i.test(a)) from = a }
+        items.push({ text, from })
+      }
+      if (items.length) { const day = Math.floor(Date.now() / 86400000); const it = items[day % items.length]; setQuote({ text: it.text, from: it.from, id: data!.id as string }) }
     })
-  }, [user.id])
+    // ⚡ Giao việc cho mình → hiện NGAY trong "Cần làm" (realtime, không cần refresh)
+    const ch = supabase.channel('my-asg-' + user.id)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'assignments', filter: `assignee=eq.${user.id}` }, () => loadMyAsg())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'assignments', filter: `assigner=eq.${user.id}` }, () => loadMyAsg())
+      .subscribe()
+    return () => { supabase.removeChannel(ch) }
+  }, [user.id]) // eslint-disable-line react-hooks/exhaustive-deps
   // đồng hồ HUD — chỉ chạy client để tránh lệch hydrate
   const [now, setNow] = useState<Date | null>(null)
   useEffect(() => { setNow(new Date()); const t = setInterval(() => setNow(new Date()), 1000); return () => clearInterval(t) }, [])
   const hour = new Date().getHours()
   const greet = hour < 11 ? 'Chào buổi sáng' : hour < 14 ? 'Chào buổi trưa' : hour < 18 ? 'Chào buổi chiều' : 'Chào buổi tối'
   const learnedCount = pages.filter(p => learnedIds.has(p.id)).length
-  // gợi ý chuyển hoá — lý do TRUNG THỰC từ data thật (không bịa; AI thật thay khi cắm API)
-  const sugDigest = pages.filter(p => !learnedIds.has(p.id)).slice(0, 3).map((p, i) => ({
+  // ĐÚC KẾT (phương án B) — chỉ trang TRẢI NGHIỆM/nội dung của bạn; loại trang-hệ-thống/container + bài SINH RA từ digest (tránh vòng lặp)
+  const SKIP_SUB = new Set(['branch', 'hub', 'profile_me', 'core_value', 'mantra', 'person', 'anchor_home', 'sources_home', 'people_home', 'timeline_home', 'values_home', 'ingest_tpl', 'ingest_tpl_home', 'template'])
+  const ducKetOk = (p: TodayNode) => {
+    const x = p as TodayNode & { subtype?: string | null; props?: Record<string, unknown> | null }
+    if ((x.props?.via as string) === 'digest') return false
+    if (x.subtype && SKIP_SUB.has(x.subtype)) return false
+    return true
+  }
+  const sugDigest = pages.filter(p => !learnedIds.has(p.id) && ducKetOk(p)).slice(0, 3).map((p, i) => ({
     n: p,
     why: (p as TodayNode & { event_date?: string | null }).event_date
-      ? `mốc ngày ${new Date((p as TodayNode & { event_date?: string }).event_date!).toLocaleDateString('vi')} — đan vào dòng đời khi còn nhớ rõ`
-      : i === 0 ? 'đứng đầu hàng đợi chưa chuyển hoá' : 'kế tiếp trong hàng đợi',
+      ? `mốc ngày ${new Date((p as TodayNode & { event_date?: string }).event_date!).toLocaleDateString('vi')} — chắt bài học khi còn nhớ rõ`
+      : i === 0 ? 'chuyện của bạn — rút lấy bài học' : 'kế tiếp để đúc kết',
   }))
+  // 📥 NỘI HOÁ — bộ cố định/ngày: 2 bài QNET + 2 bài Nhân loại; bài nào đã nội hoá → tick xanh + BÙ 1 bài mới
+  const layerOf = (p: TodayNode) => (p as TodayNode & { layer?: string }).layer ?? 'corporate'
+  const dailyTasks = (() => {
+    const day = Math.floor(Date.now() / 86400000)
+    const pickKho = (layer: string, k: number) => {
+      const all = commonPages.filter(p => layerOf(p) === layer)
+      if (!all.length) return [] as TodayNode[]
+      return Array.from({ length: Math.min(k, all.length) }, (_, i) => all[(day * k + i) % all.length]).filter((v, i, a) => a.indexOf(v) === i)
+    }
+    const stable = [...pickKho('corporate', 2), ...pickKho('humanity', 2)]
+    const shown = new Set(stable.map(p => p.id))
+    const doneN = stable.filter(p => learnedIds.has(p.id)).length   // mỗi bài xong → thêm 1 task mới chưa nội hoá
+    const fresh = commonPages.filter(p => !learnedIds.has(p.id) && !shown.has(p.id)).slice(0, doneN)
+    return [...stable, ...fresh]
+  })()
   const pct = pages.length ? Math.round((learnedCount / pages.length) * 100) : 0
   const roleName = role?.level === 5 ? '👑 Admin' : role?.can_approve ? '✅ Tổng biên tập' : role?.can_edit ? '✏️ Biên tập viên' : '🌱 Thành viên'
   // ===== KHỐI CẦN LÀM (chỉ những việc THẬT) =====
-  const todos: { icon: string; label: string; sub?: string; act: () => void; cta: string }[] = []
+  const todos: { icon: string; label: string; sub?: string; act: () => void; cta: string; wait?: boolean }[] = []
   for (const id of dueIds.slice(0, 3)) { const n = pages.find(p2 => p2.id === id) ?? recent.find(p2 => p2.id === id); if (n) todos.push({ icon: '🔁', label: `Chuyển hoá tiếp: ${n.title || 'Trang'}`, sub: 'thắp thêm chiều còn tối để bài chín hơn', act: () => onDigest(n), cta: 'Mở' }) }
-  // chỉ hiện việc CÓ gắn trang ở widget "cần làm" → nút "Mở việc" luôn tới đúng chỗ (việc chưa gắn trang nằm ở khu Giao việc, không tạo nút chết)
-  for (const a of myAsg.filter(a => a.node_id).slice(0, 3)) todos.push({ icon: '📋', label: a.title, sub: a.due ? `việc được giao · hạn ${new Date(a.due).toLocaleDateString('vi')}` : 'việc được giao', act: () => onOpenId(a.node_id!), cta: 'Mở việc' })
+  // MỌI việc được giao đều hiện ngay — có trỏ trang → "Mở việc"; không trỏ trang → "📨 Nộp" (đánh dấu đã làm) ngay tại chỗ
+  for (const a of myAsg.slice(0, 5)) {
+    const base = a.due ? `việc được giao · hạn ${new Date(a.due).toLocaleDateString('vi')}` : 'việc được giao'
+    const hanText = a.note ? `↩ trả lại: ${a.note}` : base   // việc bị trả lại → hiện góp ý ngay
+    if (a.status === 'submitted') { todos.push({ icon: '⏳', label: a.title, sub: 'đã nộp · chờ ban biên tập duyệt', act: () => {}, cta: 'Chờ duyệt', wait: true }); continue }
+    if (a.node_id) todos.push({ icon: a.note ? '🔁' : '📋', label: a.title, sub: hanText, act: () => onOpenId(a.node_id!), cta: 'Mở việc' })
+    else todos.push({ icon: a.note ? '🔁' : '📋', label: a.title, sub: hanText, act: async () => { await supabase.from('assignments').update({ status: 'submitted' }).eq('id', a.id); loadMyAsg() }, cta: '📨 Nộp' })
+  }
+  // người giao / duyệt: nhân viên đã nộp → nhắc duyệt (cuộn xuống khu Nhiệm vụ ở Studio)
+  if (reviewCount > 0) todos.push({ icon: '📥', label: `${reviewCount} việc đã nộp chờ bạn duyệt`, sub: 'nhân viên đang đợi phản hồi', act: () => document.getElementById('asg-box')?.scrollIntoView({ behavior: 'smooth' }), cta: 'Xem & duyệt' })
   for (const n of editorial.filter(e => e.status === 'draft').slice(0, 2)) todos.push({ icon: '🔁', label: `Sửa & nộp lại: ${n.title || 'Trang'}`, sub: (n as { note?: string }).note ? `BTV góp ý: ${(n as { note?: string }).note}` : 'bài bị trả lại', act: () => onOpen(n), cta: 'Sửa ngay' })
   if (role?.can_approve && (counts?.pendingAll ?? 0) > 0) todos.push({ icon: '📨', label: `${counts!.pendingAll} bài chờ bạn duyệt`, sub: 'thành viên đang đợi', act: () => onRaw?.(), cta: 'Vào duyệt' })
   return (
@@ -757,7 +907,9 @@ export function Today({ user, role, stats, recent, pages, editorial = [], counts
                   <div className="text-sm truncate text-zinc-200">{t.label}</div>
                   {t.sub && <div className="text-[10px] text-zinc-500 truncate">{t.sub}</div>}
                 </div>
-                <button onClick={t.act} className="text-[10px] rounded-lg bg-amber-400 text-black hover:bg-amber-300 px-2.5 py-1 font-bold shrink-0">{t.cta}</button>
+                {t.wait
+                  ? <span className="text-[10px] rounded-lg bg-white/5 border border-white/10 text-zinc-400 px-2.5 py-1 shrink-0">{t.cta}</span>
+                  : <button onClick={t.act} className="text-[10px] rounded-lg bg-amber-400 text-black hover:bg-amber-300 px-2.5 py-1 font-bold shrink-0">{t.cta}</button>}
               </div>
             ))}
           </div>
@@ -774,18 +926,46 @@ export function Today({ user, role, stats, recent, pages, editorial = [], counts
             <span className="text-[10px] text-zinc-600">{pct}% kho đã chuyển hoá</span>
           </div>
           <div className="h-1.5 rounded-full bg-white/5 mb-3 overflow-hidden"><div className="h-full bg-amber-400 text-black hover:bg-amber-300 transition-all" style={{ width: `${pct}%` }} /></div>
+          {/* 📥 NỘI HOÁ — kho chung, BẮT BUỘC (nhiệm vụ đẩy xuống) */}
+          {dailyTasks.length > 0 && (
+            <>
+              <div className="text-[10px] uppercase tracking-wider text-cyan-300/70 mb-1.5">📥 Nội hoá hôm nay · tinh hoa kho chung</div>
+              <div className="space-y-1.5 mb-3">
+                {dailyTasks.map(n => {
+                  const isHuman = layerOf(n) === 'humanity'
+                  const kho = isHuman ? { name: '♾️ Nhân loại', cls: 'text-fuchsia-300 border-fuchsia-400/30 bg-fuchsia-500/10' } : { name: '🌐 QNET', cls: 'text-cyan-300 border-cyan-400/30 bg-cyan-500/10' }
+                  const done = learnedIds.has(n.id)
+                  return (
+                    <div key={n.id} className={`rounded-xl border px-3 py-2 transition ${done ? 'bg-emerald-500/[0.06] border-emerald-400/25' : 'bg-cyan-500/[0.05] border-cyan-400/20 hover:border-cyan-400/40'}`}>
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg shrink-0">{done ? '✅' : (n.icon || '🌐')}</span>
+                        <button onClick={() => onOpen(n)} className={`flex-1 text-left text-sm truncate hover:text-white ${done ? 'text-emerald-200/70 line-through' : 'text-zinc-300'}`}>{n.title || 'Trang'}</button>
+                        <span className={`text-[9px] rounded-md border px-1.5 py-0.5 shrink-0 ${kho.cls}`}>{kho.name}</span>
+                        {done
+                          ? <span className="text-[10px] rounded-lg bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 px-2.5 py-1 font-bold shrink-0">✓ Đã nội hoá</span>
+                          : <button onClick={() => onDigest(n)} className="text-[10px] rounded-lg bg-cyan-400 text-black hover:bg-cyan-300 px-2.5 py-1 font-bold shrink-0">Nội hoá</button>}
+                      </div>
+                      {!done && <p className="text-[10px] text-zinc-600 pl-7">vì: tinh hoa kho chung — biến thành của bạn để dạy lại</p>}
+                    </div>
+                  )
+                })}
+              </div>
+            </>
+          )}
+          {/* 🌾 ĐÚC KẾT — kho cá nhân, TUỲ TÂM (chuyện của bạn → rút bài học) */}
+          <div className="text-[10px] uppercase tracking-wider text-amber-300/70 mb-1.5">🌾 Đúc kết · từ trải nghiệm của bạn <span className="text-zinc-600 normal-case">(tuỳ tâm)</span></div>
           <div className="space-y-1.5">
             {sugDigest.map(({ n, why }) => (
               <div key={n.id} className="rounded-xl bg-white/[0.03] border border-white/10 px-3 py-2 hover:border-amber-400/40 transition group">
                 <div className="flex items-center gap-2">
                   <span className="text-lg shrink-0">{n.icon || '📄'}</span>
                   <button onClick={() => onOpen(n)} className="flex-1 text-left text-sm truncate text-zinc-300 hover:text-white">{n.title || 'Trang'}</button>
-                  <button onClick={() => onDigest(n)} className="text-[10px] rounded-lg bg-amber-400 text-black hover:bg-amber-300 px-2.5 py-1 font-bold shrink-0">Chuyển hoá</button>
+                  <button onClick={() => onDigest(n)} className="text-[10px] rounded-lg bg-amber-400 text-black hover:bg-amber-300 px-2.5 py-1 font-bold shrink-0">Đúc kết</button>
                 </div>
                 <p className="text-[10px] text-zinc-600 pl-7">vì: {why}</p>
               </div>
             ))}
-            {sugDigest.length === 0 && <p className="text-xs text-zinc-600 py-3 text-center">🏆 Mọi bài đều đã chuyển hoá. Viết trải nghiệm mới đi!</p>}
+            {sugDigest.length === 0 && <p className="text-xs text-zinc-600 py-3 text-center">Chưa có trải nghiệm nào cần đúc kết — viết một chuyện vừa xảy ra đi!</p>}
           </div>
         </Card>
 
@@ -793,7 +973,7 @@ export function Today({ user, role, stats, recent, pages, editorial = [], counts
         <Card>
           <Lbl>⏱️ Tiếp tục viết</Lbl>
           <div className="space-y-1.5">
-            {recent.slice(0, 5).map(n => (
+            {recent.filter(n => n.kind !== 'kho' && !((n as TodayNode & { subtype?: string | null }).subtype && SKIP_SUB.has((n as TodayNode & { subtype?: string | null }).subtype!))).slice(0, 5).map(n => (
               <button key={n.id} onClick={() => onOpen(n)} className="w-full text-left rounded-xl px-3 py-2 bg-white/[0.03] border border-white/10 hover:border-cyan-400/40 hover:bg-white/[0.06] transition flex items-center gap-2">
                 <span className="text-lg shrink-0">{n.icon || '📄'}</span>
                 <span className="text-sm truncate">{n.title || 'Trang mới'}</span>
@@ -815,10 +995,10 @@ export function Today({ user, role, stats, recent, pages, editorial = [], counts
         ) : (
           <div className="rounded-2xl bg-white/[0.03] border border-white/10 px-5 py-4"><p className="text-xs text-zinc-600">⚓ Chưa có châm ngôn nào — viết câu đầu tiên khi Chuyển hoá một bài.</p></div>
         )}
-        <div className="rounded-2xl bg-white/[0.03] border border-white/10 px-5 py-4 grid grid-cols-3 gap-2 text-center">
-          <div><div className="text-xl font-black text-white">{stats.pages}</div><div className="text-[9px] uppercase tracking-wider text-zinc-600">trang</div></div>
-          <div><div className="text-xl font-black ak-grad-text">{stats.links}</div><div className="text-[9px] uppercase tracking-wider text-zinc-600">liên kết</div></div>
-          <button onClick={onGalaxy} className="rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 grid place-items-center"><span className="text-base">🌌</span><span className="text-[9px] text-zinc-500">Galaxy</span></button>
+        <div className="rounded-2xl border border-violet-400/20 bg-gradient-to-br from-violet-500/[0.12] via-transparent to-cyan-500/[0.10] px-5 py-4 grid grid-cols-3 gap-2 text-center items-center">
+          <div><div className="text-4xl font-black ak-grad-text tabular-nums leading-none">{stats.pages}</div><div className="text-[9px] uppercase tracking-[0.2em] text-zinc-500 mt-1.5">trang</div></div>
+          <div><div className="text-4xl font-black tabular-nums leading-none text-cyan-300" style={{ textShadow: '0 0 22px rgba(34,211,238,.45)' }}>{stats.links}</div><div className="text-[9px] uppercase tracking-[0.2em] text-zinc-500 mt-1.5">liên kết</div></div>
+          <button onClick={onGalaxy} title="Mở vũ trụ tri thức" className="rounded-xl bg-white/[0.04] border border-white/10 hover:border-violet-400/40 hover:bg-white/[0.07] grid place-items-center py-2.5 gap-0.5 transition"><span className="text-2xl">🌌</span><span className="text-[9px] uppercase tracking-wider text-zinc-400">Galaxy</span></button>
         </div>
       </div>
 

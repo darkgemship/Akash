@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import type { User } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabaseClient'
 import dynamic from 'next/dynamic'
@@ -7,6 +7,7 @@ import type { PartialBlock } from '@blocknote/core'
 import Galaxy, { type GNode, type GLink } from './Galaxy'
 import Digest from './Digest'
 import MeMirror from './MeMirror'
+import BoardChat from './BoardChat'
 import { Profile, Today, Board, Studio, LifeChaptersWizard } from './Pages'
 import { KolFeed, ContentEngine, ReviewHub, MembersHub } from './Hubs'
 import Warp from './Warp'
@@ -114,7 +115,7 @@ function viError(m: string): string {
   const s = m.toLowerCase()
   if (s.includes('after') && s.includes('second')) return '⏳ Supabase đang giới hạn gửi mail xác nhận. Hãy tắt "Confirm email" trong dashboard (xem hướng dẫn) rồi đăng ký lại — sẽ vào ngay.'
   if (s.includes('already registered') || s.includes('already been registered')) return '📧 Email này đã đăng ký rồi — bấm "Đăng nhập".'
-  if (s.includes('invalid login')) return '🔑 Sai email/mật khẩu, hoặc chưa có tài khoản — bấm "Đăng ký".'
+  if (s.includes('invalid login')) return '🔑 Sai email/mật khẩu, hoặc chưa có tài khoản — liên hệ quản trị để được cấp.'
   if (s.includes('not confirmed')) return '✉️ Email chưa xác nhận. Tắt "Confirm email" trong dashboard, hoặc mở mail bấm xác nhận.'
   if (s.includes('password')) return '🔒 Mật khẩu cần tối thiểu 6 ký tự.'
   return '⚠️ ' + m
@@ -130,7 +131,7 @@ function AkashMark({ size = 48 }: { size?: number }) {
 }
 
 function Login() {
-  const [mode, setMode] = useState<'in' | 'up'>('in')
+  // CHỈ ĐĂNG NHẬP — người ngoài KHÔNG tự đăng ký được; tài khoản do Admin cấp (Nhân sự → Cấp tài khoản)
   const [email, setEmail] = useState('')
   const [pw, setPw] = useState('')
   const [showPw, setShowPw] = useState(false)
@@ -141,19 +142,8 @@ function Login() {
   async function go() {
     if (!email.trim() || pw.length < 6) { setOk(false); setMsg('Nhập email và mật khẩu (≥ 6 ký tự).'); return }
     setBusy(true); setMsg('')
-    const e = email.trim()
-    if (mode === 'up') {
-      const up = await supabase.auth.signUp({ email: e, password: pw })
-      if (up.error) { setOk(false); setMsg(viError(up.error.message)); setBusy(false); return }
-      if (!up.data.session) {
-        // auto-confirm bật → đăng nhập ngay
-        const inn = await supabase.auth.signInWithPassword({ email: e, password: pw })
-        if (inn.error) setMsg(viError(inn.error.message))
-      }
-    } else {
-      const inn = await supabase.auth.signInWithPassword({ email: e, password: pw })
-      if (inn.error) { setOk(false); setMsg(viError(inn.error.message)) }
-    }
+    const inn = await supabase.auth.signInWithPassword({ email: email.trim(), password: pw })
+    if (inn.error) { setOk(false); setMsg(viError(inn.error.message)) }
     // có session → onAuthStateChange tự chuyển vào app
     setBusy(false)
   }
@@ -201,23 +191,18 @@ function Login() {
                   <AkashMark size={44} />
                   <Wordmark size="md" dotted />
                 </div>
-                {/* tab chuyển chế độ */}
-                <div className="grid grid-cols-2 gap-1 rounded-2xl bg-white/5 border border-white/10 p-1 mb-6 text-sm">
-                  <button onClick={() => { setMode('in'); setMsg('') }} className={`rounded-xl py-2 font-semibold transition ${mode === 'in' ? 'ak-cta text-white' : 'text-zinc-400 hover:text-zinc-200'}`}>Đăng nhập</button>
-                  <button onClick={() => { setMode('up'); setMsg('') }} className={`rounded-xl py-2 font-semibold transition ${mode === 'up' ? 'ak-cta text-white' : 'text-zinc-400 hover:text-zinc-200'}`}>Tạo tài khoản</button>
-                </div>
-                <h2 className="text-lg font-bold mb-1">{mode === 'in' ? 'Sẵn sàng cất cánh' : 'Bắt đầu hành trình'}</h2>
-                <p className="text-xs text-zinc-500 mb-5">{mode === 'in' ? 'Đăng nhập để bay vào vũ trụ tri thức của bạn.' : 'Tạo tài khoản — vào org chung với vai Thành viên, có ngay kho cá nhân riêng tư.'}</p>
+                <h2 className="text-lg font-bold mb-1">Sẵn sàng cất cánh</h2>
+                <p className="text-xs text-zinc-500 mb-5">Đăng nhập để bay vào vũ trụ tri thức của bạn. Tài khoản do quản trị cấp — không tự đăng ký.</p>
 
                 <label className="block hud-label mb-1.5">Email</label>
                 <input className="w-full mb-4 rounded-xl bg-white/5 border border-white/10 px-3.5 py-3 text-sm outline-none focus:border-violet-400/70 focus:bg-white/[0.07] transition" placeholder="ban@email.com" autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} />
                 <label className="block hud-label mb-1.5">Mật khẩu</label>
                 <div className="relative mb-5">
-                  <input className="w-full rounded-xl bg-white/5 border border-white/10 px-3.5 py-3 pr-11 text-sm outline-none focus:border-violet-400/70 focus:bg-white/[0.07] transition" placeholder="Tối thiểu 6 ký tự" type={showPw ? 'text' : 'password'} autoComplete={mode === 'in' ? 'current-password' : 'new-password'} value={pw} onChange={e => setPw(e.target.value)} onKeyDown={e => e.key === 'Enter' && go()} />
+                  <input className="w-full rounded-xl bg-white/5 border border-white/10 px-3.5 py-3 pr-11 text-sm outline-none focus:border-violet-400/70 focus:bg-white/[0.07] transition" placeholder="Tối thiểu 6 ký tự" type={showPw ? 'text' : 'password'} autoComplete="current-password" value={pw} onChange={e => setPw(e.target.value)} onKeyDown={e => e.key === 'Enter' && go()} />
                   <button onClick={() => setShowPw(s => !s)} title={showPw ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'} className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 grid place-items-center rounded-lg text-zinc-500 hover:text-white hover:bg-white/10">{showPw ? <IEyeOff size={16} /> : <IEye size={16} />}</button>
                 </div>
                 <button disabled={busy} onClick={go} className="w-full rounded-xl py-3 text-sm font-bold ak-cta disabled:opacity-70 hover:opacity-95 transition flex items-center justify-center gap-2">
-                  {busy ? <><span className="w-4 h-4 rounded-full border-2 border-white/40 border-t-white animate-spin" /> Đang nhảy hyperspace…</> : mode === 'in' ? '⌁ Khởi động warp drive' : '⌁ Tạo tài khoản & cất cánh'}
+                  {busy ? <><span className="w-4 h-4 rounded-full border-2 border-white/40 border-t-white animate-spin" /> Đang nhảy hyperspace…</> : '⌁ Khởi động warp drive'}
                 </button>
                 {msg && <p className={`text-xs mt-3 leading-relaxed ${ok ? 'text-emerald-400' : 'text-amber-300'}`}>{msg}</p>}
                 <p className="text-[11px] text-zinc-600 mt-5 text-center">Nhấn <kbd className="px-1.5 py-0.5 rounded border border-white/15 bg-white/5 text-zinc-400">↵ Enter</kbd> để gửi · Bảo mật bởi Supabase Auth</p>
@@ -273,6 +258,12 @@ function Workspace({ user }: { user: User }) {
   useEffect(() => { setThemeLight(typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'light') }, [])
   const [ob, setOb] = useState(false)
   const [obStep, setObStep] = useState(0)
+  // Onboarding thu thập hồ sơ (điền được tới đâu hay tới đó — phần còn lại điền dần ở 🪞 Tôi là ai)
+  const [obName, setObName] = useState('')
+  const [obValues, setObValues] = useState<string[]>([])
+  const [obVoice, setObVoice] = useState<string[]>([])
+  const [obCatch, setObCatch] = useState('')
+  const [obGoal, setObGoal] = useState('')
   const [backRaw, setBackRaw] = useState<{ from_node: string; dimension: string | null; excerpt?: string | null }[]>([])
   const [outRaw, setOutRaw] = useState<{ to_node: string; dimension: string | null; excerpt?: string | null }[]>([])
   const [comments, setComments] = useState<{ id: string; user_id: string; body: string; resolved: boolean; created_at: string }[]>([])
@@ -292,6 +283,10 @@ function Workspace({ user }: { user: User }) {
   useEffect(() => { logEvent('nav', undefined, { page }) }, [page]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { logEvent('session_start', undefined, { w: typeof window !== 'undefined' ? window.innerWidth : 0 }) }, []) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (showDigest && editing) logEvent('digest_start', editing.id) }, [showDigest]) // eslint-disable-line react-hooks/exhaustive-deps
+  const profMeRef = useRef(false)
+  useEffect(() => { if (orgId && !profMeRef.current) { profMeRef.current = true; ensureProfileMe() } }, [orgId]) // eslint-disable-line react-hooks/exhaustive-deps
+  const [returnFor, setReturnFor] = useState<string | null>(null)   // ↩ Trả lại kèm lý do (form inline, thay window.prompt)
+  const [returnNote, setReturnNote] = useState('')
   function loadPageLinks(id: string) {
     supabase.from('links').select('from_node,dimension,excerpt').eq('to_node', id).then(({ data }) => setBackRaw(data ?? []))
     supabase.from('links').select('to_node,dimension,excerpt').eq('from_node', id).then(({ data }) => setOutRaw(data ?? []))
@@ -445,6 +440,18 @@ function Workspace({ user }: { user: User }) {
     if (error) return kho.id
     await loadTree(orgId)
     return id
+  }
+  // 🪞 "Tôi là ai" (profile_me) — chân dung DISC/MBTI + hồ sơ giọng cho AI viết đúng chất. Tạo 1 lần nếu chưa có (truy DB, an toàn gọi mọi lúc).
+  async function ensureProfileMe(): Promise<string | null> {
+    if (!orgId) return null
+    const { data: ex } = await supabase.from('nodes').select('id').eq('org_id', orgId).eq('owner_id', user.id).eq('subtype', 'profile_me').limit(1).maybeSingle()
+    if (ex) return ex.id
+    const { data: kho } = await supabase.from('nodes').select('id').eq('org_id', orgId).eq('kind', 'kho').eq('layer', 'personal').limit(1).maybeSingle()
+    if (!kho) return null
+    const id = crypto.randomUUID()
+    const { error } = await supabase.from('nodes').insert({ id, org_id: orgId, owner_id: user.id, layer: 'personal', kind: 'page', parent_id: kho.id, title: 'Tôi là ai', icon: '🪞', subtype: 'profile_me', status: 'published', min_level: 1, md: '# Tôi là ai\n\n## 🧭 Tính cách (DISC · MBTI)\n\n## 🗣️ Hồ sơ giọng\n- Chất văn: \n- Từ cấm: \n- Câu tủ: \n\n## ✨ Nét cuộc đời\n' })
+    if (error) return null
+    await loadTree(orgId); return id
   }
   async function createPage(parentId: string | null, layer: string, kind: string = 'page', extra?: { title?: string; md?: string; event_date?: string | null; props?: Record<string, unknown> }) {
     if (!orgId) return
@@ -610,6 +617,13 @@ function Workspace({ user }: { user: User }) {
       if (!l || l.startsWith('#') || l.startsWith('>') || l.startsWith('-') || l.startsWith('|') || /^\*\*(Loại|Tóm tắt|Nguồn|Ngày|Campaign|Gốc)/i.test(l)) continue
       const clean = l.replace(/[*_`#>]/g, '').trim()
       if (clean.length > 8) return clean.replace(/[.。!?]+$/, '').slice(0, 72)
+    }
+    // Nhật ký/Trải nghiệm chưa có nội dung → gợi ý tiêu đề = ngày + giờ (founder: title nhật ký ghi ngày giờ)
+    const pt = (nd?.props as Record<string, unknown> | null)?.page_type as string | undefined
+    if (pt === 'trai-nghiem' || nd?.subtype === 'journal' || nd?.subtype === 'life_event') {
+      const d = nd?.event_date ? new Date(nd.event_date + 'T00:00:00') : new Date()
+      const hm = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+      return `Nhật ký ${d.toLocaleDateString('vi-VN')} · ${hm}`
     }
     return ''
   }
@@ -989,7 +1003,7 @@ function Workspace({ user }: { user: User }) {
                     )}
                   </div>
                 </div>
-                <input value={editTitle} readOnly={!canEditLayer(layerOf(editing.id))} onChange={e => setEditTitle(e.target.value)} onBlur={saveTitle} onKeyDown={e => e.key === 'Enter' && (e.target as HTMLInputElement).blur()} className="ak-display w-full text-4xl font-bold bg-transparent outline-none placeholder:text-zinc-700 mb-2" placeholder="Trang chưa có tiêu đề" />
+                <input value={editTitle} readOnly={!canEditLayer(layerOf(editing.id))} onChange={e => setEditTitle(e.target.value)} onBlur={saveTitle} onKeyDown={e => e.key === 'Enter' && (e.target as HTMLInputElement).blur()} autoComplete="off" spellCheck={false} data-1p-ignore data-lpignore="true" name="ak-page-title" className="ak-display w-full text-4xl font-bold bg-transparent outline-none placeholder:text-zinc-700 mb-2" placeholder="Trang chưa có tiêu đề" />
                 {canEditLayer(layerOf(editing.id)) && isGenericTitle(editTitle) && suggestTitle() && (
                   <button onClick={applySuggestedTitle} title="Đặt tiêu đề từ nội dung (Tóm tắt 1 câu / câu đầu)" className="mb-2 -mt-1 inline-flex items-center gap-1.5 text-[11px] rounded-lg bg-violet-500/10 border border-violet-400/25 text-violet-200 px-2.5 py-1 hover:bg-violet-500/20 transition">✨ Gợi ý tiêu đề: <span className="text-zinc-300 italic truncate max-w-[360px]">“{suggestTitle()}”</span></button>
                 )}
@@ -1018,15 +1032,23 @@ function Workspace({ user }: { user: User }) {
                             await supabase.from('nodes').update({ status: 'published', props: np }).eq('id', editing.id)
                             if (orgId) loadTree(orgId); setToast('✅ Đã duyệt & xuất bản'); setTimeout(() => setToast(''), 2500)
                           }} className="rounded-lg bg-emerald-600 hover:bg-emerald-500 px-2.5 py-1 font-semibold">✅ Duyệt</button>
-                          <button onClick={async () => {
-                            const note = window.prompt('Lý do trả lại (tác giả sẽ thấy):')
-                            if (note === null) return
-                            const { data: cur } = await supabase.from('nodes').select('props').eq('id', editing.id).single()
-                            const np = { ...((cur?.props as Record<string, unknown>) ?? {}), review_note: note || 'Cần chỉnh sửa thêm' }
-                            await supabase.from('nodes').update({ status: 'draft', props: np }).eq('id', editing.id)
-                            if (orgId) loadTree(orgId); setToast('↩ Đã trả lại kèm góp ý'); setTimeout(() => setToast(''), 2500)
-                          }} className="rounded-lg bg-white/5 border border-white/10 text-zinc-400 px-2.5 py-1 hover:text-red-300">↩ Trả lại</button>
+                          <button onClick={() => { setReturnFor(returnFor === editing.id ? null : editing.id); setReturnNote('') }} className={`rounded-lg border px-2.5 py-1 ${returnFor === editing.id ? 'bg-red-500/15 border-red-400/40 text-red-200' : 'bg-white/5 border-white/10 text-zinc-400 hover:text-red-300'}`}>↩ Trả lại</button>
                         </>
+                      )}
+                      {/* form Trả-lại INLINE (thay popup trình duyệt) */}
+                      {returnFor === editing.id && (
+                        <div className="w-full mt-1 rounded-xl border border-red-400/25 bg-red-500/[0.06] p-2.5">
+                          <textarea autoFocus value={returnNote} onChange={e => setReturnNote(e.target.value)} placeholder="Lý do trả lại (tác giả sẽ thấy)… vd: phần kết luận cần rõ hơn" className="w-full h-16 rounded-lg bg-black/30 border border-white/10 p-2 text-[13px] outline-none focus:border-red-400/40 mb-1.5" />
+                          <div className="flex gap-1.5 justify-end">
+                            <button onClick={() => { setReturnFor(null); setReturnNote('') }} className="rounded-lg bg-white/5 border border-white/10 text-zinc-400 px-3 py-1 text-xs">Huỷ</button>
+                            <button onClick={async () => {
+                              const { data: cur } = await supabase.from('nodes').select('props').eq('id', editing.id).single()
+                              const np = { ...((cur?.props as Record<string, unknown>) ?? {}), review_note: returnNote.trim() || 'Cần chỉnh sửa thêm' }
+                              await supabase.from('nodes').update({ status: 'draft', props: np }).eq('id', editing.id)
+                              setReturnFor(null); setReturnNote(''); if (orgId) loadTree(orgId); setToast('↩ Đã trả lại kèm góp ý'); setTimeout(() => setToast(''), 2500)
+                            }} className="rounded-lg bg-red-600/90 hover:bg-red-500 text-white px-3 py-1 text-xs font-semibold">↩ Trả lại kèm lý do</button>
+                          </div>
+                        </div>
                       )}
                       {node?.status === 'draft' && <span className="rounded-lg bg-zinc-500/15 border border-zinc-400/30 text-zinc-400 px-2 py-1" title={(p.review_note as string) ?? ''}>📝 Nháp</span>}
                       {/* tác giả gửi duyệt lại sau khi sửa */}
@@ -1129,13 +1151,34 @@ function Workspace({ user }: { user: User }) {
                             loadPageLinks(editing.id); loadGraph(orgId); logEvent('link', editing.id)
                             setToast(`💥 Đã nối chiều ${DIMS[dim]?.label ?? dim} — liên kết mới hình thành!`); setTimeout(() => setToast(''), 2800)
                           }}
+                          onCreateForDim={async (name, subtype) => {
+                            // Con người=person · Giá trị=core_value · Neo=mantra(quote) — tạo node mới dưới đúng hub rồi nối
+                            if (!orgId) return null
+                            const kho = khoOf('personal'); if (!kho) return null
+                            const hubSub = subtype === 'person' ? 'people_home' : subtype === 'core_value' ? 'values_home' : 'anchor_home'
+                            let hub = tree.find(n => n.subtype === hubSub)?.id
+                            if (!hub) {
+                              const [ht, hi] = subtype === 'person' ? ['Người', '👥'] : subtype === 'core_value' ? ['Giá trị cốt lõi', '⭐'] : ['Kim Chỉ Nam', '🧭']
+                              hub = crypto.randomUUID()
+                              await supabase.from('nodes').insert({ id: hub, org_id: orgId, owner_id: user.id, layer: 'personal', kind: 'folder', parent_id: kho.id, title: ht, icon: hi, subtype: hubSub, status: 'published', min_level: 1 })
+                            }
+                            const id = crypto.randomUUID()
+                            const icon = subtype === 'person' ? '👤' : subtype === 'core_value' ? '💎' : '⚓'
+                            const title = subtype === 'mantra' ? `“${name.slice(0, 80)}”` : name
+                            const md = subtype === 'person' ? `# ${name}\n\n## 👤 Hồ sơ\n- Nickname: \n- Tên gọi khác: \n- SĐT: \n- Nghề / Career: \n\n## 💬 Chuyện đã thấy/nghe\n`
+                              : subtype === 'mantra' ? `> ${name}\n\n— rút từ [[${editing?.title ?? ''}]]` : null
+                            const { error } = await supabase.from('nodes').insert({ id, org_id: orgId, owner_id: user.id, layer: 'personal', kind: subtype === 'core_value' ? 'page' : 'note', parent_id: hub, title, icon, subtype, md, status: 'published', min_level: 1 })
+                            if (error) { setErr(error.message); return null }
+                            await loadTree(orgId)
+                            return id
+                          }}
                         />
                       )
                     })()}
                     {/* 💬 THẢO LUẬN (kiểu Wikipedia Talk page — kho chung, nhiều người cùng làm) */}
                     {layerOf(editing.id) !== 'personal' && (
-                      <div className="mt-6 pt-5 border-t border-white/10 pb-4">
-                        <div className="text-[11px] uppercase tracking-wide text-zinc-500 mb-2">💬 Thảo luận ({comments.filter(c => !c.resolved).length}) <span className="normal-case text-zinc-600">— bàn ở đây trước, sửa bài sau (quy tắc Wikipedia)</span></div>
+                      <div className="mt-6 mb-4 rounded-2xl border border-cyan-400/25 bg-cyan-500/[0.06] p-4 shadow-lg shadow-cyan-500/5">
+                        <div className="text-[12px] font-bold tracking-wide text-cyan-200 mb-2.5 flex items-center gap-2">💬 Thảo luận <span className="rounded-full bg-cyan-500/20 border border-cyan-400/30 text-cyan-100 px-2 py-0.5 text-[10px]">{comments.filter(c => !c.resolved).length} đang mở</span> <span className="normal-case font-normal text-cyan-300/50 text-[10px]">— bàn ở đây trước, sửa bài sau (quy tắc Wikipedia)</span></div>
                         <div className="space-y-1.5 mb-2">
                           {comments.map(c => (
                             <div key={c.id} className={`flex items-start gap-2 rounded-xl border px-3 py-2 ${c.resolved ? 'bg-white/[0.02] border-white/5 opacity-50' : 'bg-white/[0.03] border-white/10'}`}>
@@ -1184,6 +1227,7 @@ function Workspace({ user }: { user: User }) {
             stats={{ pages: tree.filter(n => n.kind !== 'kho').length, notes: tree.filter(n => n.kind === 'note').length, links: links.length }}
             recent={recent.map(id => nodeOf(id)).filter((n): n is TNode => !!n)}
             pages={personalPages.filter(n => n.kind === 'note' || n.kind === 'page')}
+            commonPages={tree.filter(n => (n.layer === 'corporate' || n.layer === 'humanity') && (n.kind === 'note' || n.kind === 'page') && n.status === 'published')}
             editorial={tree.filter(n => n.owner_id === user.id && (n.status === 'pending' || n.status === 'draft')).map(n => ({ id: n.id, title: n.title, kind: n.kind, parent_id: n.parent_id, icon: n.icon, status: n.status, note: (n.props?.review_note as string) ?? '' }))}
             onOpen={(n) => { openNoteEditor(n as Node); setPage('know') }}
             onOpenId={(id) => { const t = nodeOf(id); if (t) { openNoteEditor(t); setPage('know') } }}
@@ -1227,6 +1271,12 @@ function Workspace({ user }: { user: User }) {
             }}
           />
           <Studio orgId={orgId} user={user} canEdit={!!role?.can_edit} canApprove={!!role?.can_approve} pages={tree.map(n => ({ id: n.id, title: n.title, layer: n.layer, kind: n.kind, parent_id: n.parent_id, icon: n.icon, subtype: n.subtype }))} onOpen={(id) => { const t = nodeOf(id); if (t) { openNoteEditor(t); setPage('know') } }} onReload={() => { if (orgId) { loadTree(orgId); loadGraph(orgId) } }} />
+          {role?.can_edit && orgId && (
+            <div className="px-8 pb-10 max-w-4xl mx-auto">
+              <div className="text-[11px] uppercase tracking-wider text-zinc-500 mb-2">💬 Trao đổi nội bộ</div>
+              <BoardChat orgId={orgId} me={user.id} pages={tree.filter(n => n.kind !== 'kho').map(n => ({ id: n.id, title: n.title, icon: n.icon }))} onOpenPage={(id) => { const t = nodeOf(id); if (t) { openNoteEditor(t); setPage('know') } }} />
+            </div>
+          )}
           </div>
         : (<div className="flex-1 flex flex-col min-h-0">{viewBar}{
           page === 'engine' ? <div className="flex-1 overflow-auto"><ContentEngine user={user} orgId={orgId} pages={tree} onOpenPage={(id) => { const t = nodeOf(id); if (t) { openNoteEditor(t); setPage('know') } }} onCreatePlan={async (title, md) => {
@@ -1423,7 +1473,29 @@ function Workspace({ user }: { user: User }) {
 
       {/* ONBOARDING 3 BƯỚC — high-tech */}
       {ob && (() => {
-        const finish = () => { setOb(false); setPage('today'); try { localStorage.setItem('dq-onboarded', '1') } catch { /* */ } } // đáp xuống Today — ô ghi nhanh là hành động đầu tiên
+        const finish = async () => {
+          // Lưu hồ sơ đã thu được vào 🪞 Tôi là ai + tạo giá trị cốt lõi (điền tới đâu hay tới đó)
+          try {
+            if (orgId && (obName.trim() || obValues.length || obVoice.length || obCatch.trim() || obGoal.trim())) {
+              const pmId = await ensureProfileMe()
+              if (pmId) {
+                const md = `# Tôi là ai\n\n## 🧭 Tính cách (DISC · MBTI)\n${obName.trim() ? `\n${obName.trim()}\n` : ''}\n## 🗣️ Hồ sơ giọng\n- Chất văn: ${obVoice.join(', ')}\n- Câu tủ: ${obCatch.trim()}\n- Từ cấm: \n\n## 🎯 Mục tiêu\n${obGoal.trim()}\n\n## 💎 Giá trị sống\n${obValues.map(v => `- ${v}`).join('\n')}\n\n## ✨ Nét cuộc đời\n`
+                await supabase.from('nodes').update({ content: null, md }).eq('id', pmId)
+              }
+              // tạo node giá trị cốt lõi (subtype core_value) dưới 🧭 La bàn để Chuyển hoá nối được
+              if (obValues.length) {
+                const compass = await ensureHub('compass', 'La bàn giá trị', '🧭')
+                for (const v of obValues) {
+                  const { data: ex } = await supabase.from('nodes').select('id').eq('owner_id', user.id).eq('subtype', 'core_value').ilike('title', v).limit(1).maybeSingle()
+                  if (!ex) await supabase.from('nodes').insert({ id: crypto.randomUUID(), org_id: orgId, owner_id: user.id, layer: 'personal', kind: 'page', parent_id: compass, title: v, icon: '💎', subtype: 'core_value', status: 'published', min_level: 1 })
+                }
+              }
+              if (obVoice.length || obCatch.trim()) await supabase.from('user_voice').upsert({ user_id: user.id, voice: { style: obVoice, catch: obCatch.trim(), goal: obGoal.trim(), updated_at: new Date().toISOString() } })
+              if (orgId) loadTree(orgId)
+            }
+          } catch { /* không chặn onboarding nếu lưu lỗi */ }
+          setOb(false); setPage('today'); try { localStorage.setItem('dq-onboarded', '1') } catch { /* */ }
+        } // đáp xuống Today — ô ghi nhanh là hành động đầu tiên
         return (
           <div className="fixed inset-0 z-[70] overflow-hidden bg-[#06060c]/92 backdrop-blur-md grid place-items-center p-6">
             <div className="dq-stars" aria-hidden />
@@ -1432,7 +1504,7 @@ function Workspace({ user }: { user: User }) {
             <div className="relative w-[600px] max-w-[95vw] rounded-3xl p-[1.5px] bg-gradient-to-br from-violet-500/70 via-white/10 to-cyan-500/70 shadow-2xl shadow-violet-500/20">
               <div className="rounded-3xl bg-[#0d0d18]/97 overflow-hidden">
                 {/* progress + dots */}
-                <div className="h-1 bg-white/5"><div className="h-full bg-gradient-to-r from-violet-500 via-blue-600 to-cyan-400 transition-all duration-500" style={{ width: `${((obStep + 1) / 3) * 100}%` }} /></div>
+                <div className="h-1 bg-white/5"><div className="h-full bg-gradient-to-r from-violet-500 via-blue-600 to-cyan-400 transition-all duration-500" style={{ width: `${((obStep + 1) / 5) * 100}%` }} /></div>
                 <div className="p-8 pb-6">
                   <div className="flex items-center justify-between mb-6">
                     <div className="flex items-center gap-2.5">
@@ -1440,8 +1512,8 @@ function Workspace({ user }: { user: User }) {
                       <span className="text-sm font-black tracking-[0.25em] uppercase ak-logo-grad">Akash</span>
                     </div>
                     <div className="flex items-center gap-1.5">
-                      {[0, 1, 2].map(i => <button key={i} onClick={() => setObStep(i)} className={`h-1.5 rounded-full transition-all ${i === obStep ? 'w-6 bg-gradient-to-r from-violet-400 to-cyan-400' : 'w-1.5 bg-white/20 hover:bg-white/40'}`} />)}
-                      <span className="text-[10px] text-zinc-600 ml-2">{obStep + 1}/3</span>
+                      {[0, 1, 2, 3, 4].map(i => <button key={i} onClick={() => setObStep(i)} className={`h-1.5 rounded-full transition-all ${i === obStep ? 'w-6 bg-gradient-to-r from-violet-400 to-cyan-400' : 'w-1.5 bg-white/20 hover:bg-white/40'}`} />)}
+                      <span className="text-[10px] text-zinc-600 ml-2">{obStep + 1}/5</span>
                     </div>
                   </div>
 
@@ -1509,15 +1581,44 @@ function Workspace({ user }: { user: User }) {
                         </div>
                       </>
                     )}
+                    {obStep === 3 && (
+                      <>
+                        <h2 className="text-2xl font-black mb-1">Bạn là <span className="ak-logo-grad">ai</span>?</h2>
+                        <p className="text-sm text-zinc-500 mb-4">Vài nét để AI hiểu bạn — điền được phần nào hay phần đó, còn lại bổ sung dần ở 🪞 Tôi là ai.</p>
+                        <textarea value={obName} onChange={e => setObName(e.target.value)} placeholder="Một dòng về bạn: tên, vai trò, điều bạn đang theo đuổi…" className="w-full rounded-xl bg-white/5 border border-white/10 p-3 text-sm outline-none focus:border-cyan-400/50 h-16 mb-3" />
+                        <div className="text-[11px] uppercase tracking-wider text-violet-300/80 mb-2">💎 3–5 giá trị bạn sống vì nó</div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {['Kỷ luật', 'Trung thực', 'Biết ơn', 'Phụng sự', 'Can đảm', 'Tự do', 'Gia đình', 'Học hỏi', 'Sức khỏe', 'Sáng tạo', 'Khiêm nhường', 'Kiên trì'].map(v => {
+                            const on = obValues.includes(v)
+                            return <button key={v} onClick={() => setObValues(p => on ? p.filter(x => x !== v) : p.length < 5 ? [...p, v] : p)} className={`px-2.5 py-1.5 rounded-lg text-xs border transition ${on ? 'bg-violet-500/30 border-violet-400/50 text-violet-100' : 'bg-white/5 border-white/10 text-zinc-400 hover:border-white/25'}`}>{on && '✓ '}{v}</button>
+                          })}
+                        </div>
+                      </>
+                    )}
+                    {obStep === 4 && (
+                      <>
+                        <h2 className="text-2xl font-black mb-1">Giọng của <span className="text-amber-300">bạn</span></h2>
+                        <p className="text-sm text-zinc-500 mb-4">AI sẽ viết content bằng đúng chất văn của bạn — chọn vài nét & câu tủ.</p>
+                        <div className="text-[11px] uppercase tracking-wider text-amber-300/80 mb-2">🗣️ Chất văn</div>
+                        <div className="flex flex-wrap gap-1.5 mb-3">
+                          {['Mộc mạc', 'Sâu lắng', 'Truyền cảm hứng', 'Hài hước', 'Thẳng thắn', 'Ấm áp', 'Sắc bén', 'Gần gũi'].map(v => {
+                            const on = obVoice.includes(v)
+                            return <button key={v} onClick={() => setObVoice(p => on ? p.filter(x => x !== v) : [...p, v])} className={`px-2.5 py-1.5 rounded-lg text-xs border transition ${on ? 'bg-amber-500/25 border-amber-400/50 text-amber-100' : 'bg-white/5 border-white/10 text-zinc-400 hover:border-white/25'}`}>{on && '✓ '}{v}</button>
+                          })}
+                        </div>
+                        <input value={obCatch} onChange={e => setObCatch(e.target.value)} placeholder='💬 Câu tủ / câu cửa miệng của bạn (vd: "Cứ làm rồi tính")…' className="w-full rounded-xl bg-white/5 border border-white/10 p-3 text-sm outline-none focus:border-amber-400/50 mb-3" />
+                        <input value={obGoal} onChange={e => setObGoal(e.target.value)} placeholder="🎯 Mục tiêu lớn nhất 12 tháng tới…" className="w-full rounded-xl bg-white/5 border border-white/10 p-3 text-sm outline-none focus:border-cyan-400/50" />
+                      </>
+                    )}
                   </div>
 
                   <div className="flex items-center justify-between mt-6">
                     <button onClick={finish} className="text-xs text-zinc-600 hover:text-zinc-300 transition">Bỏ qua</button>
                     <div className="flex gap-2">
                       {obStep > 0 && <button onClick={() => setObStep(s => s - 1)} className="rounded-xl bg-white/10 border border-white/10 px-4 py-2.5 text-sm hover:bg-white/15">← Trước</button>}
-                      {obStep < 2
+                      {obStep < 4
                         ? <button onClick={() => setObStep(s => s + 1)} className="rounded-xl ak-cta px-6 py-2.5 text-sm font-bold">Tiếp →</button>
-                        : <button onClick={finish} className="rounded-xl ak-cta px-6 py-2.5 text-sm font-bold">✍️ Viết dòng đầu tiên</button>}
+                        : <button onClick={finish} className="rounded-xl ak-cta px-6 py-2.5 text-sm font-bold">✨ Lưu hồ sơ & bắt đầu</button>}
                     </div>
                   </div>
                 </div>

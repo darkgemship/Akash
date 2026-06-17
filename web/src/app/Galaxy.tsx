@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
 // 3D dùng Three.js → chỉ tải khi mở (ssr:false), không phình app chính
 const Graph3D = dynamic(() => import('./Graph3D'), { ssr: false, loading: () => <div className="absolute inset-0 z-20 grid place-items-center bg-[#06060c] text-zinc-500 text-sm">Đang dựng bộ não 3D…</div> })
+const DimViews = dynamic(() => import('./DimViews'), { ssr: false, loading: () => <div className="absolute inset-0 z-20 grid place-items-center bg-[#06060c] text-zinc-500 text-sm">Đang dựng view 6 chiều…</div> })
 import ErrorBoundary from './ErrorBoundary'
 
 export type GNode = { id: string; title: string | null; kind: string; parent_id: string | null; layer?: string; event_date?: string | null; subtype?: string | null; icon?: string | null; emotion?: string | null }
@@ -10,8 +11,6 @@ export type GNode = { id: string; title: string | null; kind: string; parent_id:
 const KIND_ICON: Record<string, string> = { kho: '📦', folder: '📁', page: '📄', note: '📝', database: '🗂️' }
 function nodeIcon(n: GNode): string { return n.icon || KIND_ICON[n.kind] || '•' }
 // màu theo ĐỘ SÂU từ node đang chọn (gần = sáng nóng → xa = nguội mờ)
-const DEPTH_COLOR = ['#ffffff', '#f5b942', '#22d3ee', '#a78bfa', '#6366f1', '#475569']
-const depthColorOf = (d: number) => DEPTH_COLOR[Math.min(d, DEPTH_COLOR.length - 1)]
 // 🌈 màu theo CẢM XÚC (thang Hawkins): node sáng dần khi user đi lên — thấy hành trình chuyển hoá. Khớp EMO_SCALE ở PageFrame.
 const EMO_COLOR: Record<string, string> = {
   '😣 đau/sợ': '#e23b3b', '😤 tức': '#f0673a', '🌫️ hoài nghi': '#c08a3a', '🔥 thôi thúc': '#f5b942',
@@ -24,11 +23,18 @@ type P = { x: number; y: number; r: number; color: string; node: GNode; phase: n
 
 const COLOR: Record<string, string> = { kho: '#ffffff', folder: '#22d3ee', page: '#c4b5fd', database: '#fbbf24', note: '#94a3b8', block: '#34d399' }
 const SIZE: Record<string, number> = { kho: 12, folder: 7, page: 7, database: 7, note: 4, block: 3 }
+// 🎨 MÀU 6 CHIỀU LIÊN KẾT — chọn ở dải LẠNH + đỏ/cam, TÁCH HẲN 3 màu KHO (tím/vàng/hồng) để phân biệt "node thuộc kho nào" vs "đường quan hệ gì".
+// (time/emotion không vẽ ở galaxy nên giữ tone cũ cho radar/timeline.)
 export const DIM_COLOR: Record<string, string> = {
-  knowledge: '#22d3ee', experience: '#f472b6', emotion: '#fbbf24', values: '#a78bfa',
-  people: '#34d399', time: '#60a5fa', reference: '#e879f9', anchor: '#f87171',
+  knowledge: '#22d3ee', // cyan
+  people: '#34d399',    // ngọc lục
+  experience: '#84cc16',// xanh chanh (lime)
+  reference: '#3b82f6', // xanh dương
+  values: '#f97316',    // cam
+  anchor: '#ef4444',    // đỏ
+  emotion: '#fbbf24', time: '#60a5fa', // (chỉ dùng ở radar/timeline)
 }
-const DIM_LABEL: Record<string, string> = {
+export const DIM_LABEL: Record<string, string> = {
   knowledge: 'Kiến thức', experience: 'Trải nghiệm', emotion: 'Cảm xúc', values: 'Giá trị',
   people: 'Con người', time: 'Thời gian', reference: 'Tham chiếu', anchor: 'Neo',
 }
@@ -36,20 +42,33 @@ type Motion = 'drift' | 'pulse' | 'still'
 type Mode = 'galaxy' | 'mandala' | 'radar' | 'timeline' | 'neuro' | 'rings'
 // 🪐 3 VÒNG ĐỒNG TÂM — màu nền mỗi ring (cá nhân cyan sống ở lõi → QNET tím → nhân loại hồng)
 const RING_HUE: Record<string, number> = { personal: 188, corporate: 266, humanity: 312 }
-const RING_TINT: Record<string, string> = { personal: '#22d3ee', corporate: '#a78bfa', humanity: '#e879f9' }
 const RING_NAME: Record<string, string> = { personal: 'ĐỜI TÔI', corporate: 'QNET', humanity: 'NHÂN LOẠI' }
-// 🌈 5 MÀU theo LEVEL trong mỗi kho (đồng bộ thiên hà 3D): L0 sao tâm → L1 "trái đất" → 3 màu phối → giữ màu cuối
-const GAL_PAL: Record<string, { star: string; levels: string[] }> = {
-  personal:  { star: '#ff5a36', levels: ['#ff5a36', '#ffb37a', '#3b82f6', '#93c5fd', '#4b5563'] }, // đỏ→cam nhạt→xanh dương→xanh nhạt→đen xạm
-  corporate: { star: '#f5b942', levels: ['#f5b942', '#a855f7', '#fde68a', '#2dd4bf', '#4b5563'] }, // vàng→tím→vàng nhạt→xanh ngọc→đen xạm
-  humanity:  { star: '#e879f9', levels: ['#e879f9', '#fb7185', '#818cf8', '#c4b5fd', '#4b5563'] }, // hồng→hồng đào→chàm→tím nhạt→đen xạm
+// 🎨 MÀU NODE = THEO KHO (1 hue/kho, KHÔNG cầu vồng) — đậm ở tầng nông, nhạt dần khi sâu (GRAPH-VISION §3)
+//   node kể "thuộc về đâu" (kho), đường nối kể "quan hệ loại gì" (8 chiều). Đời tôi=tím · QNET=vàng · Nhân loại=hồng.
+const GAL_PAL: Record<string, { star: string; base: string }> = {
+  personal:  { star: '#a78bfa', base: '#8b5cf6' }, // tím
+  corporate: { star: '#fcd34d', base: '#f5b942' }, // vàng
+  humanity:  { star: '#f0abfc', base: '#e879f9' }, // hồng
 }
-const galLevelColor = (layer: string, level: number) => { const p = GAL_PAL[layer] ?? GAL_PAL.personal; return p.levels[Math.min(level, p.levels.length - 1)] ?? p.levels[0] }
+// trộn 2 hex theo t (0..1) — giữ HEX để tương thích các chỗ nối +alpha (rule #9)
+function mixHex(a: string, b: string, t: number): string {
+  const pa = parseInt(a.slice(1), 16), pb = parseInt(b.slice(1), 16)
+  const ar = pa >> 16, ag = (pa >> 8) & 255, ab = pa & 255
+  const br = pb >> 16, bg = (pb >> 8) & 255, bb = pb & 255
+  const m = (x: number, y: number) => Math.round(x + (y - x) * t)
+  return '#' + ((1 << 24) + (m(ar, br) << 16) + (m(ag, bg) << 8) + m(ab, bb)).toString(16).slice(1)
+}
+// 1 hue theo kho, tầng sâu → pha nhạt dần về trắng-lam (đậm=nông, nhạt=sâu)
+const galLevelColor = (layer: string, level: number) => {
+  const p = GAL_PAL[layer] ?? GAL_PAL.personal
+  const t = Math.min(Math.max(level, 0), 7) / 7
+  return mixHex(p.base, '#eaf0ff', t * 0.62)
+}
 // theme: tone trắng → nền kem cho map (2D & 3D), tone tối → nền vũ trụ
 const isLightTheme = () => typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'light'
 const CANVAS_BG = { dark: '#0a0b14', light: '#f4f1ea' }
 // thứ tự 8 trục radar theo framework
-const DIM_ORDER = ['knowledge', 'experience', 'emotion', 'values', 'people', 'time', 'reference', 'anchor']
+const DIM_ORDER = ['knowledge', 'experience', 'emotion', 'values', 'people', 'time', 'reference']   // 7 chiều (bỏ Neo). Radar chia đều 2π/length.
 
 const STOP = new Set(['những', 'được', 'không', 'trong', 'với', 'của', 'cho', 'và', 'các', 'một', 'tiên', 'đang', 'ngày', 'tháng', 'đầu', 'sau', 'trước', 'cách', 'this', 'that'])
 
@@ -86,6 +105,7 @@ export default function Galaxy({ nodes, links, onOpen, onConnect, modeReq }: {
   // tương tác kiểu Obsidian (research mũi 1): chọn node → highlight 1-hop + mũi tên hướng; kéo node giữ vị trí
   const selRef = useRef<string | null>(null)
   const burstSelRef = useRef<{ t0: number } | null>(null)
+  const bloomTimers = useRef<ReturnType<typeof setTimeout>[]>([])   // 🎆 "nở thành hệ": hẹn giờ bung từng tầng khi bấm sao kho
   const manualPos = useRef<Map<string, { x: number; y: number }>>(new Map())
   const nodeDrag = useRef<{ id: string; moved: boolean } | null>(null)
   const suppressClick = useRef(false)
@@ -103,6 +123,9 @@ export default function Galaxy({ nodes, links, onOpen, onConnect, modeReq }: {
   const unplacedRef = useRef<GNode[]>([])                                     // radar: chưa có link chiều / timeline: chưa có date
   const tlMetaRef = useRef<Record<string, { pxPerMs: number; y: number; min: number }> | null>(null)
   const ringMetaRef = useRef<{ cx: number; cy: number; RING: Record<string, number>; Rmax: number } | null>(null)
+  // 🪐 quỹ đạo thiên hà: tâm mỗi kho + bán kính TỪNG vòng (per layer/level) để draw() vẽ quỹ đạo KHỚP node
+  const galaxyMetaRef = useRef<{ centers: Record<string, { x: number; y: number }>; ringR: Record<string, Record<number, number>>; maxLv: number; stars: Record<string, string> } | null>(null)
+  const mandalaMetaRef = useRef<{ fx: number; fy: number; maxR: number; up: number; FULL: number; maxDepth: number } | null>(null)   // Cây Sự Sống: vẽ cung quỹ đạo theo level
   useEffect(() => { if (modeReq?.mode) { setMode(modeReq.mode as Mode); setMotion('still'); if (modeReq.emo) setEmoCol(true) } }, [modeReq]) // eslint-disable-line react-hooks/exhaustive-deps
   const tlZoomRef = useRef(1)                       // zoom THỜI GIAN quanh cột HÔM NAY (1 = thấy trọn quá khứ)
   const relayoutRef = useRef<() => void>(() => {})  // wheel gọi lại layout khi đổi time-zoom
@@ -118,12 +141,12 @@ export default function Galaxy({ nodes, links, onOpen, onConnect, modeReq }: {
   const [motion, setMotion] = useState<Motion>('drift')
   const [mode, setMode] = useState<Mode>('galaxy')
   const [show3d, setShow3d] = useState(false)
+  const [showDim, setShowDim] = useState(false)
   const [flow, setFlow] = useState(false)
-  const [maxLvl2D, setMaxLvl2D] = useState(5)   // 🪐 độ sâu hệ (galaxy 2D): 1=hành tinh · 2=+tiểu HT · 3=+vệ tinh · 4+=tất cả
+  const [maxLvl2D, setMaxLvl2D] = useState(8)   // 🪐 độ sâu hệ (galaxy 2D): 1=hành tinh · 2=+tiểu HT · 3=+vệ tinh · 8=tất cả (tới tầng 7)
+  useEffect(() => () => bloomTimers.current.forEach(clearTimeout), [])   // huỷ timer "nở thành hệ" khi unmount
   const [showIcons, setShowIcons] = useState(true)   // 🖼 icon trong node cho dễ nhìn
   const showIconsRef = useRef(true); showIconsRef.current = showIcons
-  const [depthCol, setDepthCol] = useState(true)     // 🎨 màu theo độ sâu khi chọn node
-  const depthColRef = useRef(true); depthColRef.current = depthCol
   const [emoCol, setEmoCol] = useState(false)        // 🌈 nhuộm node theo cảm xúc (thang Hawkins) — thấy hành trình sáng dần
   const emoColRef = useRef(false); emoColRef.current = emoCol
   const [moreModes, setMoreModes] = useState(false)  // ⋯ ẩn mode nâng cao (Mandala/Radar/Neuro) cho đỡ rối
@@ -149,6 +172,15 @@ export default function Galaxy({ nodes, links, onOpen, onConnect, modeReq }: {
     }
     degRef.current = m
   }, [links])
+
+  // QUAN HỆ CHA–CON (cấu trúc cây) — hover hiện cha+con; tách bạch với liên kết 8 chiều (reference) hiện khi click
+  const childRef = useRef<Map<string, string[]>>(new Map())
+  const parentRef = useRef<Map<string, string>>(new Map())
+  useEffect(() => {
+    const ch = new Map<string, string[]>(), pa = new Map<string, string>()
+    for (const n of nodes) if (n.parent_id) { pa.set(n.id, n.parent_id); (ch.get(n.parent_id) ?? ch.set(n.parent_id, []).get(n.parent_id)!).push(n.id) }
+    childRef.current = ch; parentRef.current = pa
+  }, [nodes])
 
   // BÙNG NỔ khi có liên kết mới (tạo từ @, từ chế độ Nối, hay gợi ý)
   useEffect(() => {
@@ -191,7 +223,7 @@ export default function Galaxy({ nodes, links, onOpen, onConnect, modeReq }: {
         if (levelMemo.has(id)) return levelMemo.get(id)!
         const n = byIdLoc.get(id); if (!n) return 0
         if (n.kind === 'kho' || !n.parent_id || !byIdLoc.has(n.parent_id) || seen.has(n.parent_id)) { levelMemo.set(id, 0); return 0 }
-        seen.add(id); const v = Math.min(5, levelOf(n.parent_id, seen) + 1); levelMemo.set(id, v); return v
+        seen.add(id); const v = Math.min(8, levelOf(n.parent_id, seen) + 1); levelMemo.set(id, v); return v
       }
       let seed = 7
       const rand = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647 }
@@ -201,21 +233,31 @@ export default function Galaxy({ nodes, links, onOpen, onConnect, modeReq }: {
         // 3 kho = 3 cành lớn từ gốc, chia góc theo độ rậm (số lá) → tán cây cân, không dồn một cung.
         const fx = cx, fy = H * 0.95                        // gốc cây sát đáy khung
         const up = -Math.PI / 2                             // hướng vươn lên trời
-        const FULL = Math.PI * 1.28                          // tổng quạt ~230° (xoè rộng thay vì 1 cung hẹp)
+        const FULL = Math.PI * 1.55                          // tổng quạt ~280° (xoè RỘNG hơn)
         const maxR = Math.min(W * 0.47, fy - 28)
         const placed = new Set<string>()
+        // SỐ con-cháu mỗi nhánh → chia cung theo độ rậm (nhánh nhiều/ sâu được cung rộng hơn → cụm sâu hết bị bóp)
+        const sizeMemo = new Map<string, number>()
+        const subSize = (id: string): number => { if (sizeMemo.has(id)) return sizeMemo.get(id)!; sizeMemo.set(id, 1); let s = 1; for (const k of kidsOf(id)) s += subSize(k.id); sizeMemo.set(id, s); return s }
         // mỗi node CHIA ĐỀU góc cho các con tại TRUNG ĐIỂM sub-wedge của nó (cân đối, không dồn theo độ rậm)
+        let maxDepthShown = 1
         const place = (n: GNode, layer: string, a0: number, a1: number, depth: number) => {
-          if (placed.has(n.id)) return; placed.add(n.id)
+          if (placed.has(n.id)) return
+          if (n.kind !== 'kho' && levelOf(n.id) > maxLvl2D) return   // tăng TẦNG → tầng sâu mới "nhảy ra thêm"
+          placed.add(n.id); maxDepthShown = Math.max(maxDepthShown, depth)
           const a = (a0 + a1) / 2
-          const R = n.kind === 'kho' ? maxR * 0.12 : maxR * Math.min(1, 0.22 + depth * 0.17)   // sâu hơn = xa gốc hơn
+          const R = n.kind === 'kho' ? maxR * 0.10 : maxR * (0.20 + depth * 0.135)   // sâu hơn = xa gốc hơn (KHÔNG cap → tầng sâu tự giãn đều, fitView tự zoom)
           const col = n.kind === 'kho' ? (GAL_PAL[layer]?.star ?? COLOR.kho) : galLevelColor(layer, levelOf(n.id))
-          m.set(n.id, { x: fx + Math.cos(a) * R, y: fy + Math.sin(a) * R, r: n.kind === 'kho' ? SIZE.kho : (SIZE[n.kind] ?? 4), color: col, node: n, phase: rand() * Math.PI * 2 })
+          // size NHỎ DẦN theo độ sâu (càng xa gốc càng nhỏ) + to theo số liên kết; màu đã nhạt dần qua galLevelColor
+          const szM = n.kind === 'kho' ? SIZE.kho : Math.max(2.6, (SIZE[n.kind] ?? 5) + (degRef.current.get(n.id) ?? 0) * 0.3) * (depth <= 1 ? 1.3 : depth === 2 ? 1.05 : depth === 3 ? 0.85 : 0.7)
+          m.set(n.id, { x: fx + Math.cos(a) * R, y: fy + Math.sin(a) * R, r: szM, color: col, node: n, phase: rand() * Math.PI * 2 })
           const ks = kidsOf(n.id).filter(k => (k.layer ?? 'personal') === layer && !placed.has(k.id))
           if (!ks.length) return
-          const pad = (a1 - a0) * 0.08; const usable = (a1 - a0) - pad * 2; const a00 = a0 + pad
-          const step = usable / ks.length   // CHIA ĐỀU mỗi con 1 lát bằng nhau → toả cân
-          ks.forEach((k, i) => place(k, layer, a00 + i * step, a00 + (i + 1) * step, depth + 1))
+          const pad = (a1 - a0) * 0.06; const usable = (a1 - a0) - pad * 2
+          // chia cung theo SỐ con-cháu (subtree size): nhánh càng rậm/sâu càng được cung RỘNG → tầng sâu xoè đều, không bị bóp
+          const sizes = ks.map(k => subSize(k.id)); const tot = sizes.reduce((s, v) => s + v, 0) || 1
+          let acc = a0 + pad
+          ks.forEach((k, i) => { const w = usable * sizes[i] / tot; place(k, layer, acc, acc + w, depth + 1); acc += w })
         }
         const layerRoots = (['personal', 'corporate', 'humanity'] as const)
           .map(L => ({ L: L as string, kho: nodes.find(n => n.kind === 'kho' && (n.layer ?? 'personal') === L) }))
@@ -223,8 +265,9 @@ export default function Galaxy({ nodes, links, onOpen, onConnect, modeReq }: {
         // 3 kho = 3 MẢNG QUẠT ĐỀU NHAU (mỗi kho 1/3 tổng quạt) cho cân đối
         const wedge = FULL / layerRoots.length
         layerRoots.forEach((x, i) => { const a0 = up - FULL / 2 + i * wedge; place(x.kho, x.L, a0 + wedge * 0.05, a0 + wedge * 0.95, 1) })
-        // node lạc (không nằm trong cây kho) → rải mờ ở rìa tán
-        nodes.forEach(n => { if (!m.has(n.id)) { const a = up - FULL / 2 + rand() * FULL; m.set(n.id, { x: fx + Math.cos(a) * maxR * 1.04, y: fy + Math.sin(a) * maxR * 1.04, r: SIZE[n.kind] ?? 4, color: COLOR[n.kind] ?? COLOR.note, node: n, phase: rand() * Math.PI * 2 }) } })
+        // node lạc (không nằm trong cây kho, trong giới hạn tầng) → rải mờ ở rìa tán
+        nodes.forEach(n => { if (!m.has(n.id) && levelOf(n.id) <= maxLvl2D) { const a = up - FULL / 2 + rand() * FULL; m.set(n.id, { x: fx + Math.cos(a) * maxR * 1.04, y: fy + Math.sin(a) * maxR * 1.04, r: SIZE[n.kind] ?? 4, color: COLOR[n.kind] ?? COLOR.note, node: n, phase: rand() * Math.PI * 2 }) } })
+        mandalaMetaRef.current = { fx, fy, maxR, up, FULL, maxDepth: maxDepthShown }
       } else if (mode === 'radar') {
         // 🎯 RADAR 8 CHIỀU: node đậu trên trục của chiều mạnh nhất nó tham gia
         const Rmax = Math.min(W, H) * 0.40
@@ -253,7 +296,7 @@ export default function Galaxy({ nodes, links, onOpen, onConnect, modeReq }: {
         primaryDimRef.current = prim
         unplacedRef.current = unplaced
         DIM_ORDER.forEach((d, i) => {
-          const th = -Math.PI / 2 + i * Math.PI / 4
+          const th = -Math.PI / 2 + i * (Math.PI * 2 / DIM_ORDER.length)
           const list = axisNodes[d].sort((a, b) => (degRef.current.get(b.id) ?? 0) - (degRef.current.get(a.id) ?? 0))
           const n2 = list.length
           list.forEach((n, k) => {
@@ -298,7 +341,9 @@ export default function Galaxy({ nodes, links, onOpen, onConnect, modeReq }: {
             while (lane < 3 && ls[lane] !== undefined && x - ls[lane] < 56) lane++
             if (lane >= 3) lane = 0
             ls[lane] = x
-            m.set(n.id, { x, y: mm.y - 26 - lane * 32, r: SIZE[n.kind] ?? 4, color: COLOR[n.kind] ?? COLOR.note, node: n, phase: rand() * Math.PI * 2 })
+            const lvT = levelOf(n.id)   // màu THEO KHO (đồng bộ Thiên hà) + size nhỏ dần theo tầng
+            const szT = Math.max(3, (SIZE[n.kind] ?? 5) + (degRef.current.get(n.id) ?? 0) * 0.25) * (lvT <= 1 ? 1.2 : lvT === 2 ? 1 : 0.82)
+            m.set(n.id, { x, y: mm.y - 26 - lane * 32, r: szT, color: galLevelColor(layer, lvT), node: n, phase: rand() * Math.PI * 2 })
           }
         } else tlMetaRef.current = null
       } else if (mode === 'rings') {
@@ -379,33 +424,42 @@ export default function Galaxy({ nodes, links, onOpen, onConnect, modeReq }: {
         // 🪐 GALAXY = 3 HỆ MẶT TRỜI: mỗi kho 1 tâm (xếp tam giác), node con xếp VÒNG TRÒN theo LEVEL quanh tâm,
         // chia đều góc trên mỗi vòng (level 1 = vòng trong → sâu hơn ra vòng ngoài). Sao tâm = màu kho.
         const S0 = Math.min(W, H)
+        // càng hiện nhiều TẦNG → 3 thiên hà GIÃN XA nhau ra (planets không chen, fitView tự zoom vừa khung)
+        const sp = 0.26 + Math.min(maxLvl2D, 8) * 0.045
         const TRI: Record<string, { x: number; y: number }> = {
-          personal:  { x: cx,            y: cy - S0 * 0.27 },
-          corporate: { x: cx - S0 * 0.31, y: cy + S0 * 0.20 },
-          humanity:  { x: cx + S0 * 0.31, y: cy + S0 * 0.20 },
+          personal:  { x: cx,                 y: cy - S0 * sp },
+          corporate: { x: cx - S0 * sp * 1.13, y: cy + S0 * sp * 0.74 },
+          humanity:  { x: cx + S0 * sp * 1.13, y: cy + S0 * sp * 0.74 },
         }
-        const ringStep = S0 * 0.05
         const grp: Record<string, Record<number, GNode[]>> = {}
         for (const n of nodes) { const L = n.layer ?? 'personal', lv = levelOf(n.id); ((grp[L] ??= {})[lv] ??= []).push(n) }
+        const ringR: Record<string, Record<number, number>> = {}
+        const baseStep = S0 * 0.055, minArc = S0 * 0.022   // khoảng cách tối thiểu giữa 2 node trên cùng vòng
         for (const L of ['personal', 'corporate', 'humanity']) {
-          const c = TRI[L] ?? TRI.personal; const lvls = grp[L] || {}
-          for (const lvStr in lvls) {
-            const lv = +lvStr, arr = lvls[lv]
-            if (lv === 0) { arr.forEach(n => m.set(n.id, { x: c.x, y: c.y, r: SIZE.kho, color: GAL_PAL[L]?.star ?? COLOR.kho, node: n, phase: rand() * Math.PI * 2 })); continue }
-            if (lv > maxLvl2D) continue   // độ sâu hệ: chỉ hiện tới tầng đã chọn
-            const R = ringStep * (lv + 0.5)
+          const c = TRI[L] ?? TRI.personal; const lvls = grp[L] || {}; ringR[L] = {}
+          const khoNode = (lvls[0] || [])[0]
+          if (khoNode) m.set(khoNode.id, { x: c.x, y: c.y, r: SIZE.kho, color: GAL_PAL[L]?.star ?? COLOR.kho, node: khoNode, phase: rand() * Math.PI * 2 })
+          let prevR = 0
+          for (let lv = 1; lv <= maxLvl2D; lv++) {
+            const arr = lvls[lv]; if (!arr || !arr.length) continue
+            // bán kính TỰ GIÃN: đủ rộng để chứa hết node tầng này KHÔNG đè + luôn rộng hơn vòng trong
+            const needR = (arr.length * minArc) / (2 * Math.PI)
+            const R = Math.max(baseStep * (lv + 0.6), needR, prevR + baseStep * 0.85)
+            prevR = R; ringR[L][lv] = R
+            const phase = lv * 0.7 + (L === 'corporate' ? 1.3 : L === 'humanity' ? 2.6 : 0)   // lệch pha mỗi kho/vòng cho so le
             arr.forEach((n, i) => {
-              const a = (i / arr.length) * Math.PI * 2 + lv * 0.6   // chia đều + lệch pha mỗi vòng cho so le đẹp
-              const sz = Math.min(10, (SIZE[n.kind] ?? 4) + (degRef.current.get(n.id) ?? 0) * 0.35) * (lv <= 1 ? 1.25 : lv === 2 ? 1 : 0.8)  // hành tinh to, sâu hơn nhỏ dần
+              const a = (i / arr.length) * Math.PI * 2 + phase
+              const sz = Math.min(9, (SIZE[n.kind] ?? 4) + (degRef.current.get(n.id) ?? 0) * 0.3) * (lv <= 1 ? 1.3 : lv === 2 ? 1.05 : 0.85)
               m.set(n.id, { x: c.x + Math.cos(a) * R, y: c.y + Math.sin(a) * R, r: sz, color: galLevelColor(L, lv), node: n, phase: rand() * Math.PI * 2 })
             })
           }
         }
         // node lạc (không thuộc kho nào) → rải vành ngoài mờ (vẫn tôn trọng độ sâu)
         nodes.forEach(n => { if (!m.has(n.id) && levelOf(n.id) <= maxLvl2D) { const a = rand() * Math.PI * 2; m.set(n.id, { x: cx + Math.cos(a) * S0 * 0.47, y: cy + Math.sin(a) * S0 * 0.47, r: SIZE[n.kind] ?? 4, color: COLOR[n.kind] ?? COLOR.note, node: n, phase: rand() * Math.PI * 2 }) } })
+        galaxyMetaRef.current = { centers: TRI, ringR, maxLv: maxLvl2D, stars: { personal: GAL_PAL.personal.star, corporate: GAL_PAL.corporate.star, humanity: GAL_PAL.humanity.star } }
       }
-      // CHỐNG NODE ĐÈ NHAU (Obsidian-style collision): vài vòng đẩy tách bằng spatial hash — gọn gàng, chỉnh chu
-      if (mode === 'galaxy' || mode === 'mandala') {
+      // CHỐNG NODE ĐÈ NHAU (Obsidian-style collision): chỉ MANDALA — galaxy đã giãn vòng theo số node nên giữ node bám đúng quỹ đạo
+      if (mode === 'mandala') {
         const arr = [...m.values()].filter(p => p.node.kind !== 'kho')
         for (let it = 0; it < 22; it++) {
           let moved = false
@@ -473,6 +527,41 @@ export default function Galaxy({ nodes, links, onOpen, onConnect, modeReq }: {
       // nền ĐẶC theo theme: tone tối = vũ trụ, tone trắng = nền kem (đổ đầy mỗi frame → không bao giờ blank)
       const light = isLightTheme()
       ctx.fillStyle = light ? CANVAS_BG.light : CANVAS_BG.dark; ctx.fillRect(0, 0, cv.width, cv.height)
+      // ════════ 🪐 QUỸ ĐẠO THIÊN HÀ — mỗi kho 1 halo + các vòng tròn mờ theo level (GRAPH-VISION §4) ════════
+      if (mode === 'galaxy' && galaxyMetaRef.current) {
+        const gm = galaxyMetaRef.current, kk = cam.current.k * dpr
+        const breathe = 0.82 + 0.18 * Math.sin(t * 0.04)
+        for (const L of ['personal', 'corporate', 'humanity']) {
+          const c = gm.centers[L]; if (!c) continue
+          const csx = SX(c.x), csy = SY(c.y), star = gm.stars[L] ?? '#a78bfa'
+          const radii = Object.values(gm.ringR[L] ?? {})
+          const Rmax = (radii.length ? Math.max(...radii) : 60)
+          const Rout = (Rmax + 30) * kk
+          const halo = ctx.createRadialGradient(csx, csy, 0, csx, csy, Rout)   // glow nền thiên hà → tách 3 cụm rõ
+          halo.addColorStop(0, withAlpha(star, light ? 0.09 : 0.15)); halo.addColorStop(0.6, withAlpha(star, light ? 0.04 : 0.06)); halo.addColorStop(1, withAlpha(star, 0))
+          ctx.fillStyle = halo; ctx.beginPath(); ctx.arc(csx, csy, Rout, 0, Math.PI * 2); ctx.fill()
+          for (const R0 of radii) {                                            // đường tròn quỹ đạo mờ KHỚP vòng node thật
+            const R = R0 * kk
+            ctx.beginPath(); ctx.arc(csx, csy, R, 0, Math.PI * 2)
+            ctx.strokeStyle = withAlpha(star, (light ? 0.10 : 0.14) * breathe); ctx.lineWidth = dpr; ctx.stroke()
+          }
+        }
+      }
+      // ════════ 🌳 CÂY SỰ SỐNG — CUNG QUỸ ĐẠO theo level (mỗi tầng 1 cung quanh gốc); tăng TẦNG → cung ngoài hiện thêm ════════
+      if (mode === 'mandala' && mandalaMetaRef.current) {
+        const mm = mandalaMetaRef.current, fsx = SX(mm.fx), fsy = SY(mm.fy)
+        const a0 = mm.up - mm.FULL / 2, a1 = mm.up + mm.FULL / 2
+        const breathe = 0.82 + 0.18 * Math.sin(t * 0.04)
+        for (let depth = 1; depth <= mm.maxDepth; depth++) {
+          const R = mm.maxR * (0.20 + depth * 0.135) * cam.current.k * dpr
+          const hue = galLevelColor('personal', depth)   // dùng dải màu tầng cho cung (đồng bộ node sâu nhạt dần)
+          ctx.beginPath(); ctx.arc(fsx, fsy, R, a0, a1)
+          ctx.strokeStyle = withAlpha(hue, (light ? 0.12 : 0.16) * breathe); ctx.lineWidth = 1.2 * dpr; ctx.stroke()
+          // chấm mốc 2 đầu cung cho thấy "tay vươn"
+          ctx.fillStyle = withAlpha(hue, light ? 0.3 : 0.4)
+          for (const aa of [a0, a1]) { ctx.beginPath(); ctx.arc(fsx + Math.cos(aa) * R, fsy + Math.sin(aa) * R, 1.6 * dpr, 0, 6.28); ctx.fill() }
+        }
+      }
       // ════════ 🪐 3 VÒNG ĐỒNG TÂM — entanglement rings, đập theo nhịp tim ════════
       if (mode === 'rings' && ringMetaRef.current) {
         const { cx: wcx, cy: wcy, RING, Rmax } = ringMetaRef.current
@@ -717,7 +806,7 @@ export default function Galaxy({ nodes, links, onOpen, onConnect, modeReq }: {
         for (const f of [0.25, 0.5, 0.75, 1]) {
           ctx.beginPath()
           DIM_ORDER.forEach((_, i) => {
-            const th = -Math.PI / 2 + i * Math.PI / 4
+            const th = -Math.PI / 2 + i * (Math.PI * 2 / DIM_ORDER.length)
             const x = SX(cx + Math.cos(th) * Rmax * f), y = SY(cy + Math.sin(th) * Rmax * f)
             if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y)
           })
@@ -727,7 +816,7 @@ export default function Galaxy({ nodes, links, onOpen, onConnect, modeReq }: {
           ctx.stroke()
         }
         DIM_ORDER.forEach((d, i) => {
-          const th = -Math.PI / 2 + i * Math.PI / 4
+          const th = -Math.PI / 2 + i * (Math.PI * 2 / DIM_ORDER.length)
           const off = dimOffRef.current.has(d)
           ctx.globalAlpha = off ? 0.15 : 1
           ctx.strokeStyle = DIM_COLOR[d] + '55'; ctx.lineWidth = 1 * dpr
@@ -843,18 +932,22 @@ export default function Galaxy({ nodes, links, onOpen, onConnect, modeReq }: {
       // CHA → CON = đường THẲNG + MŨI TÊN hướng về page con (phân biệt rõ với liên kết 8-chiều cong)
       const arrowCol = light ? 'rgba(80,80,110,.45)' : 'rgba(170,175,210,.5)'
       const lineCol = light ? 'rgba(60,60,90,.22)' : (mode === 'mandala' ? 'rgba(52,211,153,.22)' : 'rgba(150,155,195,.22)')
+      // node đang chọn/hover → đường CHA–CON nối tới nó SÁNG TRẮNG (để "thấy" quan hệ 1 tầng trên/dưới)
+      const treeFocus = selRef.current ?? ((mode !== 'timeline' && mode !== 'neuro') ? hoverId.current : null)
       pts.current.forEach(p => {
         if (!p.node.parent_id) return
         const par = pts.current.get(p.node.parent_id); if (!par) return
         const a = wpos(par), b = wpos(p)
         const ax = SX(a.x), ay = SY(a.y), bx = SX(b.x), by = SY(b.y)
-        ctx.strokeStyle = lineCol; ctx.lineWidth = Math.max(0.5, 0.7 * cam.current.k) * dpr
+        const litTree = !!treeFocus && (p.node.id === treeFocus || p.node.parent_id === treeFocus)
+        ctx.strokeStyle = litTree ? (light ? 'rgba(40,40,70,.85)' : 'rgba(245,248,255,.92)') : lineCol
+        ctx.lineWidth = (litTree ? 1.8 : Math.max(0.5, 0.7 * cam.current.k)) * dpr
         ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.stroke()
         // mũi tên (tam giác nhỏ) đặt ngay trước node con, chỉ vẽ khi đủ to để thấy
         const dd = Math.hypot(bx - ax, by - ay); if (dd < 24 * dpr) return
         const ang = Math.atan2(by - ay, bx - ax), rr = SR(p.r) + 3 * dpr
-        const tx = bx - Math.cos(ang) * rr, ty = by - Math.sin(ang) * rr, s = 4.2 * dpr
-        ctx.fillStyle = arrowCol
+        const tx = bx - Math.cos(ang) * rr, ty = by - Math.sin(ang) * rr, s = (litTree ? 5.6 : 4.2) * dpr
+        ctx.fillStyle = litTree ? (light ? 'rgba(40,40,70,.95)' : 'rgba(248,250,255,.98)') : arrowCol
         ctx.beginPath(); ctx.moveTo(tx, ty)
         ctx.lineTo(tx - Math.cos(ang - 0.45) * s, ty - Math.sin(ang - 0.45) * s)
         ctx.lineTo(tx - Math.cos(ang + 0.45) * s, ty - Math.sin(ang + 0.45) * s)
@@ -866,10 +959,10 @@ export default function Galaxy({ nodes, links, onOpen, onConnect, modeReq }: {
       links.forEach((l, li) => {
         const d = l.dimension ?? ''
         if (dimOffRef.current.has(d)) return
-        if (mode === 'timeline') {
-          const hotTL = hv && (l.from_node === hv || l.to_node === hv)
-          if (d !== 'time' && !hotTL) return // dòng đời sạch: mặc định chỉ chiều thời gian
-        }
+        // galaxy/mandala = chỉ 5 CHIỀU QUAN HỆ: bỏ 'time' (→ Dòng đời) + 'emotion' (→ tia sáng) + 'anchor' (Neo — quote là tính năng, không phải chiều).
+        if ((mode === 'galaxy' || mode === 'mandala') && (d === 'time' || d === 'emotion' || d === 'anchor')) return
+        // DÒNG ĐỜI = 7 CHIỀU (bỏ Neo — quote không gắn mốc thời gian). Các chiều khác bật/tắt qua chú giải (dimOff).
+        if (mode === 'timeline' && d === 'anchor') return
         const a0 = pts.current.get(l.from_node), b0 = pts.current.get(l.to_node); if (!a0 || !b0) return
         const a = wpos(a0), b = wpos(b0)
         const ax = SX(a.x), ay = SY(a.y), bx = SX(b.x), by = SY(b.y)
@@ -958,26 +1051,33 @@ export default function Galaxy({ nodes, links, onOpen, onConnect, modeReq }: {
         }
       })
 
-      // FOCUS 1-HOP: hover (neuro) hoặc CLICK CHỌN (mọi mode trừ timeline) → chỉ node + hàng xóm sáng
-      const focusId = (mode === 'neuro' ? hv : null) ?? selRef.current
+      // FOCUS 2 TẦNG (yêu cầu founder): HOVER (chưa chọn) → chỉ CHA + CON (cấu trúc cây); CLICK chọn → TRANG THAM CHIẾU (liên kết 8 chiều) bắn vào
+      const sel = selRef.current
+      const hovOnly = (!sel && mode !== 'timeline' && mode !== 'neuro') ? hoverId.current : null
+      const focusId = (mode === 'neuro' ? hv : null) ?? sel ?? hovOnly
       let focusSet: Set<string> | null = null
       const depthMap = new Map<string, number>()   // độ sâu BFS từ node chọn (galaxy/mandala/radar)
       if (focusId && mode !== 'timeline') {
-        if (mode === 'neuro') {
+        if (hovOnly) {
+          // HOVER: chỉ cha + con (cấu trúc), KHÔNG mở liên kết tham chiếu
           focusSet = new Set([focusId])
-          links.forEach(l => { if (l.from_node === focusId) focusSet!.add(l.to_node); if (l.to_node === focusId) focusSet!.add(l.from_node) })
+          const par = parentRef.current.get(focusId); if (par) focusSet.add(par)
+          childRef.current.get(focusId)?.forEach(c => focusSet!.add(c))
         } else {
+          // CLICK / neuro: liên kết THAM CHIẾU 8 chiều (1 hop, hoặc 5 hop khi bật Depth) + giữ cha+con cho liền mạch
           depthMap.set(focusId, 0)
+          const maxHop = mode === 'neuro' ? 1 : mode === 'radar' ? 5 : 1
           let fr = [focusId]
-          for (let d = 1; d <= 5 && fr.length; d++) {
+          for (let d = 1; d <= maxHop && fr.length; d++) {
             const nx: string[] = []
             for (const id of fr) for (const l of links) { const o = l.from_node === id ? l.to_node : l.to_node === id ? l.from_node : null; if (o && !depthMap.has(o)) { depthMap.set(o, d); nx.push(o) } }
             fr = nx
           }
+          const par = parentRef.current.get(focusId); if (par && !depthMap.has(par)) depthMap.set(par, 1)
+          childRef.current.get(focusId)?.forEach(c => { if (!depthMap.has(c)) depthMap.set(c, 1) })
           focusSet = new Set(depthMap.keys())
         }
       }
-      const useDepth = depthColRef.current && depthMap.size > 0 && mode !== 'neuro'
       // NODES — sức mạnh theo số liên kết: hub càng nối nhiều càng to & sáng
       pts.current.forEach(p => {
         const w = wpos(p)
@@ -1022,9 +1122,26 @@ export default function Galaxy({ nodes, links, onOpen, onConnect, modeReq }: {
         if (gx0 < -140 * dpr || gx0 > cv.width + 140 * dpr || gy0 < -140 * dpr || gy0 > cv.height + 140 * dpr) return
         // quầng glow = sprite vẽ sẵn (thay shadowBlur)
         const emoC = emoColRef.current ? emoColorOf(p.node.emotion) : undefined
-        const nodeCol = emoC ?? (useDepth ? depthColorOf(depthMap.get(p.node.id) ?? 5) : p.color)
+        const nodeCol = emoC ?? p.color
         const glowR = SR(w.r + power) + ((p.node.kind === 'kho' ? 26 : p.node.kind === 'folder' ? 12 : 7) + Math.min(16, deg * 2) + (hot ? 10 : 0) + nb * 36) * dpr
         ctx.drawImage(glowSprite(nodeCol), gx0 - glowR, gy0 - glowR, glowR * 2, glowR * 2)
+        // 🌟 CẢM XÚC = TIA SÁNG toả ra (chiều cảm xúc thể hiện bằng hiệu ứng, không phải đường nối): node có cảm xúc bắn tia màu tương ứng, lấp lánh quay nhẹ
+        const emoRay = emoColorOf(p.node.emotion)
+        if (emoRay && mode !== 'neuro' && mode !== 'radar') {
+          const rr0 = SR(w.r + power)
+          if (rr0 > 2.2 * dpr) {
+            ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round'
+            const nRay = 8
+            for (let ri = 0; ri < nRay; ri++) {
+              const a = (ri / nRay) * Math.PI * 2 + t * 0.01 + p.phase
+              const puls = 0.6 + 0.55 * Math.sin(t * 0.05 + ri * 0.8 + p.phase)
+              const len = rr0 + (5 + Math.min(12, deg)) * dpr * puls
+              ctx.strokeStyle = emoRay + (ri % 2 ? '99' : '66'); ctx.lineWidth = (ri % 2 ? 1.6 : 0.9) * dpr
+              ctx.beginPath(); ctx.moveTo(gx0 + Math.cos(a) * rr0, gy0 + Math.sin(a) * rr0); ctx.lineTo(gx0 + Math.cos(a) * len, gy0 + Math.sin(a) * len); ctx.stroke()
+            }
+            ctx.restore()
+          }
+        }
         ctx.fillStyle = nodeCol
         if (mode === 'neuro') {
           // 🧠 NEURON THẬT: soma méo hữu cơ + tua dendrite + nhân sáng
@@ -1288,7 +1405,7 @@ export default function Galaxy({ nodes, links, onOpen, onConnect, modeReq }: {
       const W2 = r.width, H2 = r.height
       const Rmax = Math.min(W2, H2) * 0.40
       for (let i = 0; i < 8; i++) {
-        const th = -Math.PI / 2 + i * Math.PI / 4
+        const th = -Math.PI / 2 + i * (Math.PI * 2 / DIM_ORDER.length)
         const lx = W2 / 2 + Math.cos(th) * (Rmax + 34), ly = H2 / 2 + Math.sin(th) * (Rmax + 34)
         if (Math.abs(mx - lx) < 48 && Math.abs(my - ly) < 18) {
           const d = DIM_ORDER[i]
@@ -1310,6 +1427,15 @@ export default function Galaxy({ nodes, links, onOpen, onConnect, modeReq }: {
         onConnect(pickRef.current, best.node.id)
         pickRef.current = null; setPicked(null)
       }
+      return
+    }
+    // 🎆 BẤM SAO KHO (galaxy) → "NỞ THÀNH HỆ": bung dần tầng 1→4+ như pháo hoa nở chậm, kèm ripple (GRAPH-VISION §6①)
+    if (mode === 'galaxy' && best.node.kind === 'kho') {
+      bloomTimers.current.forEach(clearTimeout)
+      selRef.current = best.node.id
+      burstSelRef.current = { t0: performance.now() }
+      setMaxLvl2D(1)
+      bloomTimers.current = [2, 3, 4, 5].map((lv, i) => setTimeout(() => setMaxLvl2D(lv), 260 * (i + 1)))
       return
     }
     // CHỌN node (Obsidian-style): highlight 1-hop + mũi tên hướng + sóng "bắn ra" — rồi mở peek
@@ -1355,7 +1481,7 @@ export default function Galaxy({ nodes, links, onOpen, onConnect, modeReq }: {
     hoverId.current = best?.node.id ?? null
     if (best) {
       const c = cam.current
-      const deg = links.filter(l => l.from_node === best.node.id || l.to_node === best.node.id).length
+      const deg = degRef.current.get(best.node.id) ?? 0   // dùng Map (O(1)) thay vì lọc toàn links mỗi lần hover
       setTip({ x: best.x * c.k + c.x, y: best.y * c.k + c.y - best.r * c.k - 12, title: best.node.title || 'Trang', kind: best.node.kind, deg })
     } else setTip(null)
   }
@@ -1401,6 +1527,15 @@ export default function Galaxy({ nodes, links, onOpen, onConnect, modeReq }: {
           <Graph3D nodes={nodes} links={links} onOpen={onOpen} onClose={() => setShow3d(false)} />
         </ErrorBoundary>
       )}
+      {showDim && (
+        <ErrorBoundary onError={() => setShowDim(false)} fallback={
+          <div className="absolute inset-0 z-20 grid place-items-center bg-[#06060c] text-center px-8">
+            <div className="max-w-sm"><div className="text-4xl mb-3">🎀</div><div className="text-zinc-200 text-base font-semibold mb-1.5">Không mở được view 6 chiều</div><button onClick={() => setShowDim(false)} className="rounded-lg ak-cta px-5 py-2 text-sm font-bold mt-3">← Về Galaxy</button></div>
+          </div>
+        }>
+          <DimViews nodes={nodes} links={links} onOpen={onOpen} onClose={() => setShowDim(false)} />
+        </ErrorBoundary>
+      )}
       <canvas ref={ref} onClick={onClick} onMouseDown={onDown} onMouseMove={onMove} onMouseUp={onUp}
         onMouseLeave={() => { hoverId.current = null; setTip(null); panning.current = null; nodeDrag.current = null }}
         style={{ background: isLightTheme() ? CANVAS_BG.light : CANVAS_BG.dark }}
@@ -1417,10 +1552,11 @@ export default function Galaxy({ nodes, links, onOpen, onConnect, modeReq }: {
       <div className="absolute top-3 right-3 flex flex-col items-end gap-2 z-10">
         <div className="flex items-center gap-1 rounded-md bg-[#10101a]/85 backdrop-blur border border-[var(--hud-line)] p-1 text-[11px]">
           {/* mode CHÍNH — luôn hiện */}
-          <button onClick={() => setMode('galaxy')} title="Cấu trúc kho — cái gì nằm trong cái gì" className={`px-2 py-1.5 rounded-lg ${mode === 'galaxy' ? 'bg-violet-500/40 text-white' : 'text-zinc-400 hover:bg-white/10'}`}>🌌 Galaxy</button>
+          <button onClick={() => setMode('galaxy')} title="Vũ trụ tri thức — 3 thiên hà (kho), node xếp vòng theo tầng. Bấm sao tâm để 'nở thành hệ'" className={`px-2 py-1.5 rounded-lg ${mode === 'galaxy' ? 'bg-violet-500/40 text-white' : 'text-zinc-400 hover:bg-white/10'}`}>🌌 Thiên hà</button>
           <button onClick={() => { setMode('mandala'); setFlow(true) }} title="Cây Sự Sống — gốc ở đáy, cành tri thức toả rộng lên trời; sâu hơn vươn xa hơn" className={`px-2 py-1.5 rounded-lg ${mode === 'mandala' ? 'bg-amber-500/35 text-amber-100 shadow-lg shadow-amber-500/30' : 'text-zinc-400 hover:bg-white/10'}`}>🌳 Cây sự sống</button>
           <button onClick={() => { setMode('timeline'); setMotion('still') }} title="Dòng đời — tri thức đan vào mốc thời gian thực; bật 🌈 Cảm xúc để thấy hành trình sáng dần" className={`px-2 py-1.5 rounded-lg ${mode === 'timeline' ? 'bg-blue-500/35 text-blue-100 shadow-lg shadow-blue-500/30' : 'text-zinc-400 hover:bg-white/10'}`}>📜 Dòng đời</button>
           <button onClick={() => setShow3d(true)} title="Bộ não 3D — xoay/zoom mọi chiều, tìm node sáng, lọc kho, chỉnh lực" className="px-2 py-1.5 rounded-lg text-zinc-400 hover:bg-white/10">🌐 3D</button>
+          <button onClick={() => setShowDim(true)} title="4 view tôn vinh 6 chiều liên kết — Quỹ đạo · Vòng hợp âm · 6 bầu trời · Dòng chảy" className="px-2 py-1.5 rounded-lg text-zinc-400 hover:bg-white/10">🎀 6 chiều</button>
           {/* mode NÂNG CAO — ẩn sau ⋯ cho đỡ rối */}
           {moreModes && <>
             <span className="w-px self-stretch bg-[var(--hud-line)] mx-0.5" />
@@ -1447,15 +1583,15 @@ export default function Galaxy({ nodes, links, onOpen, onConnect, modeReq }: {
             </button>
           ))}
         </div>}
-        {mode === 'galaxy' && <div className="flex items-center gap-1 rounded-md bg-[#10101a]/85 backdrop-blur border border-[var(--hud-line)] p-1 text-[11px]">
+        {(mode === 'galaxy' || mode === 'mandala') && <div className="flex items-center gap-1 rounded-md bg-[#10101a]/85 backdrop-blur border border-[var(--hud-line)] p-1 text-[11px]">
           <span className="hud-label pl-1.5 pr-0.5">tầng</span>
-          {([[1, 'hành tinh'], [2, 'tiểu HT'], [3, 'vệ tinh'], [5, 'tất cả']] as [number, string][]).map(([lv, lb]) => (
-            <button key={lv} onClick={() => setMaxLvl2D(lv)} title={`Hiện tới tầng ${lv === 5 ? '4+' : lv} — ${lb}`} className={`px-2 py-1.5 rounded-lg ${maxLvl2D === lv ? 'ak-cta text-white' : 'text-zinc-400 hover:bg-white/10'}`}>{lv === 5 ? '4+' : lv}</button>
+          {([[1, 'hành tinh'], [3, 'vệ tinh'], [5, 'tầng 5'], [8, 'tất cả']] as [number, string][]).map(([lv, lb]) => (
+            <button key={lv} onClick={() => setMaxLvl2D(lv)} title={`Hiện tới tầng ${lv === 8 ? '7 (tất cả)' : lv} — ${lb}`} className={`px-2 py-1.5 rounded-lg ${maxLvl2D === lv ? 'ak-cta text-white' : 'text-zinc-400 hover:bg-white/10'}`}>{lv === 8 ? 'Tất cả' : lv}</button>
           ))}
         </div>}
         <div className="flex items-center gap-1 rounded-md bg-[#10101a]/85 backdrop-blur border border-[var(--hud-line)] p-1 text-[11px]">
           <button onClick={() => setShowIcons(v => !v)} title="Bật/tắt icon trong node cho dễ nhìn" className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg ${showIcons ? 'bg-white/15 text-white' : 'text-zinc-400 hover:bg-white/10'}`}>🖼 Icon</button>
-          <button onClick={() => setDepthCol(v => !v)} title="Chọn 1 node → tô màu các node theo độ sâu (gần sáng, xa mờ)" className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg ${depthCol ? 'bg-violet-500/30 text-violet-100' : 'text-zinc-400 hover:bg-white/10'}`}>🎨 Depth</button>
+          <button onClick={() => { manualPos.current.clear(); relayoutRef.current(); resetCam(); fitView() }} title="Đặt lại bố cục — trả mọi node đã kéo về đúng vị trí gốc & về khung vừa" className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-zinc-400 hover:bg-white/10">↻ Đặt lại</button>
           {(mode === 'galaxy' || mode === 'mandala') && <button onClick={() => setFlow(f => !f)} title="Hạt năng lượng chạy dọc mọi liên kết — thấy tri thức đang truyền" className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg ${flow ? 'bg-cyan-500/30 text-cyan-100' : 'text-zinc-400 hover:bg-white/10'}`}><span className="dq-prev-flow" />Dòng chảy</button>}
           {onConnect && <button onClick={() => { setConnect(c => !c); pickRef.current = null; setPicked(null) }} title="Bấm 2 node để tạo liên kết mới — có vụ nổ ăn mừng" className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg ${connect ? 'bg-amber-500/30 text-amber-100' : 'text-zinc-400 hover:bg-white/10'}`}><span className="dq-prev-link" />Nối</button>}
           <button onClick={() => setSugOpen(s => !s)} title="Máy soi cặp trang nên nối mà chưa nối" className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg ${sugOpen ? 'bg-violet-500/30 text-violet-100' : 'text-zinc-400 hover:bg-white/10'}`}><span className="dq-prev-sug">✨</span>Gợi ý</button>
@@ -1489,16 +1625,16 @@ export default function Galaxy({ nodes, links, onOpen, onConnect, modeReq }: {
         </div>
       )}
 
-      {/* chú giải = ĐỦ 8 CHIỀU framework, đếm link, bấm để lọc */}
+      {/* chú giải: galaxy/mandala = 6 chiều QUAN HỆ (time→Dòng đời, emotion→thuộc tính); các view khác giữ đủ 8 */}
       <div className="absolute bottom-3 left-3 rounded-md bg-[#10101a]/88 backdrop-blur border border-[var(--hud-line)] px-3.5 py-2.5 z-10">
         <div className="flex items-center justify-between gap-4 mb-2">
-          <span className="hud-label">8 chiều liên kết</span>
+          <span className="hud-label">{(mode === 'galaxy' || mode === 'mandala') ? '5 chiều quan hệ' : mode === 'timeline' ? '7 chiều (Dòng đời)' : '7 chiều liên kết'}</span>
           {dimOff.size > 0
             ? <button onClick={() => setDimOff(new Set())} className="text-[9px] text-violet-300 hover:underline">hiện tất cả</button>
             : <span className="text-[9px] text-zinc-700">bấm để lọc</span>}
         </div>
         <div className="grid grid-cols-4 gap-1">
-          {DIM_ORDER.map(d => {
+          {DIM_ORDER.filter(d => !((mode === 'galaxy' || mode === 'mandala') && (d === 'time' || d === 'emotion')) && !(mode === 'timeline' && d === 'anchor')).map(d => {
             const off = dimOff.has(d)
             const cnt = links.filter(l => (l.dimension ?? '') === d).length
             return (

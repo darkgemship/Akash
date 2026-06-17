@@ -501,6 +501,7 @@ export function ReviewHub({ me, onOpen, onChanged }: { me: string; onOpen: (id: 
   const [emails, setEmails] = useState<Record<string, string>>({})
   const [openId, setOpenId] = useState<string | null>(null)
   const [draftMd, setDraftMd] = useState('')
+  const [rvView, setRvView] = useState<'md' | 'notion'>('notion')   // editor biên tập: xem Notion (đẹp) ↔ sửa MD thô
   const [busy, setBusy] = useState(false)
   const [recentOk, setRecentOk] = useState<AnyNode[]>([])
   const load = () => {
@@ -509,7 +510,7 @@ export function ReviewHub({ me, onOpen, onChanged }: { me: string; onOpen: (id: 
     supabase.from('open_questions').select('id,node_id,question').eq('status', 'feedback').then(({ data }) => setFbs((data as { id: string; node_id: string; question: string }[]) ?? []))
     supabase.from('page_comments').select('id,node_id,body,resolved').eq('resolved', false).then(({ data }) => setCmts((data as { id: string; node_id: string; body: string; resolved: boolean }[]) ?? []))
     supabase.rpc('admin_list_members').then(({ data }) => { if (data) setEmails(Object.fromEntries((data as { user_id: string; email: string }[]).map(m => [m.user_id, m.email]))) })
-    supabase.from('nodes').select('id,title,icon,props').not('props->>approved_at', 'is', null).order('props->>approved_at', { ascending: false }).limit(5).then(({ data }) => setRecentOk((data as AnyNode[]) ?? []))
+    supabase.from('nodes').select('id,title,icon,props,owner_id,layer').not('props->>approved_at', 'is', null).order('props->>approved_at', { ascending: false }).limit(6).then(({ data }) => setRecentOk((data as AnyNode[]) ?? []))
   }
   useEffect(load, []) // eslint-disable-line react-hooks/exhaustive-deps
   const crumb = (id: string | null | undefined): string => {
@@ -582,7 +583,17 @@ export function ReviewHub({ me, onOpen, onChanged }: { me: string; onOpen: (id: 
             <Card>
               <Lbl>🕓 Duyệt gần đây</Lbl>
               <div className="space-y-1">
-                {recentOk.map(n => <button key={n.id} onClick={() => onOpen(n.id)} className="w-full text-left text-xs rounded-lg bg-white/[0.03] border border-white/10 px-2.5 py-1.5 hover:border-emerald-400/40 truncate">✅ {n.icon} {n.title}</button>)}
+                {recentOk.map(n => {
+                  const ap = (n.props as { approved_at?: string; approved_by?: string } | null)
+                  const who = n.owner_id ? (emails[n.owner_id] ?? 'thành viên').split('@')[0] : 'hệ thống'
+                  const when = ap?.approved_at ? new Date(ap.approved_at).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : ''
+                  return (
+                    <button key={n.id} onClick={() => onOpen(n.id)} className="w-full text-left rounded-lg bg-white/[0.03] border border-white/10 px-2.5 py-1.5 hover:border-emerald-400/40">
+                      <div className="text-xs truncate">✅ {n.icon} {n.title}</div>
+                      <div className="text-[10px] text-zinc-600 truncate">✍️ {who} · 🕓 duyệt {when}</div>
+                    </button>
+                  )
+                })}
                 {recentOk.length === 0 && <p className="text-xs text-zinc-600">Chưa có.</p>}
               </div>
             </Card>
@@ -596,9 +607,19 @@ export function ReviewHub({ me, onOpen, onChanged }: { me: string; onOpen: (id: 
               <Lbl>👁 Đọc lại lần cuối — sửa trực tiếp được</Lbl>
               <button onClick={() => setOpenId(null)} className="text-[11px] text-zinc-500 hover:text-white">← Danh sách</button>
             </div>
-            <h3 className="text-lg font-extrabold mb-1">{opened.icon} {opened.title}</h3>
-            <div className="text-[11px] text-zinc-500 mb-3">{layerLbl(opened.layer)} · 📂 {crumb(opened.parent_id)} · ✍️ {opened.owner_id ? (emails[opened.owner_id] ?? '').split('@')[0] : 'hệ thống'}</div>
-            <textarea value={draftMd} onChange={e => setDraftMd(e.target.value)} className="w-full h-[420px] rounded-xl bg-black/30 border border-white/10 p-4 text-[13px] font-mono leading-relaxed outline-none focus:border-amber-400/40" />
+            <div className="flex items-start justify-between gap-2 mb-3">
+              <div>
+                <h3 className="text-lg font-extrabold mb-1">{opened.icon} {opened.title}</h3>
+                <div className="text-[11px] text-zinc-500">{layerLbl(opened.layer)} · 📂 {crumb(opened.parent_id)} · ✍️ {opened.owner_id ? (emails[opened.owner_id] ?? '').split('@')[0] : 'hệ thống'}</div>
+              </div>
+              <div className="flex gap-0.5 bg-white/5 border border-white/10 rounded-lg p-0.5 text-[10px] shrink-0">
+                <button onClick={() => setRvView('notion')} className={`px-2.5 py-1 rounded ${rvView === 'notion' ? 'bg-violet-500/30 text-white' : 'text-zinc-500'}`}>✨ Notion</button>
+                <button onClick={() => setRvView('md')} className={`px-2.5 py-1 rounded ${rvView === 'md' ? 'bg-violet-500/30 text-white' : 'text-zinc-500'}`}>{'{ }'} MD</button>
+              </div>
+            </div>
+            {rvView === 'md'
+              ? <textarea value={draftMd} onChange={e => setDraftMd(e.target.value)} className="w-full h-[420px] rounded-xl bg-black/30 border border-white/10 p-4 text-[13px] font-mono leading-relaxed outline-none focus:border-amber-400/40" />
+              : <div className="w-full h-[420px] overflow-auto rounded-xl bg-black/30 border border-white/10 p-4"><MiniMd md={draftMd} /></div>}
           </Card>
           <div className="space-y-3">
             <Card>
@@ -671,6 +692,8 @@ export function MembersHub({ me, orgId, canAdmin, pages = [], onOpenPage }: { me
   const [focus, setFocus] = useState<string | null>(null)
   const [na, setNa] = useState({ assignee: '', title: '', note: '', due: '', node_id: '' })
   const [msg, setMsg] = useState('')
+  const [acct, setAcct] = useState({ email: '', password: '', role: 'member' })
+  const [acctBusy, setAcctBusy] = useState(false)
   const load = () => {
     supabase.rpc('admin_list_members').then(({ data }) => setMembers((data as Member[]) ?? []))
     supabase.from('assignments').select('*').order('created_at', { ascending: false }).limit(40).then(({ data }) => setAsgs((data as typeof asgs) ?? []))
@@ -688,6 +711,18 @@ export function MembersHub({ me, orgId, canAdmin, pages = [], onOpenPage }: { me
     if (error) setMsg(error.message); else { setMsg('✓ đã cập nhật'); load() }
     setTimeout(() => setMsg(''), 2000)
   }
+  async function createAccount() {
+    if (!acct.email.includes('@') || acct.password.length < 6) { setMsg('⚠️ Nhập email hợp lệ + mật khẩu ≥ 6 ký tự'); setTimeout(() => setMsg(''), 2500); return }
+    setAcctBusy(true)
+    const { data, error } = await supabase.functions.invoke('admin-create-user', { body: acct })
+    setAcctBusy(false)
+    let errMsg = ''
+    if (error) { try { errMsg = (await (error as { context: Response }).context.json()).error } catch { errMsg = error.message } }
+    else if ((data as { error?: string })?.error) errMsg = (data as { error: string }).error
+    if (errMsg) setMsg('⚠️ ' + errMsg)
+    else { setMsg('✅ Đã cấp tài khoản ' + acct.email); setAcct({ email: '', password: '', role: 'member' }); load() }
+    setTimeout(() => setMsg(''), 4000)
+  }
   const grouped = [...members].sort((a, b) => b.level - a.level)
   const fm = members.find(m => m.user_id === focus)
   return (
@@ -695,6 +730,23 @@ export function MembersHub({ me, orgId, canAdmin, pages = [], onOpenPage }: { me
       <h2 className="text-xl font-extrabold mb-1">👥 Nhân sự & phân quyền</h2>
       <p className="text-zinc-500 text-sm mb-4">Toàn bộ thành viên theo cấp bậc — bật/tắt quyền, xem trang họ đang build, giao việc gắn vào trang cụ thể. {msg && <b className="text-emerald-300">{msg}</b>}</p>
       {canAdmin && <BehaviorPanel members={members} />}
+      {/* ➕ CẤP TÀI KHOẢN — chỉ Admin; người ngoài không tự đăng ký được, chỉ login */}
+      {canAdmin && (
+        <div className="rounded-2xl border border-violet-400/25 bg-violet-500/[0.05] p-4 mb-4">
+          <div className="text-sm font-bold mb-2">➕ Cấp tài khoản mới <span className="text-[11px] font-normal text-zinc-500">— tạo email + mật khẩu cho thành viên (họ không tự đăng ký được)</span></div>
+          <div className="flex flex-wrap gap-2 items-center">
+            <input value={acct.email} onChange={e => setAcct({ ...acct, email: e.target.value })} placeholder="email@…" autoComplete="off" className="flex-1 min-w-[180px] rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm outline-none focus:border-violet-400/50" />
+            <input value={acct.password} onChange={e => setAcct({ ...acct, password: e.target.value })} placeholder="Mật khẩu (≥6 ký tự)" className="w-44 rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm outline-none focus:border-violet-400/50" />
+            <select value={acct.role} onChange={e => setAcct({ ...acct, role: e.target.value })} className="rounded-lg bg-[#15151f] border border-white/10 px-2 py-2 text-sm outline-none">
+              <option value="member">Thành viên</option>
+              <option value="editor">Biên tập viên</option>
+              <option value="chief">Tổng biên tập</option>
+            </select>
+            <button onClick={createAccount} disabled={acctBusy} className="rounded-lg ak-cta px-4 py-2 text-sm font-bold disabled:opacity-50">{acctBusy ? 'Đang tạo…' : '✚ Cấp tài khoản'}</button>
+          </div>
+          <p className="text-[11px] text-zinc-600 mt-2">Tài khoản tạo xong đăng nhập được ngay (đã xác nhận sẵn). Đổi vai sau ở danh sách bên dưới.</p>
+        </div>
+      )}
       <div className="grid lg:grid-cols-[1fr_360px] gap-4">
         <div className="space-y-2">
           {grouped.map(m => (

@@ -1,5 +1,16 @@
 # 🧠 Akash → RAG: cách tự "băm" tri thức để AI truy xuất thông minh nhất
 
+> ## ✅ TRẠNG THÁI HẠ TẦNG (đã build 2026-06-16 — "kiến trúc trước, nội dung sau")
+> Đã dựng & test sống trên project **data QI**:
+> - **Bảng `public.chunks`** (`node_id, org_id, ord, heading, text, token_est, meta jsonb, embedding vector(1536), content_hash`) + RLS select theo membership. pgvector đã cài.
+> - **Băm heuristic (không tốn token)**: `chunk_node(uuid)` cắt md theo heading `##`, nhét metadata prefix `[Kho · loại · cảm xúc · từ khoá]`; `chunk_org(uuid)` băm cả kho. ĐÃ TEST: 1 trang có `##` → 4 chunk đúng.
+> - **Tự băm khi sửa**: trigger `chunk_on_md` AFTER INSERT/UPDATE OF md trên `nodes` → chunks luôn cập nhật. (Bảo mật: revoke execute chunk_node/chunk_org/trg khỏi anon/authenticated.)
+> - **Embedding (Stage 2, "cắm key là chạy")**: Edge Function **`rag-embed`** ĐÃ DEPLOY (mã ở `supabase/functions/rag-embed/index.ts`). Đọc chunk chưa có vector → gọi `text-embedding-3-small` → ghi `embedding`. **Chưa cắm `OPENAI_API_KEY`** (Edge secret) nên hiện trả `{skipped:true}`.
+> - **Truy xuất**: RPC **`match_chunks(query_embedding, match_count, filter)`** — hybrid lọc metadata (org/layer/page_type) + cosine vector. Chạy được ngay khi có embedding.
+> - **CÒN THIẾU**: (a) **nội dung md thật** trong trang (giờ chỉ 1/495 trang có md → chưa có chữ để băm nhiều), (b) cắm OPENAI key, (c) tạo index ivfflat sau khi có vector, (d) **agent hỏi-đáp** (Stage 3) ghép retrieve + LLM + hồ sơ giọng.
+> - **Bật khi sẵn sàng**: đổ nội dung md → trigger tự băm (hoặc `select chunk_org('<org>')`) → set Edge secret OPENAI_API_KEY → gọi `rag-embed` tới khi `remaining=0` → `create index on chunks using ivfflat (embedding vector_cosine_ops) with (lists=100)` → dựng agent dùng `match_chunks`.
+
+
 > Trả lời câu hỏi của founder: Obsidian = nguồn gốc (source of truth), chunk + embedding = lớp kỹ thuật cho AI tìm nhanh.
 > Akash đã có lợi thế Obsidian KHÔNG có: **dữ liệu đã cấu trúc sẵn** (3 kho · 7 loại trang · 8 chiều liên kết · Properties · level). Tận dụng cái này để chunk THÔNG MINH hơn chia-theo-token mù.
 

@@ -38,9 +38,11 @@ Gold đứng MỘT MÌNH, không pha vào gradient tím-cyan: hai hệ ánh sán
 | Chờ duyệt | amber 300-400 | trùng hệ gold — hợp lý: "đang trong lò" |
 | Trả lại / nguy hiểm | red 400 | dùng tiết chế |
 
-### 8 chiều liên kết (BẤT BIẾN — theo FRAMEWORK.md §1, không đổi)
-knowledge `#22d3ee` · experience `#f472b6` · emotion `#fbbf24` · values `#a78bfa` · people `#34d399` · time `#60a5fa` · reference `#e879f9` · anchor `#f87171`
-Hồng/fuchsia chỉ còn tồn tại Ở ĐÂY (màu chiều trong graph) — không dùng cho chrome UI nữa.
+### Màu chiều liên kết — NGUỒN SỰ THẬT: `web/src/app/Galaxy.tsx` `DIM_COLOR` (cập nhật 2026-06-17)
+**6 CHIỀU QUAN HỆ vẽ trong graph** (dải lạnh+đỏ/cam, TÁCH HẲN 3 màu kho tím/vàng/hồng để "node thuộc kho nào" ≠ "đường quan hệ gì"):
+knowledge=Kiến thức `#22d3ee` (cyan) · people=Con người `#34d399` (lục) · experience=Trải nghiệm `#84cc16` (lime) · reference=Tham chiếu `#3b82f6` (lam) · values=Giá trị `#f97316` (cam) · anchor=Neo `#ef4444` (đỏ)
+**2 THUỘC TÍNH (KHÔNG vẽ thành đường ở galaxy/mandala — chỉ radar/timeline):** emotion=Cảm xúc `#fbbf24` · time=Thời gian `#60a5fa` (→ có view Dòng đời riêng).
+> Lý do bỏ vẽ: `time` đã có view Dòng đời; `emotion` trùng khít `experience` nên là đường thừa. Khung Chuyển hoá vẫn ĐỦ 8 cánh. (Bộ màu cũ tím/hồng cho values/reference gây lẫn node↔link → đã bỏ.)
 
 ## 2. Typography
 | Vai trò | Font | Lý do |

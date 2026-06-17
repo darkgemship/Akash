@@ -2,6 +2,163 @@
 
 > Ghi lại mỗi đợt build để lần sau làm tốt hơn. Quy trình chuẩn: **đọc docs → sửa code → `npm run build` → test thật trên preview (đăng nhập, bấm từng nút) → cập nhật docs**.
 
+## 2026-06-16 (đợt GRAPH-VISION — founder duyệt từng mục qua hỏi-đáp) — redesign visual graph
+Spec chốt ở **docs/GRAPH-VISION.md** (file hợp đồng). Founder tự chọn: vibe=vũ trụ/thiên hà · màu node=theo KHO (tím/vàng/hồng, đậm-nhạt theo level) · đường nối=8 chiều nổi+hạt chạy · mục đích=vẻ đẹp · giữ 4 view (Thiên hà/Cây sự sống/Dòng đời/3D) · nhịp sống động · wow=① nở thành hệ ② hover bừng chòm.
+- **Gỡ "loạn 3 hệ màu"**: bỏ cầu vồng 5 tầng + màu cảm xúc mặc định. NODE = 1 hue/kho (đậm tầng nông→nhạt khi sâu, `galLevelColor` dùng `mixHex` về trắng-lam). Áp cả `Galaxy.tsx` (2D) và `Graph3D.tsx` (3D). Sao tâm: cá nhân chuyển ĐỎ→TÍM cho khớp kho.
+- **Đường nối 3D**: từ xám trung tính → tô MÀU 8 CHIỀU (DIM_COLOR), width 0.9, vẫn mờ khi ngoài focus. (2D vốn đã 8 màu.)
+- **Quỹ đạo mờ theo level (2D galaxy)**: mỗi tâm kho có halo glow + các đường tròn quỹ đạo mờ từng tầng (thở nhẹ) — `galaxyMetaRef` + vẽ trong `draw()`.
+- **Hover → chòm 1-hop bừng, phần còn lại mờ (alpha 0.1)**: `focusId` fallback về `hoverId`; hover-only giới hạn 1 hop (`maxHop`), click giữ 5 hop cho màu-độ-sâu.
+- **Wow① nở thành hệ**: bấm SAO KHO (galaxy) → `setMaxLvl2D(1)` rồi hẹn giờ bung 2→3→4→4+ mỗi 260ms (pháo hoa nở) + ripple sẵn có; không mở peek. `bloomTimers` ref + cleanup unmount.
+- Nhãn "🌌 Galaxy" → "🌌 Thiên hà". Radar/Neuro vẫn nằm sau nút ⋯ (thanh chính = đúng 4 view).
+- Trạng thái: `tsc --noEmit` sạch, dev server 200. **CHƯA test mắt trên preview** (cần founder mở view Thiên hà xem màu/quỹ đạo/hover/nở-hệ). Còn lại: quỹ đạo+mượt cho 3D, tinh chỉnh nhịp sống (flow mặc định?), tuỳ chọn độ-sâu riêng từng kho.
+
+### Vòng 3 (cùng phiên) — sửa layout vòng + TẠO LẠI DATA + hover 2 tầng
+- **Chẩn đoán rối**: data cũ lệch nặng — corporate 69 node dồn 1 tầng L2, personal 50 ở L2 → bước chống-đè đẩy node văng khỏi vòng (humanity 7/28/15 nên nhìn sạch). KHÔNG phải lỗi mồ côi (0 orphan).
+- **Sửa layout galaxy 2D**: bán kính mỗi vòng **TỰ GIÃN theo số node** (`needR = count*minArc/2π`, luôn rộng hơn vòng trong) + **BỎ chống-đè ở galaxy** (chỉ giữ cho mandala) → node bám đúng quỹ đạo. `galaxyMetaRef` lưu `ringR` từng tầng để vẽ quỹ đạo KHỚP. Tâm 3 kho giãn ra (0.30/0.34).
+- **TẠO LẠI DATA SẠCH** (xoá 217 node cũ + 104 link, GIỮ 3 sao kho): `scripts/gen-galaxy-sql.mjs` (taxonomy + pad lá theo khía cạnh) + `scripts/seed-galaxy.mjs` (insert qua supabase-js). Kết quả DB: **Cá nhân 100 (7→19→73) · QNET 90 (6→13→70) · Nhân loại 100 (6→18→75)** + 160 link 8 chiều. Cây hình tháp, không tầng nào quá đông.
+- **HOVER = cha+con / CLICK = tham chiếu 8 chiều bắn vào** (childRef/parentRef). Hover hiện cấu trúc cây, click mới mở liên kết + burst.
+- **Việc TIẾP (3D overhaul)** ghi ở GRAPH-VISION §7bis: căn tâm sao kho · bỏ auto-reset camera (giật + tự về view all) · vòng quỹ đạo + mũi tên cha-con · đường cong 8 chiều · thẩm mỹ cầu màu (ảnh 5) · mượt. + size/màu theo level cho mandala & các view khác.
+
+### Vòng 4 — đại tu 3D (dùng logic 2D) + sửa data + event_date
+- **3D xây lại theo directive "dùng 2D galaxy build 3D"**: TẮT lực d3 (charge/link/center=null), đặt node DETERMINISTIC theo vòng-level (bán kính tự giãn như 2D) dạng **xoắn ốc 3D** (nghiêng đĩa Euler mỗi kho + xoay thêm mỗi vòng). `place()` set fx/fy/fz, cooldownTicks(1). → hết "điểm nối loạn".
+- **Link 3D 2 loại**: cha–con `tree` (thẳng, mũi tên rõ, mờ theo kho) + 8 chiều `dim` (CONG curvature 0.28, màu chiều, hạt chạy). 
+- **Camera**: bấm node = bay nhẹ tới + GIỮ góc (recenter lookAt, không reset). Bấm nền = chỉ bỏ chọn. Frame toàn cảnh quanh TÂM THẬT (trung bình 3 kho, không phải gốc) → hết lệch/label văng. Sao kho + halo + label trùng tâm vì node đặt deterministic quanh tâm.
+- **Size theo level 3D**: val nhân hệ số nhỏ dần theo lv (lv≤1×1.35 … lv3×0.8).
+- **Sự cố data**: founder thấy Galaxy trống + "Failed to fetch" = lỗi mạng tạm thời (hạ tầng chập chờn), data còn nguyên. Kiểm: 297 node (3 kho + 287 seed + **7 hub Cá nhân app TỰ tạo lại** sau khi seed xoá — đúng, giữ). KHÔNG nhân đôi (đã xoá trước khi insert, khác với lo ngại của phiên Claude khác chỉ đọc seed-galaxy.mjs). App tra hub theo subtype, không UUID cứng → reseed không hỏng Home. QNET/Nhân loại không cần hub.
+- **Gắn event_date** cho mọi trang (Cá nhân 1997→2025, QNET 2016→2026, Nhân loại 2018→2026) → Dòng đời có dữ liệu.
+
+### Vòng 5 — fix page + 3D links + Cây sự sống + Dòng đời
+- **Page mất Properties/footer/thẩm thấu**: do nhánh/chủ đề là `kind='folder'` → `isContainer()` true → page.tsx ẩn PropsPanel + footer lite (giấu 8 chiều). FIX: `update nodes set kind='page'` cho subtype branch/topic (294 trang đều 'page'). Cây sidebar vẫn mở rộng theo parent_id. Generator cũng đổi sang 'page'. ⚠️ Trường tùy chỉnh + nội dung trang CŨ đã mất khi reseed (không khôi phục được) — đã báo founder, lần sau hỏi trước khi reseed.
+- **3D links vô hình**: bug = linkWidth/arrow/particle tính theo ĐƠN VỊ THẾ GIỚI, ở scale thiên hà (~1600) thì <1px. FIX: width tree 1.6 / dim 2.6 (focus 4), arrow 7–9, particle 4.5, opacity 0.8, curvature dim 0.34 (cong mềm). + **onNodeHover** = bừng chòm (cha+con+1-hop) như 2D · **onNodeClick** = zoom VÀO thiên hà của node (hết giật ra) · childrenOf/selRef refs thêm.
+- **Cây sự sống (mandala)**: size node NHỎ DẦN theo độ sâu (×1.3→0.7) + to theo degree; màu đã nhạt dần qua galLevelColor.
+- **Dòng đời (timeline)**: thiết kế 3-dải-trục-NOW vốn ổn, trước trống vì thiếu ngày (đã gắn). Đổi node sang **màu theo kho** (galLevelColor) + size theo tầng/degree cho đồng bộ Thiên hà.
+
+### Vòng 6 — 3D link RENDER + particle streams + data sâu level 4-7
+- **BUG GỐC link 3D vô hình**: `d3Force('link', null)` đã XOÁ lực link — mà chính nó phân giải source/target id→node để link render được. FIX: GIỮ lực link, `strength(0)+distance(0)` (vẫn phân giải, không kéo vì node ghim fx) + cooldownTicks 3. Giờ link cha-con + 8 chiều HIỆN.
+- **Mũi tên cha–con rõ** (width 2.2, arrow 11, màu sáng). **Link xuyên-thiên-hà = dòng particles** (cross-kho phát hiện qua layer: width 3.4, 4 hạt) → "dòng sao bắn qua lại giữa 3 thiên hà". tooltip 3D thêm "X trang con".
+- **Data sâu**: `scripts/seed-deep.mjs` thêm 198 node level 4→7 (2 nhánh sâu/kho). Nâng trần `levelOf` 5→8 + ring loop tới 8 + nút độ-sâu "Tất cả"=8 + màu theo tầng tới 7, ở CẢ Galaxy 2D & Graph3D. DB giờ lvl 0-7 (tổng ~495 node).
+
+### Vòng 7 — tinh chỉnh giãn cách + 3D breathing/click-star + RAG audit
+- **2D Thiên hà**: nhiều tầng → 3 thiên hà GIÃN XA (sp theo maxLvl2D). **Cây sự sống**: bỏ cap bán kính → tầng sâu tự giãn đều.
+- **3D**: link cha-con MỜ hẳn (xoắn ốc rõ) · 8 chiều giữ màu đậm + **"thở"** (linkOpacity nhịp sin, throttle 1/4 frame) · cross-kho 4 hạt = dòng particles giữa 3 thiên hà. **Click node = zoom SÁT galaxy đó (không thấy 2 cái kia) + tâm xoay = NGÔI SAO**. Nút **↻ Refresh** (rebuildRef: place+reheat+frame). autoRot xoay quanh tâm scene.
+- **Bỏ nút Depth** ở Thiên hà (depthCol=false cố định) — chỉ giữ TẦNG. Thêm ↻ Refresh ở 2D.
+- **AUDIT link 2D vs 3D**: ĐỒNG NHẤT — cùng mảng `links` từ loadGraph() (Galaxy→Graph3D truyền y nguyên), cùng from→to + dimension. 3D thêm đường cha-con (2D cũng có).
+- **AUDIT RAG**: pgvector ĐÃ cài ✓, ai_jobs queue ✓, cột nodes.md (source of truth) ✓, kế hoạch RAG-CHUNKING.md ✓. NHƯNG: CHƯA có bảng `chunks`, CHƯA edge function băm, CHƯA embedding/match_chunks, CHƯA agent, CHƯA cắm key. ⚠️ Chỉ 1/495 trang có md thật (reseed xoá nội dung cũ) → chưa có chữ để băm. Kết: sẵn sàng KIẾN TRÚC, chưa có lớp chunk/embed/agent + chưa có nội dung.
+
+### Vòng 8 — BUILD hạ tầng RAG (founder: "kiến trúc trước, nội dung sau")
+- **Migration `rag_chunks_architecture`**: bảng `chunks` (vector(1536) + meta + content_hash) + RLS select-theo-membership + RPC `match_chunks` (hybrid lọc+cosine) + hàm `chunk_node`/`chunk_org` (băm md theo `##` + metadata prefix, heuristic không tốn token). Test: 1 trang có `##` → 4 chunk đúng.
+- **Trigger `chunk_on_md`**: tự băm khi md đổi (Indexer tự động). Revoke execute chunk_node/chunk_org/trg khỏi anon/authenticated (advisor security).
+- **Edge Function `rag-embed` DEPLOYED** (mã: `supabase/functions/rag-embed/index.ts`): embed chunk chưa có vector qua text-embedding-3-small; chưa cắm OPENAI_API_KEY → trả skipped. "Cắm key là chạy".
+- Pipeline hoàn chỉnh: **md → chunk_node (auto trigger) → rag-embed (cần key) → match_chunks → [agent: chưa làm]**. Chi tiết + cách bật: RAG-CHUNKING.md §đầu.
+- CÒN: đổ nội dung md thật (1/495 trang có md), cắm OPENAI key, index ivfflat, dựng agent hỏi-đáp (Stage 3).
+
+### Vòng 10 — AI chuẩn hoá bài (Haiku) + Sprint A (footer 8 chiều) + Sprint B (UI)
+- **AI chuẩn hoá Studio (Stage 3)**: Edge Function `ai-standardize` DEPLOYED (mã `supabase/functions/ai-standardize/index.ts`) — xử lý ai_jobs(ingest_to_template) bằng **Claude Haiku** (claude-haiku-4-5, theo DECISIONS), viết lại bản thô→bài chuẩn→ghi nodes.md (trigger tự băm chunk). Cần Edge secret **ANTHROPIC_API_KEY**, chưa cắm → {skipped}. Dùng Anthropic SDK (npm:@anthropic-ai/sdk). Cũng sửa publish theo VAI TRÒ (admin/tổng bt → official, editor → pending) + tắt popup Save ID card (autoComplete off title).
+- **Sprint A — footer 8 chiều (PageFrame) DONE**: `TagField` tái dùng · Từ khoá=tag · Con người=tag person + tạo mới (hồ sơ nickname/tên khác/sđt/career) · Giá trị=core_value · Neo=mantra(quote) · Kiến/Trải nghiệm=nối trang (giữ). Handler `onCreateForDim` ở page.tsx tạo node theo subtype dưới đúng hub.
+- **Sprint B — UI (5/9 DONE, tsc sạch)**: 🪞 "Tôi là ai" (profile_me) tự tạo trong kho cá nhân (ensureProfileMe + effect) · Thảo luận đóng card cyan nổi bật · Bỏ Campaign khỏi Studio · Gợi ý chưa-nối làm MỜ (Digest Chips) · Con người có loại (PERSON_CAT: mentor/guru/vĩ nhân/gia đình/bạn bè).
+- **Sprint B — HOÀN TẤT 9/9 (tsc sạch, server 200):** (5 mục vòng trước) + feedback "Trả lại" INLINE (state returnFor/returnNote thay window.prompt, page.tsx) · editor ReviewHub **MD/Notion 2-view** (rvView toggle, Hubs.tsx) · **hero "số nhiệm màu"** nổi bật (Pages.tsx: số to 4xl + gradient + glow cyan) · **Nhật ký tiêu đề=ngày+giờ** khi chưa có nội dung (suggestTitle, vẫn ưu tiên rút từ body).
+- **Sprint C — HOÀN TẤT 4/4 (tsc sạch, server 200, advisors KHÔNG cảnh báo bảng mới):**
+  1. **💬 Phòng biên tập** (BoardChat.tsx) — chat realtime CHỈ ban biên tập (admin+tổng BT+biên tập). Bảng `board_messages` RLS gate `can_edit` cùng org (select/insert/delete), thêm vào realtime publication, đính kèm trang (node_id→mở page). Mount ở Today khi `role.can_edit`.
+  2. **Onboarding 5 màn** (page.tsx) — thêm màn 4 (1 dòng về bạn + 3–5 giá trị) & màn 5 (chất văn + câu tủ + mục tiêu). `finish()` async ghi 🪞 Tôi là ai (md) + tạo node `core_value` dưới 🧭 La bàn + upsert `profiles.voice{style,catch,goal}`. Điền tới đâu hay tới đó — bổ sung dần ở profile_me.
+  3. **Cần chuyển hoá — nhiệm vụ hằng ngày** (Pages.tsx Today) — prop mới `commonPages` (corporate+humanity, published). Khối "📚 Nhiệm vụ hôm nay · từ kho chung" xoay 2 bài/ngày chưa chuyển hoá.
+  4. **Chuyển hoá ↔ 8 chiều** (Digest.tsx) — `STEP_DIMS` + chip "Bước này đào chiều: …" sáng theo `dims`, làm rõ đào theo 8 chiều, không chồng chéo.
+- **quote-author hero — XONG** (Pages.tsx): ghép dòng `> 💬 "câu"` với dòng `> — Tác giả · ngày` → hiện đúng tên tác giả thay vì "Kim Chỉ Nam của bạn" generic.
+- **Còn (nice-to-have):** cắm ANTHROPIC/OPENAI key kích hoạt AI thật.
+
+### Vòng 3D-2 — đại tu tương tác 3D (founder gửi ảnh web rối + list yêu cầu)
+- **Control 'orbit' + damping** (thay trackball mặc định): xoay/zoom MƯỢT, đoán được, không lật-lộn. `fg.controls()` set enableDamping=true, rotateSpeed .85, zoomSpeed 1.15.
+- **HẾT GIẬT-VỀ**: trước đây `onEngineStop(frameAll)` reframe camera mỗi lần reheat (đổi lực/tắt chiều/kéo node) → cảm giác "xoay xong bị kéo về". Giờ `framedOnce` — chỉ frame LẦN ĐẦU; nút ⌖ Toàn cảnh / ↻ mới ép (force).
+- **Đường CHA–CON sáng rõ**: từ trắng-mờ 0.15 → TRẮNG 0.5 + mũi tên trắng đậm 0.98 (rgba 248,250,255). Quan hệ trang nổi bật.
+- **Web 8 chiều mặc định ẨN** (ảnh founder rối tung): chỉ hiện khi **bấm/hover 1 node** → link + back-link của riêng node đó (dày 5, có hạt). Toggle "Hiện MỌI liên kết 8 chiều" để bung hết. `showAllDims` + `dimActive(s,tg)`.
+- **Thời gian = view riêng**: bỏ hẳn link chiều `time` khỏi 3D (đã có Dòng đời 2D) + ẩn khỏi legend.
+- **Bấm node = ZOOM SOI**: lùi camera vừa khít chòm liên quan (theo `depth` tầng), tâm xoay = chính node → xoay quanh để xem nhiều góc; giữ hướng camera hiện tại (đỡ chóng mặt). Inspector "Tầng liên quan" 1/2/3.
+- **🌊 Dòng chảy**: đổi tên toggle "Hạt chạy" → "Dòng chảy", hạt chạy trên MỌI liên kết 8 chiều đang hiện (không chỉ xuyên-thiên-hà). Sửa effect [particles] không còn ghi đè accessor bằng hàm phẳng.
+- **Kéo node về chỗ cũ**: 3D ↻ Refresh = `place()` đặt lại xoắn ốc gốc (gỡ node bị kéo lệch). 2D ↻ đổi thành "Đặt lại" — `manualPos.clear()` + relayout → trả mọi node đã kéo về vị trí gốc.
+- **Top Hubs = bậc liên kết 8 chiều** (deg: đếm link from+to mỗi node, KHÔNG tính cha-con), sort giảm, top 8. (giải thích cho founder, không đổi code.)
+- Trạng thái: tsc sạch, server 200. **CHƯA test mắt** — cần founder mở 3D xoay/zoom/bấm node kiểm mượt + sáng.
+
+### Vòng 3D-3 — đồng bộ 2D≡3D + chốt 6 chiều quan hệ
+- **Founder duyệt qua DB**: cả 8 chiều đều có link thật (knowledge 44 · people 30 · time 21 · reference 21 · anchor 15 · experience 12 · emotion 12 · values 9). PHÁT HIỆN: emotion=experience=12 trùng khít (Digest tạo link emotion tới ĐÚNG cặp node của experience) → emotion là đường thừa.
+- **Chốt: graph vẽ 6 CHIỀU QUAN HỆ** (knowledge·reference·people·values·anchor·experience). time→view Dòng đời, emotion→thuộc tính. Khung Chuyển hoá vẫn đủ 8 cánh. Áp **cả 3D lẫn 2D** (galaxy+mandala; radar/neuro/timeline giữ đủ 8). Legend đổi nhãn theo mode.
+- **BẤM NODE = hiện MỌI liên hệ (2D≡3D, founder chốt)**: node + **1 cha (1 tầng trên)** + **con trực tiếp (1 tầng dưới)** + **liên kết 8 chiều 1 hop**. 3D: thêm `neighborhood()` (expand dim + parent + children) dùng cho cả recompute & onNodeClick. 2D vốn đã đúng (focusSet click = 1-hop dim + cha + con).
+- **Đường CHA–CON sáng khi chọn**: 3D tree-link trắng đậm khi cả 2 đầu trong active. 2D: thêm `treeFocus` → đường+mũi tên cha-con nối node đang chọn/hover sáng TRẮNG (trước đây luôn mờ → không "thấy" quan hệ).
+- **Top Hubs đổi tên "🔗 Nối nhiều nhất"** + mô tả "trang nhiều liên kết = trạm tri thức · số = số liên kết · bấm để soi" (founder không hiểu nhãn cũ). Bỏ zoomToFit (fit-all vô nghĩa) → chỉ setSel soi node.
+
+### Vòng View-full 17/6 — Cây quỹ đạo + 4 view 6-chiều tương tác
+- **🌳 Cây Sự Sống quỹ đạo theo level**: vẽ **cung quỹ đạo mỗi tầng** quanh gốc (`mandalaMetaRef` + arc trong draw, màu dải tầng, thở nhẹ) · mandala giờ **tôn trọng TẦNG** (`maxLvl2D`) → tăng tầng = cung ngoài + node sâu "nhảy ra thêm"; nút TẦNG hiện cho cả mandala.
+- **DimViews nâng cấp (1 file)**: **hover-highlight + tooltip** mọi view (rê chuột → node liên quan bừng, còn lại mờ) · **Chord mở sâu** (nút 40/80/150/Tất cả) + hover node→ruy-băng bừng · **🌈 6 bầu trời = CHÒM SAO** (nền đêm + sao mờ + sao sáng lấp lánh + đường chòm + quầng) · **🌊 Sankey tương tác** (rê vào cột kho/chiều → lọc dòng chảy qua nó + đếm; băng có hit-test).
+- tsc sạch, 200. CÒN: 🌌 Thiên hà "phát triển cho đủ" (cần founder nói rõ chỗ nào thấy thiếu).
+
+### Vòng 7-chiều (bỏ Neo) + Dòng đời 7 + Cảm xúc tia sáng — founder co-design 17/6
+- **Chốt KHUNG 7 CHIỀU** (bỏ Neo): 5 chiều quan hệ (vẽ đường) + Thời gian (trục Dòng đời) + Cảm xúc (tia sáng). Quote vẫn ghi Kim Chỉ Nam như tính năng. Lý do bỏ Neo: nó là mẹo ghi nhớ, trùng Kiến thức+Giá trị, "neo" khó hiểu.
+- Sửa 6 file: Digest (hoa 8→7 cánh, /8→/7, STEP_DIMS bỏ anchor, label bước Neo→"Kim Chỉ Nam tuỳ chọn") · Galaxy (galaxy/mandala bỏ time+emotion+anchor = 5 đường; DIM_ORDER 8→7; radar góc `π/4`→`2π/length`; chú giải 6→5/7) · DimViews (DIM6→5) · transformScore (DIM_KEYS 8→7, reweight tổng=1) · PageFrame (DIMS+DIM_SUBTYPE bỏ anchor).
+- **Dòng đời = 7 chiều** (bỏ Neo) + các chiều **bấm là hiện** (trước chỉ vẽ time → bấm chiều khác không lên).
+- **Cảm xúc = TIA SÁNG**: node có cảm xúc bắn tia màu tương ứng, lấp lánh quay (galaxy/mandala/timeline), không còn là đường nối.
+- **Làm rõ "Ứng dụng" = Xưởng content** (chuyển động ③): nội hoá kho chung→mình → chuyển hoá ra series hành động/content (trong kho cá nhân). Đề xuất từ "Nội hoá"→có thể đổi "Hấp thụ".
+- tsc sạch, 200. CÒN: Cây Sự Sống quỹ đạo theo level · chord mở level · sankey tương tác · 6 bầu trời constellations.
+
+### Vòng Showcase-2026-06-17 — audit + 3D dải thiên hà hoà quyện + 4 view mới 6 chiều
+- **Audit (2 agent song song)** docs + code 2D/3D → tạo `docs/AUDIT-2026-06-17.md` (gói: nhất quán + đề xuất view + bước tiếp + function). Sửa docs: BRANDING (màu 6 chiều mới), GRAPH-VISION (banner 6 chiều), ROLES (viết lại 5 vai + privacy + admin-create-user), DECISIONS (mục D chốt 7 quyết định mới), NEXT-STEPS (viết lại). IMPROVEMENT.md thêm nhật ký 17/6.
+- **Code fix nhỏ**: legend 3D tiếng Anh→tiếng Việt (export+dùng `DIM_LABEL`); xoá dead code `repelRef`/`linkRef`/`RING_TINT`; tooltip 2D dùng `degRef` O(1); xoá hẳn dead code `depthCol`/`DEPTH_COLOR`/`depthColorOf`/`useDepth`.
+- **3D dải thiên hà hoà quyện** (Graph3D.tsx): trường sao 2 lớp `fract(sin)` có màu (2200+700 sao); **tinh vân (nebula)** additive tô màu kho RẢI quanh + vươn về tâm chung → 3 thiên hà nhoà vào nhau; 6 mây pha-trộn ở tâm; **cầu nối xuyên thiên hà luôn sáng** (toggle "🌉 Cầu nối thiên hà", `bridges` mặc định ON) + dòng chảy hạt.
+- **4 view mới tôn vinh 6 chiều** (`DimViews.tsx` — overlay riêng, nút "🎀 6 chiều" trong Galaxy bar): **🪐 Quỹ đạo theo chiều** (node tâm + 6 vòng màu, neighbor trên vòng của chiều, bấm để đổi tâm) · **🎀 Vòng hợp âm** (node gom theo kho, ruy-băng nối màu chiều) · **🌈 6 bầu trời** (2×3 ô, mỗi ô 1 chiều) · **🌊 Dòng chảy Sankey** (Kho nguồn→Chiều→Kho đích, băng dày theo số link). Canvas + rAF + hit-test mở trang.
+- **Còn (tuỳ, KHÔNG ảnh hưởng chạy)**: mode `rings` (~120 dòng) vẫn unreachable — để lại tránh rủi ro trước launch; đồng bộ "8 chiều"→"6" ở docs phụ.
+- tsc sạch, server 200 xuyên suốt.
+
+### Vòng 3D-4 — màu tách bạch + nhịp thở + peek + gợi ý nối (founder gửi nhiều ảnh)
+- **MÀU: 6 chiều TÁCH HẲN 3 kho.** Trước: values=tím=Personal, reference=hồng=Humanity → lẫn node↔link. Nay 6 chiều dồn dải lạnh+đỏ/cam: knowledge cyan · people lục · experience lime · reference lam · values cam · anchor đỏ. KHO giữ tím/vàng/hồng. Sửa `DIM_COLOR` (Galaxy, dùng chung 2D/3D/Pages). `LAYER_TINT` (Graph3D inspector dots) đổi khớp sao kho (trước sai: cyan/violet/pink).
+- **Mất hành tinh khi chọn node — FIX**: node ngoài chòm trước tô `rgba(...,0.1)` → ~vô hình; nay `#5b6080` (xám-lam mờ nhưng VẪN THẤY như 2D).
+- **🫧 Nhịp thở**: quầng 3 sao kho phồng/xẹp + sáng/mờ theo sin trong tick (rẻ, chỉ 3 sprite). + auto-xoay sẵn có.
+- **Hạt chạy 6 chiều (kể cả Neo)**: accessor đồng nhất mọi link dim đang hiện (showAllDims hoặc node đang soi); Neo nay đỏ rõ.
+- **"Mở trang" = PEEK ngay trong 3D** (founder: không nhảy về 2D): panel phải đọc md tại chỗ (fetch nodes.md/content) + nút "✏️ Sửa toàn trang" mới sang 2D.
+- **🪢 Cần nối + 💡 Gợi ý nối**: list 6 trang ÍT liên kết nhất (0 link = vàng) để user biết trang lẻ loi; khi soi 1 node → Inspector gợi ý ≤4 trang "hợp" (trùng từ khoá tiêu đề, chưa nối) → bấm soi rồi mở trang nối ở footer 8 chiều.
+- tsc sạch, server 200.
+
+### Vòng DB-Privacy — kiến trúc kho cá nhân riêng tư + khuôn chung + snapshot/backup (founder duyệt)
+Project **data QI (vntndprivvkgjbeutand)** — KHÔNG đụng project thật. 5 migration:
+1. **privacy_personal_nodes_links**: helper `can_see_node(uuid)` (SECURITY DEFINER, đúng logic node_select). `node_update`/`node_delete` → personal CHỈ CHỦ; org staff chỉ tác động `layer<>'personal'`. `links` select/insert/update → chỉ khi `can_see_node` CẢ 2 đầu → link (+excerpt) giữa 2 trang personal của người khác bị ẩn hoàn toàn.
+2. **private_user_voice + drop_profiles_voice_column**: tách `voice` khỏi `profiles` (mọi member đọc được) sang bảng `user_voice` owner-only; copy data; cập nhật app (Pages.tsx đọc/ghi, page.tsx onboarding) → rồi DROP cột `profiles.voice`. profiles giờ chỉ còn tên/avatar (cần cho chat/nhân sự).
+3. **uniform_personal_mold_and_reset**: `bootstrap_me()` mở rộng = KHUÔN CHUNG đầy đủ (kho + 7 hub hệ thống + 🪞 profile_me + **7 nhánh chủ đề kèm page_type**), idempotent → mọi user mới ra cùng bộ khung. `vault_reset()` xoá personal (FK đều CASCADE/SET NULL nên sạch) rồi dựng lại khuôn.
+4. **vault_snapshots**: bảng owner-only + `vault_capture(u)` (dump node+link personal→jsonb, revoke khỏi user) + `snapshot_create(label)` (điểm khôi phục thủ công) + `snapshot_restore(id)` (xoá+dựng lại GIỮ id→link đúng) + `snapshot_auto_all()` (cron, giữ 5 bản auto/user, revoke khỏi user).
+5. **cron_vault_auto_backup**: bật `pg_cron`, lịch `0 3 */2 * *` (3h sáng mỗi 2 ngày) chạy `snapshot_auto_all()`.
+- Advisors: KHÔNG lỗi mới — user_voice/vault_snapshots có RLS; vault_capture/snapshot_auto_all không lộ ra user. (Còn cảnh báo cũ: vector ở public, danh sách SECURITY DEFINER, leaked-password.)
+### Vòng Biên-tập + Giao-việc nâng cấp
+- **#1 Trung tâm biên tập** (Hubs.tsx ReviewHub): "🕓 Duyệt gần đây" thêm **✍️ tác giả + 🕓 thời gian duyệt** (query thêm owner_id; đọc props.approved_at). (List chờ duyệt vốn đã có tác giả+ngày.)
+- **#2 Giao việc Studio** (Pages.tsx): thêm select **"gắn trang (tuỳ chọn)"** (node_id) · khi giao → **tự đăng thông báo lên Phòng biên tập** (`board_messages`, kèm node_id) cho cả nhóm thấy realtime · nút duyệt đổi thành **"✓ Nghiệm thu"** + gọi `award_qi` cộng Qi cho người làm (đồng bộ với Nhân sự).
+- **#3 "Tiếp tục viết"**: lọc bỏ trang container (kho + nhánh/hub/hệ thống) → chỉ còn trang nội dung thật.
+- tsc sạch, 200.
+
+### Vòng Tài-khoản-do-admin-cấp (chặn tự đăng ký)
+- **Login-only** (page.tsx): bỏ tab "Tạo tài khoản" + nhánh signUp; chỉ `signInWithPassword`. Thông báo lỗi đổi "liên hệ quản trị để được cấp".
+- **Edge Function `admin-create-user`** (deployed, verify_jwt): xác thực JWT người gọi → phải Admin level 5 → service role `auth.admin.createUser({email_confirm:true})` + insert membership cùng org theo vai (member/editor/chief → level 1/2/4 + can_edit/can_approve). CORS + lỗi tiếng Việt.
+- **UI** (Hubs.tsx MembersHub): card "➕ Cấp tài khoản mới" (admin) — email + mật khẩu + vai → `functions.invoke('admin-create-user')`. Tài khoản tạo xong login ngay.
+- **CÒN 1 BƯỚC TAY (founder)**: tắt "Allow new users to sign up" trong Supabase Dashboard → Authentication → Sign In/Providers (chặn cứng signup ở tầng Auth; app đã bỏ UI signup nên người thường không đăng ký được, đây là khoá an toàn 100%). Edge Function dùng service role nên KHÔNG bị ảnh hưởng bởi toggle này.
+
+### Vòng Việc-được-giao-hiện-ngay
+- **Lỗi cũ**: việc giao KHÔNG trỏ page (vd "Check làm FP") bị loại khỏi "Cần làm" (code cũ chỉ lấy `myAsg.filter(node_id)`). **Sửa**: mọi việc open đều hiện — có trỏ trang → nút "Mở việc"; không trỏ trang → nút "📨 Nộp" (update status submitted + reload tại chỗ); đã nộp → badge mờ "Chờ duyệt" (không phải nút chết, thêm field `wait`).
+- **Hiện NGAY khi giao** (founder yêu cầu "hiện lên luôn"): thêm `assignments` vào realtime publication + Today subscribe channel `postgres_changes` filter `assignee=eq.me` → `loadMyAsg()`. Giao việc cho mình ở Studio → "Cần làm" cập nhật tức thì không cần refresh. tsc sạch, 200.
+- **Luồng duyệt GitHub-style — XONG** (Pages.tsx Studio + Today):
+  - **Lịch sử nộp**: 🟢 đã duyệt(published) · 🟡 chờ duyệt(pending) · 🔴 bị trả lại(draft) — bài bị trả hiện **💬 góp ý** + nút **✏️ Sửa** / **↩ Nộp lại** (status→pending). Query thêm `props.review_note`.
+  - **Nhiệm vụ**: badge màu 🟡 đang làm(open) · 🔵 đã nộp chờ duyệt(submitted) · 🟢 xong(done). Người nhận open→**📨 Nộp**; người giao/duyệt khi submitted→**✓ Duyệt**(done) hoặc **↩ Trả lại**(prompt góp ý→open+note). Nút **Mở** nếu có node_id.
+  - **Today "Cần làm"**: việc bị trả lại hiện 🔁 + góp ý ngay; approver thấy **"N việc đã nộp chờ bạn duyệt"** → cuộn xuống `#asg-box`. Realtime thêm filter `assigner=eq.me` để reviewCount cập nhật tức thì.
+
+### Vòng Chuyển-hoá-2-chế-độ (founder chốt phương án B sau khi biện luận)
+**Quyết định**: Chuyển hoá = `nguyên liệu thô → trí tuệ tích hợp`, áp cho CẢ 2 kho nhưng TÁCH 2 chế độ cùng 1 cỗ máy 8 chiều:
+- **📥 Nội hoá** (kho chung QNET/Nhân loại) — BẮT BUỘC, nhiệm vụ đẩy xuống, nhấn Kiến thức/Tham chiếu → nối vào đời bạn. "biến tinh hoa thành của bạn để dạy lại".
+- **🌾 Đúc kết** (kho cá nhân, trải nghiệm/sự kiện) — TUỲ TÂM, nhấn Trải nghiệm/Cảm xúc/Con người/Thời gian → chắt ra Nguyên lý & Neo. "rút bài học từ chuyện bạn đã sống".
+- **Chống vòng lặp**: bài SINH RA từ digest (props.via='digest') + trang container/hệ thống (branch/hub/profile_me/core_value/mantra/person/…home/template) KHÔNG vào hàng đợi đúc kết.
+- Code: Digest.tsx tự nhận `isCommon` theo `folder.layer` → `MODE{icon,name,tag,emphasis,done}`: đổi tiêu đề modal + banner nhấn-chiều + lời chúc mừng. Pages.tsx Today: tách 2 khối "📥 Nội hoá hôm nay" (cyan, nút "Nội hoá") và "🌾 Đúc kết · tuỳ tâm" (amber, nút "Đúc kết", lọc `ducKetOk`). tsc sạch, 200.
+
+### Vòng DB-Privacy (tiếp) — UI Sao lưu + branding
+- **UI — XONG** (Pages.tsx, trang Hồ sơ): `BackupCard` = "🗄️ Sao lưu & Khôi phục" (list snapshot auto/thủ công + nút Tạo điểm / ↩ Khôi phục / 🔄 Reset, gọi rpc snapshot_create/snapshot_restore/vault_reset, confirm trước khi khôi phục/reset, reload sau). `VoiceCard` thêm ô "🎨 Nguyên tắc thương hiệu & content" (`voice.branding`) — founder thêm tự do, AI coi như luật dựng content giống mình. QNET/Nhân loại giữ nguyên: tài sản chung, seed 1 lần qua `seed_qnet`.
+
+### Vòng 9 — 3D ĐƠ (perf) + lọc chiều + cánh quạt + audit chiều
+- **3D đơ/không xoay-zoom = lỗi PERF**: hiệu ứng "thở" gọi `fg.linkOpacity()` mỗi 4 frame → 3d-force-graph DỰNG LẠI toàn bộ ~518 link mỗi lần → nghẽn. ĐÃ GỠ. + giảm tải: link cha-con width 0 (đường mảnh, rẻ thay ống trụ), hạt chỉ ở link xuyên-kho + chòm focus. (Data sâu 495 node đẩy 3D quá tải GPU tích hợp.)
+- **3D: lọc 8 chiều** — bấm legend tắt/bật từng chiều + nút "ẩn hết/hiện hết" → thấy rõ xoắn ốc. (dimOff state + linkVisibility.)
+- **Cây sự sống**: cánh quạt 230°→280° + chia cung theo SỐ con-cháu (subtree size) → nhánh rậm/sâu được cung rộng, cụm sâu hết bị bóp.
+- **Audit chiều**: data có ĐỦ 8 chiều (knowledge 44·people 30·time 21·reference 19·anchor 14·experience 12·emotion 12·values 9) nhưng lệch về knowledge/people. LƯU Ý framework: emotion & time là THUỘC TÍNH (cột emotion + event_date), KHÔNG phải link page→page → chiều link "thật" chỉ 6 (knowledge/experience/values/people/reference/anchor).
+- **CHỜ LÀM (founder, footer 8 chiều — việc lớn riêng)**: Từ khoá = tag tự điền + sửa/xoá; Con người = tag person-profile (sẽ có nhiều profile mối quan hệ); Giá trị = chỉ nối giá trị trong trang Kim Chỉ Nam; Neo = câu quote từ kho quote; soát lại Kiến thức & Trải nghiệm.
+
 ## 2026-06-16 (KẾT SỔ phiên graph/3D) — tổng hợp + việc tiếp theo
 PHIÊN NÀY (đợt 25→44, ~20 commit): ổn định + redesign toàn bộ data-viz + vài tính năng lõi.
 - **Ổn định**: diệt crash WebGL kéo-sập-app (StrictMode orphan rAF "reading tick" → hoãn-init+cờ-cancelled+error-swallow); hết trắng-màn load; Galaxy 2D hết dồn-góc (fitView phân vị + auto-fit muộn); 3D click không sập→home (try/catch + mở-rồi-thoát-3D).

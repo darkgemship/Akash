@@ -19,9 +19,11 @@ const DIM8: { key: string; label: string; color: string }[] = [
   { key: 'people', label: 'Con người', color: '#34d399' },
   { key: 'time', label: 'Thời gian', color: '#60a5fa' },
   { key: 'values', label: 'Giá trị', color: '#a78bfa' },
-  { key: 'anchor', label: 'Neo', color: '#f87171' },
 ]
+// 7 CHIỀU (bỏ Neo — quote vẫn ghi vào Kim Chỉ Nam nhưng không còn là 1 chiều). Cảm xúc = thể hiện bằng tia sáng ở graph.
 const STEPS = ['Đọc & nhặt', 'Kiến thức', 'Tham chiếu', 'Cuộc đời', 'Thời gian', 'Linh hồn', 'Hành động']
+// mỗi bước đào sâu chiều nào trong 7 chiều (bước 0 = chuẩn bị, bước 6 = hành động — không phải chiều liên kết)
+const STEP_DIMS: string[][] = [[], ['knowledge'], ['reference'], ['experience', 'emotion', 'people'], ['time'], ['values'], []]
 const EMOTIONS = [['😮', 'vỡ òa'], ['💗', 'chạm'], ['🔥', 'thôi thúc'], ['😣', 'nhói'], ['🌫️', 'hoài nghi']] as const
 const VALUE_SUGGEST = ['Kỷ luật', 'Trung thực', 'Biết ơn', 'Phụng sự', 'Can đảm', 'Tự do', 'Gia đình', 'Học hỏi', 'Sức khỏe', 'Sáng tạo', 'Khiêm nhường', 'Kiên trì']
 const STOP = new Set(['những', 'được', 'không', 'trong', 'với', 'của', 'cho', 'và', 'các', 'một', 'ngày', 'tháng', 'đầu', 'sau', 'trước', 'cách'])
@@ -145,7 +147,6 @@ export default function Digest({ folder, others, orgId, userId, onClose, onSaved
     people: !!personName.trim() && !!personStory.trim(),
     time: !!eventDate || lifeSel.length > 0 || !!newLife.title.trim(),
     values: valSel.length > 0 || valPick.length > 0,
-    anchor: !!mantra.trim(),
   }
   const dimsCovered = Object.values(dims).filter(Boolean).length
 
@@ -159,13 +160,18 @@ export default function Digest({ folder, others, orgId, userId, onClose, onSaved
       <div>
         <div className="text-[10px] uppercase tracking-wider mb-1.5" style={{ color: color + 'cc' }}>{dir} · {selected.length} đã nối</div>
         <div className="flex flex-wrap gap-1.5">
-          {list.map(({ o, score }) => (
-            <button key={o.id} onClick={() => onToggle(o.id, o.title ?? 'Trang')}
-              className={`px-2.5 py-1.5 rounded-lg text-xs border transition ${selected.includes(o.id) ? 'text-white border-transparent' : 'bg-white/5 border-white/10 text-zinc-300'}`}
-              style={selected.includes(o.id) ? { background: color + '55' } : undefined}>
-              {o.title}{score > 0 && !selected.includes(o.id) && <span className="ml-1 text-[9px] text-amber-300">✨</span>}
-            </button>
-          ))}
+          {list.map(({ o, score }) => {
+            const on = selected.includes(o.id)
+            // đã nối = SÁNG (màu chiều) · gợi ý theo từ khoá nhưng chưa nối = mờ vừa + viền màu nhạt · còn lại = mờ hẳn
+            const cls = on ? 'text-white border-transparent' : score > 0 ? 'bg-white/[0.04] text-zinc-400' : 'bg-white/[0.02] border-white/5 text-zinc-600 opacity-60'
+            return (
+              <button key={o.id} onClick={() => onToggle(o.id, o.title ?? 'Trang')}
+                className={`px-2.5 py-1.5 rounded-lg text-xs border transition ${cls}`}
+                style={on ? { background: color + '55' } : score > 0 ? { borderColor: color + '40' } : undefined}>
+                {o.title}{score > 0 && !on && <span className="ml-1 text-[9px]" style={{ color }}>✨</span>}
+              </button>
+            )
+          })}
         </div>
       </div>
     )
@@ -290,15 +296,25 @@ export default function Digest({ folder, others, orgId, userId, onClose, onSaved
     setCelebrate({ score: t8.total, covered: t8.covered })
   }
 
+  // PHƯƠNG ÁN B — 2 CHẾ ĐỘ cùng 1 cỗ máy 8 chiều:
+  //  • Kho chung (QNET/Nhân loại) = NỘI HOÁ (bắt buộc, nhấn Kiến thức/Tham chiếu → nối vào đời bạn).
+  //  • Kho cá nhân = ĐÚC KẾT (tuỳ tâm, nhấn Trải nghiệm/Cảm xúc/Con người → chắt ra Nguyên lý & Neo).
+  const isCommon = folder.layer === 'corporate' || folder.layer === 'humanity'
+  const MODE = isCommon
+    ? { icon: '📥', name: 'Nội hoá', tag: 'biến tinh hoa kho chung thành của bạn — để dạy lại', emphasis: 'Nhấn Kiến thức & Tham chiếu (nó từ đâu) rồi nối vào trải nghiệm/giá trị của bạn.', done: 'Đã nội hoá! Tri thức này giờ là một phần của bạn.' }
+    : { icon: '🌾', name: 'Đúc kết', tag: 'rút bài học từ chuyện chính bạn đã sống', emphasis: 'Nhấn Trải nghiệm · Cảm xúc · Con người · Thời gian rồi chắt ra Nguyên lý & Neo.', done: 'Đã đúc kết! Trải nghiệm thành bài học truyền lại được.' }
   const inputCls = 'w-full rounded-xl bg-white/5 border border-white/10 p-3 text-sm outline-none focus:border-violet-400/50'
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm grid place-items-center z-[60] p-6" onClick={onClose}>
       <div className="w-[620px] max-w-[94vw] max-h-[90vh] overflow-auto bg-[#0d0d18] border border-white/10 rounded-2xl p-6" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-3">
-          <div className="font-bold">🔥 Chuyển hoá: {folder.title}</div>
+          <div className="min-w-0">
+            <div className="font-bold truncate">{MODE.icon} {MODE.name}: {folder.title}</div>
+            <div className="text-[10px] text-zinc-500">{MODE.tag}</div>
+          </div>
           <div className="flex items-center gap-2">
             {/* HOA THẤM 8 CÁNH */}
-            <div className="flex gap-1" title={`${dimsCovered}/8 chiều đã chạm`}>
+            <div className="flex gap-1" title={`${dimsCovered}/7 chiều đã chạm`}>
               {DIM8.map(d => (
                 <span key={d.key} title={d.label} className="w-2.5 h-2.5 rounded-full transition-all" style={{ background: dims[d.key] ? d.color : '#ffffff18', boxShadow: dims[d.key] ? `0 0 6px ${d.color}` : 'none' }} />
               ))}
@@ -306,10 +322,22 @@ export default function Digest({ folder, others, orgId, userId, onClose, onSaved
             <button onClick={onClose} className="w-8 h-8 grid place-items-center rounded-lg bg-white/5 border border-white/10">✕</button>
           </div>
         </div>
-        <div className="flex gap-1 mb-4">
+        <div className="flex gap-1 mb-2">
           {STEPS.map((s, i) => <button key={s} onClick={() => setStep(i)} className={`flex-1 text-center text-[10px] py-1.5 rounded-md transition ${i === step ? 'bg-white/15 text-white' : i < step ? 'bg-white/10 text-zinc-300' : 'bg-white/5 text-zinc-600'}`}>{i + 1}·{s}</button>)}
         </div>
+        {/* chiều bước này đào sâu — petal sáng khi đã chạm, giúp thấy rõ "đào theo 8 chiều", không chồng chéo */}
+        {STEP_DIMS[step].length > 0 && (
+          <div className="flex items-center gap-1.5 mb-3 text-[10px] text-zinc-500">
+            <span>Bước này đào chiều:</span>
+            {STEP_DIMS[step].map(k => { const d = DIM8.find(x => x.key === k)!; return (
+              <span key={k} className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 border" style={{ color: dims[k] ? d.color : '#71717a', borderColor: dims[k] ? d.color + '55' : '#ffffff12', background: dims[k] ? d.color + '14' : 'transparent' }}>
+                <span className="w-1.5 h-1.5 rounded-full" style={{ background: dims[k] ? d.color : '#52525b', boxShadow: dims[k] ? `0 0 5px ${d.color}` : 'none' }} />{d.label}
+              </span>
+            ) })}
+          </div>
+        )}
 
+        <div className={`mb-3 rounded-lg border px-3 py-1.5 text-[11px] ${isCommon ? 'border-cyan-400/25 bg-cyan-500/[0.06] text-cyan-200/90' : 'border-amber-400/25 bg-amber-500/[0.06] text-amber-200/90'}`}>{MODE.icon} <b>{MODE.name}</b> — {MODE.emphasis}</div>
         <div className="min-h-[210px]">
           {step === 0 && (
             <>
@@ -417,7 +445,7 @@ export default function Digest({ folder, others, orgId, userId, onClose, onSaved
                 )}
               </div>
               <div className="rounded-xl bg-white/[0.03] border border-white/10 p-3">
-                <div className="text-[10px] uppercase tracking-wider text-red-300/80 mb-1.5">⚓ Neo — viết MỘT CÂU kim chỉ nam CỦA BẠN rút từ bài</div>
+                <div className="text-[10px] uppercase tracking-wider text-red-300/80 mb-1.5">⚓ Câu Kim Chỉ Nam (tuỳ chọn) — MỘT CÂU châm ngôn CỦA BẠN rút từ bài</div>
                 <textarea value={mantra} onChange={e => setMantra(e.target.value)} placeholder={quotes[0] ? `Gợi từ quote bạn nhặt: "${quotes[0].text.slice(0, 60)}…" — nhưng hãy viết bằng lời CỦA BẠN` : 'Vd: "Mình không kiểm soát kết quả, mình kiểm soát nỗ lực."'} className={inputCls + ' h-16'} />
                 <p className="text-[10px] text-zinc-600 mt-1">Câu này vào trang 🧭 Kim Chỉ Nam — giọng nói tinh khiết nhất của bạn, AI sẽ học từ đây.</p>
               </div>
@@ -436,7 +464,7 @@ export default function Digest({ folder, others, orgId, userId, onClose, onSaved
               <input value={lingering} onChange={e => setLingering(e.target.value)} placeholder="❓ Điều gì còn lấn cấn / chưa hiểu? (sẽ vào Hộp câu hỏi mở)" className={inputCls + ' mb-3'} />
               <div className="rounded-xl bg-white/[0.03] border border-white/10 p-3 flex items-center gap-4">
                 <div className="flex gap-1.5">{DIM8.map(d => <span key={d.key} title={d.label} className="w-3.5 h-3.5 rounded-full" style={{ background: dims[d.key] ? d.color : '#ffffff15', boxShadow: dims[d.key] ? `0 0 8px ${d.color}` : 'none' }} />)}</div>
-                <div className="text-xs text-zinc-400">{dimsCovered}/8 cánh hoa đã sáng {dimsCovered === 8 ? '— 🌸 THẤM TRỌN!' : dimsCovered >= 4 ? '— rất sâu rồi' : '— quay lại thắp thêm cánh nào'}</div>
+                <div className="text-xs text-zinc-400">{dimsCovered}/7 cánh hoa đã sáng {dimsCovered === 7 ? '— 🌸 THẤM TRỌN!' : dimsCovered >= 4 ? '— rất sâu rồi' : '— quay lại thắp thêm cánh nào'}</div>
               </div>
             </>
           )}
@@ -451,14 +479,14 @@ export default function Digest({ folder, others, orgId, userId, onClose, onSaved
             <div className="dq-step-in relative w-[420px] max-w-[92vw] rounded-3xl p-[1.5px] bg-gradient-to-br from-violet-500/70 via-white/10 to-cyan-500/70" onClick={e => e.stopPropagation()}>
               <div className="rounded-3xl bg-[#0d0d18]/97 p-8 text-center">
                 <div className="text-6xl mb-2 dq-pop">🌸</div>
-                <h2 className="text-2xl font-black mb-1">Đã chuyển hoá! Viên kim cương sáng thêm một mặt.</h2>
+                <h2 className="text-2xl font-black mb-1">{MODE.done}</h2>
                 <p className="text-sm text-zinc-400 mb-4">"{folder.title}" giờ là một phần của bạn.</p>
                 <div className="flex justify-center gap-1.5 mb-4">
                   {DIM8.map(d => <span key={d.key} className="w-3.5 h-3.5 rounded-full" style={{ background: dims[d.key] ? d.color : '#ffffff15', boxShadow: dims[d.key] ? `0 0 10px ${d.color}` : 'none' }} />)}
                 </div>
                 <div className="text-5xl font-black text-zinc-50 mb-1">{celebrate.score}</div>
                 <div className="hud-label mb-1">Độ Chuyển hoá</div>
-                <p className="text-xs text-zinc-500 mb-5">{celebrate.covered}/8 chiều · node sẽ sáng hơn trên Galaxy ✨ · hẹn ôn lại sau {[1,3,7,21,60][0]} ngày</p>
+                <p className="text-xs text-zinc-500 mb-5">{celebrate.covered}/7 chiều · node sẽ sáng hơn trên Galaxy ✨ · hẹn ôn lại sau {[1,3,7,21,60][0]} ngày</p>
                 <button onClick={onClose} className="rounded-xl ak-cta px-6 py-2.5 text-sm font-bold">Tiếp tục hành trình →</button>
               </div>
             </div>
