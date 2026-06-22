@@ -22,23 +22,6 @@ export function Corners({ color, size = 9 }: { color?: string; size?: number }) 
   )
 }
 
-// Panel HUD: viền hairline, bo nhẹ (4px, KHÔNG pill như Notion), góc ngoặc tuỳ chọn
-export function HudPanel({ children, className = '', corners = false, glow = false, onClick, title }: {
-  children: React.ReactNode; className?: string; corners?: boolean; glow?: boolean; onClick?: () => void; title?: string
-}) {
-  return (
-    <div onClick={onClick} title={title} className={`hud-panel relative ${glow ? 'hud-glow-edge' : ''} ${onClick ? 'cursor-pointer hud-hover' : ''} ${className}`}>
-      {corners && <Corners />}
-      {children}
-    </div>
-  )
-}
-
-// Nhãn eyebrow: mono in hoa giãn cách — thứ tạo cảm giác high-tech nhất
-export function HudLabel({ children, className = '', accent }: { children: React.ReactNode; className?: string; accent?: boolean }) {
-  return <div className={`hud-label ${accent ? 'hud-label-accent' : ''} ${className}`}>{children}</div>
-}
-
 // Status dot: tĩnh hoặc đập sống (live)
 export function Dot({ live = false, color = 'var(--hud-accent)', size = 7 }: { live?: boolean; color?: string; size?: number }) {
   return <span className={`hud-dot ${live ? 'hud-dot-live' : ''}`} style={{ width: size, height: size, ['--dot' as string]: color }} />
@@ -64,22 +47,6 @@ export function Wordmark({ size = 'md', dotted = false }: { size?: 'sm' | 'md' |
   const px = size === 'lg' ? 26 : size === 'sm' ? 14 : 18
   const txt = dotted ? 'A·K·A·S·H' : 'AKASH'
   return <span className="hud-wordmark" style={{ fontSize: px }}>{txt}</span>
-}
-
-// Số liệu lớn HUD: mono tabular + nhãn đơn vị nhỏ
-export function HudStat({ label, value, unit, trend, accent = false }: {
-  label: string; value: React.ReactNode; unit?: string; trend?: string; accent?: boolean
-}) {
-  return (
-    <div>
-      <div className="hud-label mb-1">{label}</div>
-      <div className="flex items-baseline gap-1.5">
-        <span className={`hud-num ${accent ? 'hud-num-accent' : ''}`}>{value}</span>
-        {unit && <span className="hud-label" style={{ fontSize: 9 }}>{unit}</span>}
-      </div>
-      {trend && <div className="text-[10px] text-[var(--hud-dim)] mt-0.5 font-mono">{trend}</div>}
-    </div>
-  )
 }
 
 /* Constellation — chòm sao node-link phát sáng (nhẹ: ~110 điểm, drift chậm + twinkle)

@@ -223,7 +223,7 @@ function Workspace({ user }: { user: User }) {
   const [editJson, setEditJson] = useState<PartialBlock[] | null>(null)
   const [editTitle, setEditTitle] = useState('')
   const [savedMsg, setSavedMsg] = useState('')
-  const [page, setPage] = useState<'know' | 'today' | 'studio' | 'engine' | 'board' | 'review' | 'users' | 'profile' | 'kol'>('today')
+  const [page, setPage] = useState<'know' | 'today' | 'engine' | 'board' | 'review' | 'users' | 'profile' | 'kol'>('today')
   const [view, setView] = useState<'folder' | 'galaxy'>('folder')
   const [allNodes, setAllNodes] = useState<GNode[]>([])
   const [links, setLinks] = useState<GLink[]>([])
