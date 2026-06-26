@@ -1030,7 +1030,7 @@ function Workspace({ user }: { user: User }) {
                   const chain = ancestors(editing.id)
                   const hubN = chain.find(a => a.id !== node.id && (a.kind === 'folder' || a.subtype === 'hub')) ?? chain.find(a => a.kind === 'kho')
                   return (
-                    <div className="order-last mt-4 pt-4 border-t border-white/[0.06]">
+                    <div className="order-last mt-4 pt-4 border-t border-white/[0.06]" style={{ order: 99 }}>
                     <PropsPanel node={node} canE={canE} isEditor={!!role?.can_edit} hubLabel={hubN ? `${hubN.icon || ''} ${hubN.title || ''}`.trim() : null} onSetProp={setNodeProp} onSaveDate={saveEventDate} onSetEmotion={saveEmotion}>
                       {node?.status === 'pending' && <span className="rounded-lg bg-amber-500/15 border border-amber-400/30 text-amber-300 px-2 py-1">⏳ Chờ duyệt</span>}
                       {/* duyệt ngay trong trang (người có quyền) */}
