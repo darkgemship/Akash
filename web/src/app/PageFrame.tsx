@@ -353,24 +353,24 @@ export function PropsPanel({ node, canE, isEditor, hubLabel, onSetProp, onSaveDa
    🗂 trang con → ❤️ liên kết 8 chiều (nối ngay tại chỗ) → 🕸️ đi/về →
    💎 tinh hoa → 📚 references → 📎 đính kèm
 ===================================================================== */
-export function PageFooter({ node, pages, outLinks, backLinks, mdText, canE, lite, onOpen, onAddChild, onLink, onSetProp, onCreateForDim }: {
+export function PageFooter({ node, pages, outLinks, backLinks, mdText, canE, lite, onOpen, onLink, onSetProp, onCreateForDim }: {
   node: FrameNode
   pages: FrameNode[]            // toàn bộ tree — để tra tên trang & picker nối
   outLinks: LinkOut[]
   backLinks: LinkBack[]
   mdText: string
   canE: boolean
-  lite?: boolean   // trang tổng (kho/hub): chỉ hiện danh sách trang con, không 8 chiều/trích dẫn
+  lite?: boolean   // trang tổng (kho/hub): trang con xem ở sidebar → ẩn footer hẳn
   onOpen: (id: string) => void
-  onAddChild: () => void
   onLink: (toId: string, dimension: string) => void
   onSetProp: (key: string, val: unknown) => void
   onCreateForDim?: (name: string, subtype: string) => Promise<string | null>   // tạo người/giá trị/quote mới rồi nối
 }) {
   const [picker, setPicker] = useState<{ dim: string; q: string } | null>(null)
   const byId = useMemo(() => new Map(pages.map(pg => [pg.id, pg])), [pages])
-  const childPages = pages.filter(pg => pg.parent_id === node.id)
   const p = (node.props ?? {}) as Record<string, unknown>
+  // trang tổng (kho/hub): trang con đã xem ở sidebar → ẩn footer cho đỡ rối
+  if (lite) return null
 
   // gom liên kết theo 8 chiều (đi + về)
   const byDim = Object.entries(DIMS).map(([k, d]) => ({
@@ -405,21 +405,9 @@ export function PageFooter({ node, pages, outLinks, backLinks, mdText, canE, lit
     <>
       <div className="mt-2 mb-1 flex items-center gap-2">
         <span className="font-mono text-[9px] uppercase tracking-[0.22em] text-zinc-600">Footer</span>
-        <span className="text-[10px] text-zinc-700">— chân trang: trang con · 8 chiều · liên kết · trích dẫn · nguồn</span>
+        <span className="text-[10px] text-zinc-700">— chân trang: 8 chiều · liên kết · trích dẫn · nguồn</span>
         <span className="flex-1 h-px bg-white/[0.06]" />
       </div>
-      {/* 🗂 TRANG CON */}
-      <Sect title="🗂 Trang con">
-        <div className="space-y-0.5">
-          {childPages.map(c => (
-            <button key={c.id} onClick={() => onOpen(c.id)} className="w-full text-left rounded-md px-2 py-1.5 text-sm flex items-center gap-2 hover:bg-white/[0.06]">
-              <span className="text-[15px]">{c.icon || kindIcon(c.kind)}</span><span className="text-zinc-300">{c.title || 'Trang mới'}</span>
-            </button>
-          ))}
-          {canE && <button onClick={onAddChild} className="w-full text-left rounded-md px-2 py-1.5 text-sm flex items-center gap-2 text-zinc-500 hover:bg-white/[0.06] hover:text-zinc-300">＋ Thêm trang con</button>}
-        </div>
-      </Sect>
-
       {lite ? null : <>
       {/* ❤️ LIÊN KẾT 8 CHIỀU — gốc rễ framework: trang chưa nối = chưa thuộc về cuộc đời bạn */}
       <Sect title={`❤️ Liên kết 8 chiều (${litDims}/8 chiều sáng)`} hint="🧡 Cảm xúc & 💙 Thời gian TỰ sáng từ Properties (không cần nối trang) — 6 chiều còn lại bấm ＋ Nối tới trang khác">

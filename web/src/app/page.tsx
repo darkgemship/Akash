@@ -332,6 +332,16 @@ function Workspace({ user }: { user: User }) {
   function isContainer(n?: TNode | null) { return !!n && (n.kind === 'kho' || n.kind === 'folder' || ['hub', 'kol_home', 'viral_home', 'content_matrix'].includes(n.subtype ?? '')) }
   // quyền sửa: kho cá nhân luôn được; kho chung cần can_edit (Biên tập viên trở lên)
   function canEditLayer(layer: string) { return layer === 'personal' || !!role?.can_edit }
+  // page CẤP 1 = con trực tiếp của KHO (cây gốc kho chung) — vd: Lãnh đạo & Đội nhóm, Văn hoá & Giá trị…
+  function isTopHub(n?: TNode | null) { return !!n && n.layer !== 'personal' && !!n.parent_id && nodeOf(n.parent_id)?.kind === 'kho' }
+  // quyền ĐỔI TITLE: kho cá nhân = chủ tuỳ biến · kho chung cần biên tập viên+; RIÊNG page cấp 1 chỉ Tổng biên tập/Admin (level ≥ 4)
+  function canRenameNode(n?: TNode | null) {
+    if (!n) return false
+    if (n.layer === 'personal') return true
+    if (!role?.can_edit) return false
+    if (isTopHub(n)) return (role?.level ?? 0) >= 4
+    return true
+  }
   function ancestors(id: string): TNode[] {
     const chain: TNode[] = []
     let cur = nodeOf(id)
@@ -647,7 +657,6 @@ function Workspace({ user }: { user: User }) {
     await supabase.from('nodes').update({ cover }).eq('id', editing.id)
     if (orgId) loadTree(orgId)
   }
-  function addChild() { if (editing) createPage(editing.id, layerOf(editing.id)) }
 
   useEffect(() => {
     let cancel = false
@@ -702,7 +711,7 @@ function Workspace({ user }: { user: User }) {
           {renaming ? (
             <input autoFocus value={renameText} onChange={e => setRenameText(e.target.value)} onBlur={() => renameNode(n.id, renameText.trim() || 'Trang mới')} onKeyDown={e => { if (e.key === 'Enter') renameNode(n.id, renameText.trim() || 'Trang mới'); if (e.key === 'Escape') setRenameId(null) }} className="flex-1 mr-1 my-0.5 rounded bg-white/10 border border-violet-400/50 px-1.5 py-1 text-sm outline-none" />
           ) : (
-            <button onClick={() => openNoteEditor(n)} onDoubleClick={() => { if (editable) { setRenameId(n.id); setRenameText(n.title ?? '') } }} className="flex-1 text-left pr-1 py-1.5 text-sm truncate flex items-center gap-1.5 min-w-0">
+            <button onClick={() => openNoteEditor(n)} onDoubleClick={() => { if (canRenameNode(n)) { setRenameId(n.id); setRenameText(n.title ?? '') } }} className="flex-1 text-left pr-1 py-1.5 text-sm truncate flex items-center gap-1.5 min-w-0">
               <span className="shrink-0 text-[15px] leading-none">{n.icon || kindIcon(n.kind)}</span>
               {isKho
                 ? <span className={`truncate text-[11px] font-bold uppercase tracking-wider ${khoColor}`}>{n.title || 'Kho'}</span>
@@ -720,7 +729,7 @@ function Workspace({ user }: { user: User }) {
               <div className="fixed inset-0 z-20" onClick={() => setMenuFor(null)} />
               <div className="absolute right-1 top-8 z-30 w-48 bg-[#1c1c26] border border-white/10 rounded-lg shadow-2xl py-1 text-sm">
                 <button onClick={() => { setMenuFor(null); openNoteEditor(n) }} className="w-full text-left px-3 py-1.5 hover:bg-white/10">📂 Mở trang</button>
-                <button onClick={() => { setMenuFor(null); setRenameId(n.id); setRenameText(n.title ?? '') }} className="w-full text-left px-3 py-1.5 hover:bg-white/10">✏️ Đổi tên</button>
+                {canRenameNode(n) && <button onClick={() => { setMenuFor(null); setRenameId(n.id); setRenameText(n.title ?? '') }} className="w-full text-left px-3 py-1.5 hover:bg-white/10">✏️ Đổi tên</button>}
                 <button onClick={() => { setMenuFor(null); createPage(n.id, n.layer) }} className="w-full text-left px-3 py-1.5 hover:bg-white/10">＋ Thêm trang con</button>
                 <button onClick={() => { setMenuFor(null); createPage(n.id, n.layer, 'database') }} className="w-full text-left px-3 py-1.5 hover:bg-white/10">🗂️ Thêm bảng dữ liệu</button>
                 <button onClick={() => { setMenuFor(null); setTplFor({ parentId: n.id, layer: n.layer }) }} className="w-full text-left px-3 py-1.5 hover:bg-white/10">📑 Trang từ template</button>
@@ -990,8 +999,8 @@ function Workspace({ user }: { user: User }) {
                   {COVERS.map((c, i) => <button key={i} onClick={() => saveCover(c)} className={`w-5 h-5 rounded-full border ${editCover === c ? 'border-white ring-2 ring-white/40' : 'border-white/40'}`} style={{ background: c || '#222' }} />)}
                 </div>}
               </div>
-              {/* page body */}
-              <div className="max-w-3xl mx-auto px-12 pb-24">
+              {/* page body — flex-col để Properties (order-last) rơi xuống CUỐI trang cho đỡ rối */}
+              <div className="max-w-3xl mx-auto px-12 pb-24 flex flex-col">
                 <div className="relative -mt-10 mb-1">
                   <div className="relative inline-block">
                     <button onClick={() => canEditLayer(layerOf(editing.id)) && setShowIcons(s => !s)} title="Đổi icon" className="text-[64px] leading-none w-20 h-20 grid place-items-center rounded-2xl hover:bg-white/5 transition">{editIcon || kindIcon(editing.kind)}</button>
@@ -1003,15 +1012,15 @@ function Workspace({ user }: { user: User }) {
                     )}
                   </div>
                 </div>
-                <input value={editTitle} readOnly={!canEditLayer(layerOf(editing.id))} onChange={e => setEditTitle(e.target.value)} onBlur={saveTitle} onKeyDown={e => e.key === 'Enter' && (e.target as HTMLInputElement).blur()} autoComplete="off" spellCheck={false} data-1p-ignore data-lpignore="true" name="ak-page-title" className="ak-display w-full text-4xl font-bold bg-transparent outline-none placeholder:text-zinc-700 mb-2" placeholder="Trang chưa có tiêu đề" />
-                {canEditLayer(layerOf(editing.id)) && isGenericTitle(editTitle) && suggestTitle() && (
+                <input value={editTitle} readOnly={!canRenameNode(nodeOf(editing.id))} onChange={e => setEditTitle(e.target.value)} onBlur={saveTitle} onKeyDown={e => e.key === 'Enter' && (e.target as HTMLInputElement).blur()} autoComplete="off" spellCheck={false} data-1p-ignore data-lpignore="true" name="ak-page-title" className="ak-display w-full text-4xl font-bold bg-transparent outline-none placeholder:text-zinc-700 mb-2" placeholder="Trang chưa có tiêu đề" />
+                {canRenameNode(nodeOf(editing.id)) && isGenericTitle(editTitle) && suggestTitle() && (
                   <button onClick={applySuggestedTitle} title="Đặt tiêu đề từ nội dung (Tóm tắt 1 câu / câu đầu)" className="mb-2 -mt-1 inline-flex items-center gap-1.5 text-[11px] rounded-lg bg-violet-500/10 border border-violet-400/25 text-violet-200 px-2.5 py-1 hover:bg-violet-500/20 transition">✨ Gợi ý tiêu đề: <span className="text-zinc-300 italic truncate max-w-[360px]">“{suggestTitle()}”</span></button>
                 )}
                 {/* 🪞 "AI hiểu bạn" — chân dung sống, chỉ trên trang Tôi là ai */}
                 {nodeOf(editing.id)?.subtype === 'profile_me' && (
                   <MeMirror nodes={tree} onOpenPortrait={() => { setView('galaxy'); setGalaxyModeReq({ mode: 'timeline', emo: true, t: Date.now() }); setToast('🌌 Chân dung cảm xúc của bạn trên Dòng đời — node sáng dần khi bạn đi lên'); setTimeout(() => setToast(''), 4000) }} />
                 )}
-                {/* ① PROPERTIES — 📌 trường chuẩn ban biên tập (fix cứng) + ✏️ trường riêng user (PageFrame.tsx). Trang tổng (kho/hub) không có */}
+                {/* ① PROPERTIES — ĐẨY XUỐNG CUỐI trang (order-last) cho đỡ rối · 📌 trường chuẩn + ✏️ trường riêng (PageFrame.tsx). Trang tổng (kho/hub) không có */}
                 {(() => {
                   const node = nodeOf(editing.id)
                   if (!node || isContainer(node)) return null
@@ -1021,6 +1030,7 @@ function Workspace({ user }: { user: User }) {
                   const chain = ancestors(editing.id)
                   const hubN = chain.find(a => a.id !== node.id && (a.kind === 'folder' || a.subtype === 'hub')) ?? chain.find(a => a.kind === 'kho')
                   return (
+                    <div className="order-last mt-4 pt-4 border-t border-white/[0.06]">
                     <PropsPanel node={node} canE={canE} isEditor={!!role?.can_edit} hubLabel={hubN ? `${hubN.icon || ''} ${hubN.title || ''}`.trim() : null} onSetProp={setNodeProp} onSaveDate={saveEventDate} onSetEmotion={saveEmotion}>
                       {node?.status === 'pending' && <span className="rounded-lg bg-amber-500/15 border border-amber-400/30 text-amber-300 px-2 py-1">⏳ Chờ duyệt</span>}
                       {/* duyệt ngay trong trang (người có quyền) */}
@@ -1094,6 +1104,7 @@ function Workspace({ user }: { user: User }) {
                         <span className="w-full text-[11px] text-amber-200/90 bg-amber-500/10 border border-amber-400/25 rounded-lg px-2.5 py-1.5 mt-1">💬 Góp ý của biên tập: {p.review_note as string}</span>
                       )}
                     </PropsPanel>
+                    </div>
                   )
                 })()}
                 {editing.kind === 'database' ? (
@@ -1142,7 +1153,6 @@ function Workspace({ user }: { user: User }) {
                           mdText={mdText}
                           canE={canEditLayer(layerOf(editing.id))}
                           onOpen={(id) => { const t = nodeOf(id); if (t) openNoteEditor(t) }}
-                          onAddChild={addChild}
                           onSetProp={setNodeProp}
                           onLink={async (toId, dim) => {
                             if (!orgId) return
