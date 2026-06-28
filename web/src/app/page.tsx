@@ -999,7 +999,7 @@ function Workspace({ user }: { user: User }) {
                   {COVERS.map((c, i) => <button key={i} onClick={() => saveCover(c)} className={`w-5 h-5 rounded-full border ${editCover === c ? 'border-white ring-2 ring-white/40' : 'border-white/40'}`} style={{ background: c || '#222' }} />)}
                 </div>}
               </div>
-              {/* page body — flex-col để Properties (order-last) rơi xuống CUỐI trang cho đỡ rối */}
+              {/* page body — Properties được đặt CUỐI source (sau body) nên luôn rơi xuống cuối trang cho đỡ rối */}
               <div className="max-w-3xl mx-auto px-12 pb-24 flex flex-col">
                 <div className="relative -mt-10 mb-1">
                   <div className="relative inline-block">
@@ -1020,93 +1020,6 @@ function Workspace({ user }: { user: User }) {
                 {nodeOf(editing.id)?.subtype === 'profile_me' && (
                   <MeMirror nodes={tree} onOpenPortrait={() => { setView('galaxy'); setGalaxyModeReq({ mode: 'timeline', emo: true, t: Date.now() }); setToast('🌌 Chân dung cảm xúc của bạn trên Dòng đời — node sáng dần khi bạn đi lên'); setTimeout(() => setToast(''), 4000) }} />
                 )}
-                {/* ① PROPERTIES — ĐẨY XUỐNG CUỐI trang (order-last) cho đỡ rối · 📌 trường chuẩn + ✏️ trường riêng (PageFrame.tsx). Trang tổng (kho/hub) không có */}
-                {(() => {
-                  const node = nodeOf(editing.id)
-                  if (!node || isContainer(node)) return null
-                  const p = (node.props ?? {}) as Record<string, unknown>
-                  const canE = canEditLayer(layerOf(editing.id))
-                  // cây gốc = container gần kho nhất trong chuỗi tổ tiên (hub/folder), fallback chính kho
-                  const chain = ancestors(editing.id)
-                  const hubN = chain.find(a => a.id !== node.id && (a.kind === 'folder' || a.subtype === 'hub')) ?? chain.find(a => a.kind === 'kho')
-                  return (
-                    <div className="order-last mt-4 pt-4 border-t border-white/[0.06]" style={{ order: 99 }}>
-                    <PropsPanel node={node} canE={canE} isEditor={!!role?.can_edit} hubLabel={hubN ? `${hubN.icon || ''} ${hubN.title || ''}`.trim() : null} onSetProp={setNodeProp} onSaveDate={saveEventDate} onSetEmotion={saveEmotion}>
-                      {node?.status === 'pending' && <span className="rounded-lg bg-amber-500/15 border border-amber-400/30 text-amber-300 px-2 py-1">⏳ Chờ duyệt</span>}
-                      {/* duyệt ngay trong trang (người có quyền) */}
-                      {node?.status === 'pending' && role?.can_approve && (
-                        <>
-                          <button onClick={async () => {
-                            const { data: cur } = await supabase.from('nodes').select('md,props').eq('id', editing.id).single()
-                            const np = { ...((cur?.props as Record<string, unknown>) ?? {}), last_published_md: cur?.md ?? '', approved_at: new Date().toISOString() }
-                            await supabase.from('nodes').update({ status: 'published', props: np }).eq('id', editing.id)
-                            if (orgId) loadTree(orgId); setToast('✅ Đã duyệt & xuất bản'); setTimeout(() => setToast(''), 2500)
-                          }} className="rounded-lg bg-emerald-600 hover:bg-emerald-500 px-2.5 py-1 font-semibold">✅ Duyệt</button>
-                          <button onClick={() => { setReturnFor(returnFor === editing.id ? null : editing.id); setReturnNote('') }} className={`rounded-lg border px-2.5 py-1 ${returnFor === editing.id ? 'bg-red-500/15 border-red-400/40 text-red-200' : 'bg-white/5 border-white/10 text-zinc-400 hover:text-red-300'}`}>↩ Trả lại</button>
-                        </>
-                      )}
-                      {/* form Trả-lại INLINE (thay popup trình duyệt) */}
-                      {returnFor === editing.id && (
-                        <div className="w-full mt-1 rounded-xl border border-red-400/25 bg-red-500/[0.06] p-2.5">
-                          <textarea autoFocus value={returnNote} onChange={e => setReturnNote(e.target.value)} placeholder="Lý do trả lại (tác giả sẽ thấy)… vd: phần kết luận cần rõ hơn" className="w-full h-16 rounded-lg bg-black/30 border border-white/10 p-2 text-[13px] outline-none focus:border-red-400/40 mb-1.5" />
-                          <div className="flex gap-1.5 justify-end">
-                            <button onClick={() => { setReturnFor(null); setReturnNote('') }} className="rounded-lg bg-white/5 border border-white/10 text-zinc-400 px-3 py-1 text-xs">Huỷ</button>
-                            <button onClick={async () => {
-                              const { data: cur } = await supabase.from('nodes').select('props').eq('id', editing.id).single()
-                              const np = { ...((cur?.props as Record<string, unknown>) ?? {}), review_note: returnNote.trim() || 'Cần chỉnh sửa thêm' }
-                              await supabase.from('nodes').update({ status: 'draft', props: np }).eq('id', editing.id)
-                              setReturnFor(null); setReturnNote(''); if (orgId) loadTree(orgId); setToast('↩ Đã trả lại kèm góp ý'); setTimeout(() => setToast(''), 2500)
-                            }} className="rounded-lg bg-red-600/90 hover:bg-red-500 text-white px-3 py-1 text-xs font-semibold">↩ Trả lại kèm lý do</button>
-                          </div>
-                        </div>
-                      )}
-                      {node?.status === 'draft' && <span className="rounded-lg bg-zinc-500/15 border border-zinc-400/30 text-zinc-400 px-2 py-1" title={(p.review_note as string) ?? ''}>📝 Nháp</span>}
-                      {/* tác giả gửi duyệt lại sau khi sửa */}
-                      {node?.status === 'draft' && node?.owner_id === user.id && (
-                        <button onClick={async () => {
-                          await supabase.from('nodes').update({ status: 'pending' }).eq('id', editing.id)
-                          if (orgId) loadTree(orgId); setToast('📨 Đã gửi duyệt lại'); setTimeout(() => setToast(''), 2500)
-                        }} className="rounded-lg bg-amber-500/20 border border-amber-400/40 text-amber-200 px-2.5 py-1 font-semibold">📨 Gửi duyệt lại</button>
-                      )}
-                      {/* đề xuất trang cá nhân lên Kho nhân loại */}
-                      {node?.layer === 'personal' && node?.owner_id === user.id && !node?.subtype && node?.kind === 'page' && (
-                        <button onClick={() => setProposeFor(editing.id)} title="Trả lời 3 câu → bản sao vào hàng chờ duyệt Kho nhân loại" className="rounded-lg bg-violet-500/15 border border-violet-400/30 text-violet-200 px-2.5 py-1 hover:bg-violet-500/25">♾️ Đề xuất lên nhân loại</button>
-                      )}
-                      {/* trang kho chung → ánh xạ về kho cá nhân qua trạm Tủ nguồn */}
-                      {node && node.layer !== 'personal' && !isContainer(node) && (
-                        <button onClick={() => mirrorToMyKho(node)} title="Tạo trang Cảm nhận trong 📚 Tủ nguồn tinh hoa (nối chiều Tham chiếu về bài gốc) — rồi từ đó nối tiếp vào trang của bạn" className="rounded-lg bg-cyan-500/15 border border-cyan-400/30 text-cyan-200 px-2.5 py-1 hover:bg-cyan-500/25">🪞 Ánh xạ về kho tôi</button>
-                      )}
-                      {/* thành viên góp ý bài kho chung */}
-                      {!canE && node?.layer !== 'personal' && (
-                        <button onClick={async () => {
-                          const fb = window.prompt('Góp ý cho bài này (chữ cần sửa, đề xuất…):')
-                          if (!fb?.trim()) return
-                          await supabase.from('open_questions').insert({ user_id: user.id, node_id: editing.id, question: fb.trim(), status: 'feedback' })
-                          setToast('💬 Đã gửi góp ý cho ban biên tập'); setTimeout(() => setToast(''), 2500)
-                        }} className="rounded-lg bg-white/5 border border-white/10 text-zinc-400 px-2.5 py-1 hover:text-cyan-200">💬 Góp ý sửa</button>
-                      )}
-                      {p.principle ? <span className="rounded-lg bg-cyan-500/10 border border-cyan-400/25 text-cyan-200 px-2 py-1 max-w-[260px] truncate" title={p.principle as string}>⚡ {p.principle as string}</span> : null}
-                      {/* tính năng trang (đợt 9): tương tác hồ sơ · bản trước · dòng đời · copy */}
-                      {(p.page_type as string) === 'ho-so' && canE && <button onClick={async () => {
-                        const note = window.prompt('Tương tác mới với người này (1 dòng):'); if (!note?.trim()) return
-                        const { data: cur } = await supabase.from('nodes').select('md').eq('id', editing.id).single()
-                        const cm = (cur?.md as string) ?? ''
-                        const line = `- ${new Date().toLocaleDateString('vi')}: ${note.trim()}`
-                        const next = cm.includes('## 💬 Lịch sử tương tác') ? cm.replace('## 💬 Lịch sử tương tác', `## 💬 Lịch sử tương tác\n${line}`) : `${cm}\n\n## 💬 Lịch sử tương tác\n${line}`
-                        await supabase.from('nodes').update({ md: next, content: null }).eq('id', editing.id)
-                        const t2 = nodeOf(editing.id); if (t2) openNoteEditor(t2); setToast('💬 Đã ghi tương tác'); setTimeout(() => setToast(''), 2200)
-                      }} className="rounded-lg bg-emerald-500/10 border border-emerald-400/25 text-emerald-200 px-2.5 py-1 hover:bg-emerald-500/20">➕ Ghi tương tác</button>}
-                      {(p.last_published_md as string) && <button onClick={() => { const w = window.open('', '_blank', 'width=680,height=760'); if (w) { w.document.write(`<pre style="white-space:pre-wrap;font:13px/1.6 monospace;padding:24px;background:#0c0d10;color:#d0d6e0">${String(p.last_published_md).replace(/</g, '&lt;')}</pre>`); w.document.title = 'Bản đã duyệt trước — ' + editTitle } }} title="Xem bản md đã duyệt lần trước" className="rounded-lg bg-white/5 border border-white/10 text-zinc-400 px-2.5 py-1 hover:text-white">🕓 Bản trước</button>}
-                      {node?.event_date && <button onClick={() => { setView('galaxy'); setGalaxyModeReq({ mode: 'timeline', t: Date.now() }); setToast('📜 Đang mở Dòng đời — trang của bạn nằm tại mốc ' + new Date(node.event_date!).toLocaleDateString('vi')); setTimeout(() => setToast(''), 3500) }} className="rounded-lg bg-blue-500/10 border border-blue-400/25 text-blue-200 px-2.5 py-1 hover:bg-blue-500/20">📅 Xem trên Dòng đời</button>}
-                      <button onClick={async () => { const { data: cur } = await supabase.from('nodes').select('md').eq('id', editing.id).single(); navigator.clipboard?.writeText(`# ${editTitle}\n\n${(cur?.md as string) ?? ''}`); setToast('📋 Đã copy nội dung — dán đi đâu cũng được'); setTimeout(() => setToast(''), 2200) }} title="Copy toàn bộ nội dung trang (markdown)" className="rounded-lg bg-white/5 border border-white/10 text-zinc-400 px-2.5 py-1 hover:text-white">📋 Copy</button>
-
-                      {(p.review_note as string) && node?.status === 'draft' && node?.owner_id === user.id && (
-                        <span className="w-full text-[11px] text-amber-200/90 bg-amber-500/10 border border-amber-400/25 rounded-lg px-2.5 py-1.5 mt-1">💬 Góp ý của biên tập: {p.review_note as string}</span>
-                      )}
-                    </PropsPanel>
-                    </div>
-                  )
-                })()}
                 {editing.kind === 'database' ? (
                   <Database
                     key={editing.id}
@@ -1215,6 +1128,93 @@ function Workspace({ user }: { user: User }) {
                     )}
                   </>
                 )}
+                {/* ① PROPERTIES — đặt CUỐI source → luôn rơi xuống cuối trang · 📌 trường chuẩn + ✏️ trường riêng (PageFrame.tsx). Trang tổng (kho/hub) không có */}
+                {(() => {
+                  const node = nodeOf(editing.id)
+                  if (!node || isContainer(node)) return null
+                  const p = (node.props ?? {}) as Record<string, unknown>
+                  const canE = canEditLayer(layerOf(editing.id))
+                  // cây gốc = container gần kho nhất trong chuỗi tổ tiên (hub/folder), fallback chính kho
+                  const chain = ancestors(editing.id)
+                  const hubN = chain.find(a => a.id !== node.id && (a.kind === 'folder' || a.subtype === 'hub')) ?? chain.find(a => a.kind === 'kho')
+                  return (
+                    <div className="mt-4 pt-4 border-t border-white/[0.06]">
+                    <PropsPanel node={node} canE={canE} isEditor={!!role?.can_edit} hubLabel={hubN ? `${hubN.icon || ''} ${hubN.title || ''}`.trim() : null} onSetProp={setNodeProp} onSaveDate={saveEventDate} onSetEmotion={saveEmotion}>
+                      {node?.status === 'pending' && <span className="rounded-lg bg-amber-500/15 border border-amber-400/30 text-amber-300 px-2 py-1">⏳ Chờ duyệt</span>}
+                      {/* duyệt ngay trong trang (người có quyền) */}
+                      {node?.status === 'pending' && role?.can_approve && (
+                        <>
+                          <button onClick={async () => {
+                            const { data: cur } = await supabase.from('nodes').select('md,props').eq('id', editing.id).single()
+                            const np = { ...((cur?.props as Record<string, unknown>) ?? {}), last_published_md: cur?.md ?? '', approved_at: new Date().toISOString() }
+                            await supabase.from('nodes').update({ status: 'published', props: np }).eq('id', editing.id)
+                            if (orgId) loadTree(orgId); setToast('✅ Đã duyệt & xuất bản'); setTimeout(() => setToast(''), 2500)
+                          }} className="rounded-lg bg-emerald-600 hover:bg-emerald-500 px-2.5 py-1 font-semibold">✅ Duyệt</button>
+                          <button onClick={() => { setReturnFor(returnFor === editing.id ? null : editing.id); setReturnNote('') }} className={`rounded-lg border px-2.5 py-1 ${returnFor === editing.id ? 'bg-red-500/15 border-red-400/40 text-red-200' : 'bg-white/5 border-white/10 text-zinc-400 hover:text-red-300'}`}>↩ Trả lại</button>
+                        </>
+                      )}
+                      {/* form Trả-lại INLINE (thay popup trình duyệt) */}
+                      {returnFor === editing.id && (
+                        <div className="w-full mt-1 rounded-xl border border-red-400/25 bg-red-500/[0.06] p-2.5">
+                          <textarea autoFocus value={returnNote} onChange={e => setReturnNote(e.target.value)} placeholder="Lý do trả lại (tác giả sẽ thấy)… vd: phần kết luận cần rõ hơn" className="w-full h-16 rounded-lg bg-black/30 border border-white/10 p-2 text-[13px] outline-none focus:border-red-400/40 mb-1.5" />
+                          <div className="flex gap-1.5 justify-end">
+                            <button onClick={() => { setReturnFor(null); setReturnNote('') }} className="rounded-lg bg-white/5 border border-white/10 text-zinc-400 px-3 py-1 text-xs">Huỷ</button>
+                            <button onClick={async () => {
+                              const { data: cur } = await supabase.from('nodes').select('props').eq('id', editing.id).single()
+                              const np = { ...((cur?.props as Record<string, unknown>) ?? {}), review_note: returnNote.trim() || 'Cần chỉnh sửa thêm' }
+                              await supabase.from('nodes').update({ status: 'draft', props: np }).eq('id', editing.id)
+                              setReturnFor(null); setReturnNote(''); if (orgId) loadTree(orgId); setToast('↩ Đã trả lại kèm góp ý'); setTimeout(() => setToast(''), 2500)
+                            }} className="rounded-lg bg-red-600/90 hover:bg-red-500 text-white px-3 py-1 text-xs font-semibold">↩ Trả lại kèm lý do</button>
+                          </div>
+                        </div>
+                      )}
+                      {node?.status === 'draft' && <span className="rounded-lg bg-zinc-500/15 border border-zinc-400/30 text-zinc-400 px-2 py-1" title={(p.review_note as string) ?? ''}>📝 Nháp</span>}
+                      {/* tác giả gửi duyệt lại sau khi sửa */}
+                      {node?.status === 'draft' && node?.owner_id === user.id && (
+                        <button onClick={async () => {
+                          await supabase.from('nodes').update({ status: 'pending' }).eq('id', editing.id)
+                          if (orgId) loadTree(orgId); setToast('📨 Đã gửi duyệt lại'); setTimeout(() => setToast(''), 2500)
+                        }} className="rounded-lg bg-amber-500/20 border border-amber-400/40 text-amber-200 px-2.5 py-1 font-semibold">📨 Gửi duyệt lại</button>
+                      )}
+                      {/* đề xuất trang cá nhân lên Kho nhân loại */}
+                      {node?.layer === 'personal' && node?.owner_id === user.id && !node?.subtype && node?.kind === 'page' && (
+                        <button onClick={() => setProposeFor(editing.id)} title="Trả lời 3 câu → bản sao vào hàng chờ duyệt Kho nhân loại" className="rounded-lg bg-violet-500/15 border border-violet-400/30 text-violet-200 px-2.5 py-1 hover:bg-violet-500/25">♾️ Đề xuất lên nhân loại</button>
+                      )}
+                      {/* trang kho chung → ánh xạ về kho cá nhân qua trạm Tủ nguồn */}
+                      {node && node.layer !== 'personal' && !isContainer(node) && (
+                        <button onClick={() => mirrorToMyKho(node)} title="Tạo trang Cảm nhận trong 📚 Tủ nguồn tinh hoa (nối chiều Tham chiếu về bài gốc) — rồi từ đó nối tiếp vào trang của bạn" className="rounded-lg bg-cyan-500/15 border border-cyan-400/30 text-cyan-200 px-2.5 py-1 hover:bg-cyan-500/25">🪞 Ánh xạ về kho tôi</button>
+                      )}
+                      {/* thành viên góp ý bài kho chung */}
+                      {!canE && node?.layer !== 'personal' && (
+                        <button onClick={async () => {
+                          const fb = window.prompt('Góp ý cho bài này (chữ cần sửa, đề xuất…):')
+                          if (!fb?.trim()) return
+                          await supabase.from('open_questions').insert({ user_id: user.id, node_id: editing.id, question: fb.trim(), status: 'feedback' })
+                          setToast('💬 Đã gửi góp ý cho ban biên tập'); setTimeout(() => setToast(''), 2500)
+                        }} className="rounded-lg bg-white/5 border border-white/10 text-zinc-400 px-2.5 py-1 hover:text-cyan-200">💬 Góp ý sửa</button>
+                      )}
+                      {p.principle ? <span className="rounded-lg bg-cyan-500/10 border border-cyan-400/25 text-cyan-200 px-2 py-1 max-w-[260px] truncate" title={p.principle as string}>⚡ {p.principle as string}</span> : null}
+                      {/* tính năng trang (đợt 9): tương tác hồ sơ · bản trước · dòng đời · copy */}
+                      {(p.page_type as string) === 'ho-so' && canE && <button onClick={async () => {
+                        const note = window.prompt('Tương tác mới với người này (1 dòng):'); if (!note?.trim()) return
+                        const { data: cur } = await supabase.from('nodes').select('md').eq('id', editing.id).single()
+                        const cm = (cur?.md as string) ?? ''
+                        const line = `- ${new Date().toLocaleDateString('vi')}: ${note.trim()}`
+                        const next = cm.includes('## 💬 Lịch sử tương tác') ? cm.replace('## 💬 Lịch sử tương tác', `## 💬 Lịch sử tương tác\n${line}`) : `${cm}\n\n## 💬 Lịch sử tương tác\n${line}`
+                        await supabase.from('nodes').update({ md: next, content: null }).eq('id', editing.id)
+                        const t2 = nodeOf(editing.id); if (t2) openNoteEditor(t2); setToast('💬 Đã ghi tương tác'); setTimeout(() => setToast(''), 2200)
+                      }} className="rounded-lg bg-emerald-500/10 border border-emerald-400/25 text-emerald-200 px-2.5 py-1 hover:bg-emerald-500/20">➕ Ghi tương tác</button>}
+                      {(p.last_published_md as string) && <button onClick={() => { const w = window.open('', '_blank', 'width=680,height=760'); if (w) { w.document.write(`<pre style="white-space:pre-wrap;font:13px/1.6 monospace;padding:24px;background:#0c0d10;color:#d0d6e0">${String(p.last_published_md).replace(/</g, '&lt;')}</pre>`); w.document.title = 'Bản đã duyệt trước — ' + editTitle } }} title="Xem bản md đã duyệt lần trước" className="rounded-lg bg-white/5 border border-white/10 text-zinc-400 px-2.5 py-1 hover:text-white">🕓 Bản trước</button>}
+                      {node?.event_date && <button onClick={() => { setView('galaxy'); setGalaxyModeReq({ mode: 'timeline', t: Date.now() }); setToast('📜 Đang mở Dòng đời — trang của bạn nằm tại mốc ' + new Date(node.event_date!).toLocaleDateString('vi')); setTimeout(() => setToast(''), 3500) }} className="rounded-lg bg-blue-500/10 border border-blue-400/25 text-blue-200 px-2.5 py-1 hover:bg-blue-500/20">📅 Xem trên Dòng đời</button>}
+                      <button onClick={async () => { const { data: cur } = await supabase.from('nodes').select('md').eq('id', editing.id).single(); navigator.clipboard?.writeText(`# ${editTitle}\n\n${(cur?.md as string) ?? ''}`); setToast('📋 Đã copy nội dung — dán đi đâu cũng được'); setTimeout(() => setToast(''), 2200) }} title="Copy toàn bộ nội dung trang (markdown)" className="rounded-lg bg-white/5 border border-white/10 text-zinc-400 px-2.5 py-1 hover:text-white">📋 Copy</button>
+
+                      {(p.review_note as string) && node?.status === 'draft' && node?.owner_id === user.id && (
+                        <span className="w-full text-[11px] text-amber-200/90 bg-amber-500/10 border border-amber-400/25 rounded-lg px-2.5 py-1.5 mt-1">💬 Góp ý của biên tập: {p.review_note as string}</span>
+                      )}
+                    </PropsPanel>
+                    </div>
+                  )
+                })()}
               </div>
             </div>
           )}
